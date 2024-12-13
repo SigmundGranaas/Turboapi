@@ -1,0 +1,20 @@
+﻿services:
+  turboapi:
+    image: turboapi
+    build:
+      context: .
+      dockerfile: Turboapi/Dockerfile
+
+  db:
+    image: postgres
+    container_name: postgres_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    profiles: [db]
+
+volumes:
+  postgres_data:

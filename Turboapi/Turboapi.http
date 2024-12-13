@@ -1,0 +1,6 @@
+@Turboapi_HostAddress = http://localhost:5098
+
+GET {{Turboapi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

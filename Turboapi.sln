@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi", "Turboapi\Turboapi.csproj", "{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0F2A4886-38D7-415C-B877-27D4370D59E1}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
