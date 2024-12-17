@@ -1,3 +1,4 @@
+using System.Security.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Turboapi.auth;
 using Turboapi.dto;
@@ -121,6 +122,14 @@ public class AuthController : ControllerBase
                 Success = true,
                 AccessToken = result.Token,
                 RefreshToken = result.RefreshToken
+            });
+        }
+        catch (AuthenticationException ex)
+        {
+            return Unauthorized(new AuthResponse 
+            { 
+                Success = false,
+                Error = ex.Message 
             });
         }
         catch (Exception ex)

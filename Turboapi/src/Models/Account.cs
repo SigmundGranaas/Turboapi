@@ -6,8 +6,6 @@ public class Account
     public string Email { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? LastLoginAt { get; set; }
-    public bool IsEmailVerified { get; set; }
-    public string? EmailVerificationToken { get; set; }
     
     // Navigation properties
     public List<UserRole> Roles { get; set; }

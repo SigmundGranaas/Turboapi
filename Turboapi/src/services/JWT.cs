@@ -1,3 +1,4 @@
+using System.Security.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Turboapi.auth;
 using Turboapi.Models;
@@ -46,7 +47,67 @@ public class JwtService : IJwtService
         _context = context;
         _logger = logger;
     }
+    
+    public async Task<AuthResult> RefreshTokenAsync(string refreshToken)
+{
+    try
+    {
+        var storedToken = await _context.RefreshTokens
+            .Include(t => t.Account)
+            .ThenInclude(a => a.Roles)
+            .FirstOrDefaultAsync(t => t.Token == refreshToken);
 
+        if (storedToken == null)
+            return new AuthResult 
+            { 
+                Success = false, 
+                ErrorMessage = "Invalid refresh token" 
+            };
+
+        if (storedToken.IsRevoked)
+            return new AuthResult 
+            { 
+                Success = false, 
+                ErrorMessage = "Refresh token has been revoked" 
+            };
+
+        if (storedToken.ExpiryTime < DateTime.UtcNow)
+        {
+            storedToken.IsRevoked = true;
+            storedToken.RevokedReason = "Token expired";
+            await _context.SaveChangesAsync();
+            
+            return new AuthResult 
+            { 
+                Success = false, 
+                ErrorMessage = "Refresh token has expired" 
+            };
+        }
+
+        // Mark current token as revoked BEFORE generating new ones
+        storedToken.IsRevoked = true;
+        storedToken.RevokedReason = "Token refreshed";
+        await _context.SaveChangesAsync();
+
+        // Generate new tokens
+        var newAccessToken = await GenerateTokenAsync(storedToken.Account);
+        var newRefreshToken = await GenerateRefreshTokenAsync(storedToken.Account);
+
+        return new AuthResult
+        {
+            Success = true,
+            Token = newAccessToken,
+            RefreshToken = newRefreshToken,
+            AccountId = storedToken.AccountId
+        };
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error refreshing token");
+        throw new AuthenticationException("An error occurred while refreshing the token", ex);
+    }
+}
+    
     public async Task<string> GenerateTokenAsync(Account account)
     {
         var roles = await _context.UserRoles
@@ -57,7 +118,11 @@ public class JwtService : IJwtService
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, account.Id.ToString()),
-            new(ClaimTypes.Email, account.Email)
+            new(ClaimTypes.Email, account.Email),
+            // Add unique JWT ID
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            // Add issued at time
+            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString())
         };
 
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
@@ -69,6 +134,7 @@ public class JwtService : IJwtService
             issuer: _jwtConfig.Issuer,
             audience: _jwtConfig.Audience,
             claims: claims,
+            notBefore: DateTime.UtcNow,
             expires: DateTime.UtcNow.AddMinutes(_jwtConfig.TokenExpirationMinutes),
             signingCredentials: credentials
         );
@@ -76,97 +142,40 @@ public class JwtService : IJwtService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public async Task<string> GenerateRefreshTokenAsync(Account account)
+public async Task<string> GenerateRefreshTokenAsync(Account account)
+{
+    var randomNumber = new byte[64];
+    using var rng = RandomNumberGenerator.Create();
+    rng.GetBytes(randomNumber);
+    var refreshToken = Convert.ToBase64String(randomNumber);
+
+    // Create new refresh token first
+    var newToken = new RefreshToken
     {
-        var randomNumber = new byte[64];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        var refreshToken = Convert.ToBase64String(randomNumber);
+        AccountId = account.Id,
+        Token = refreshToken,
+        ExpiryTime = DateTime.UtcNow.AddDays(_jwtConfig.RefreshTokenExpirationDays),
+        CreatedAt = DateTime.UtcNow,
+        IsRevoked = false
+    };
 
-        // Revoke any existing active refresh tokens
-        var existingTokens = await _context.RefreshTokens
-            .Where(t => t.AccountId == account.Id && !t.IsRevoked)
-            .ToListAsync();
+    await _context.RefreshTokens.AddAsync(newToken);
+    
+    // Then revoke existing tokens
+    var existingTokens = await _context.RefreshTokens
+        .Where(t => t.AccountId == account.Id && !t.IsRevoked && t.Id != newToken.Id)
+        .ToListAsync();
 
-        foreach (var token in existingTokens)
-        {
-            token.IsRevoked = true;
-            token.RevokedReason = "Token rotation";
-        }
-
-        // Create new refresh token
-        await _context.RefreshTokens.AddAsync(new RefreshToken
-        {
-            AccountId = account.Id,
-            Token = refreshToken,
-            ExpiryTime = DateTime.UtcNow.AddDays(_jwtConfig.RefreshTokenExpirationDays),
-            CreatedAt = DateTime.UtcNow,
-            IsRevoked = false
-        });
-
-        await _context.SaveChangesAsync();
-        return refreshToken;
+    foreach (var token in existingTokens)
+    {
+        token.IsRevoked = true;
+        token.RevokedReason = "Token rotation";
     }
 
-    public async Task<AuthResult> RefreshTokenAsync(string refreshToken)
-    {
-        try
-        {
-            var storedToken = await _context.RefreshTokens
-                .Include(t => t.Account)
-                .ThenInclude(a => a.Roles)
-                .FirstOrDefaultAsync(t => t.Token == refreshToken);
-
-            if (storedToken == null)
-                return new AuthResult 
-                { 
-                    Success = false, 
-                    ErrorMessage = "Invalid refresh token" 
-                };
-
-            if (storedToken.IsRevoked)
-                return new AuthResult 
-                { 
-                    Success = false, 
-                    ErrorMessage = "Refresh token has been revoked" 
-                };
-
-            if (storedToken.ExpiryTime < DateTime.UtcNow)
-            {
-                storedToken.IsRevoked = true;
-                storedToken.RevokedReason = "Token expired";
-                await _context.SaveChangesAsync();
-                
-                return new AuthResult 
-                { 
-                    Success = false, 
-                    ErrorMessage = "Refresh token has expired" 
-                };
-            }
-
-            // Generate new tokens
-            var newAccessToken = await GenerateTokenAsync(storedToken.Account);
-            var newRefreshToken = await GenerateRefreshTokenAsync(storedToken.Account);
-
-            return new AuthResult
-            {
-                Success = true,
-                Token = newAccessToken,
-                RefreshToken = newRefreshToken,
-                AccountId = storedToken.AccountId
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error refreshing token");
-            return new AuthResult 
-            { 
-                Success = false, 
-                ErrorMessage = "An error occurred while refreshing the token" 
-            };
-        }
-    }
-
+    await _context.SaveChangesAsync();
+    return refreshToken;
+}
+    
     public async Task<(bool isValid, string? userId)> ValidateRefreshTokenAsync(string refreshToken)
     {
         try

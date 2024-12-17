@@ -12,13 +12,6 @@ public record LoginRequest(
 public record GoogleLoginRequest(
     string IdToken);
 
-public class GoogleAuthConfig
-{
-    public string ClientId { get; set; }
-    public string ClientSecret { get; set; }
-    public string RedirectUri { get; set; }
-}
-
 public record AuthResponse
 {
     public bool Success { get; init; }

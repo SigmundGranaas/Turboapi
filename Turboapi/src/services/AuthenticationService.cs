@@ -20,15 +20,13 @@ public class AuthenticationService : IAuthenticationService
         _logger = logger;
     }
     
-    
-
     public async Task<AuthResult> AuthenticateAsync(string provider, IAuthenticationCredentials credentials)
     {
         try
         {
             var authProvider = _providers.FirstOrDefault(p => p.Name == provider)
                 ?? throw new ArgumentException($"Provider {provider} not supported");
-                
+
             return await authProvider.AuthenticateAsync(credentials);
         }
         catch (Exception ex)

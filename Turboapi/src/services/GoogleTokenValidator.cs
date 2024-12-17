@@ -1,33 +1,37 @@
 using System.Text.Json;
+using Microsoft.Extensions.Options;
+using Turboapi.auth;
 using Turboapi.Models;
+
+namespace Turboapi.Services;
 
 public class GoogleTokenValidator
 {
-    private readonly IConfiguration _configuration;
     private readonly HttpClient _httpClient;
     private readonly ILogger<GoogleTokenValidator> _logger;
-    private readonly string _clientId;
-    private readonly string _clientSecret;
+    private readonly GoogleAuthSettings _settings;
 
     public GoogleTokenValidator(
-        IConfiguration configuration,
+        IOptions<GoogleAuthSettings> settings,
         HttpClient httpClient,
         ILogger<GoogleTokenValidator> logger)
     {
-        _configuration = configuration;
+        _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
+        
+        if (string.IsNullOrEmpty(_settings.ClientId))
+            throw new ArgumentException("Google ClientId is not configured");
+        if (string.IsNullOrEmpty(_settings.ClientSecret))
+            throw new ArgumentException("Google ClientSecret is not configured");
+            
         _httpClient = httpClient;
         _logger = logger;
-        _clientId = configuration["Authentication:Google:ClientId"] 
-            ?? throw new ArgumentNullException("Google ClientId is not configured");
-        _clientSecret = configuration["Authentication:Google:ClientSecret"] 
-            ?? throw new ArgumentNullException("Google ClientSecret is not configured");
     }
 
-    public async Task<GoogleTokenInfo> ValidateIdTokenAsync(string idToken)
+    public async  Task<GoogleTokenInfo> ValidateIdTokenAsync(string? idToken)
     {
         try
         {
-            if (string.IsNullOrEmpty(idToken))
+            if (string.IsNullOrEmpty(idToken) || string.IsNullOrWhiteSpace(idToken))
             {
                 return new GoogleTokenInfo 
                 { 
@@ -36,16 +40,10 @@ public class GoogleTokenValidator
                 };
             }
 
-            // Validate token with Google's OAuth2 v3 endpoint
-            var response = await _httpClient.GetAsync(
-                $"https://oauth2.googleapis.com/tokeninfo?id_token={idToken}");
-
-            if (!response.IsSuccessStatusCode)
+            var (success, tokenInfo) = await GetTokenInfoFromGoogleAsync(idToken);
+            
+            if (!success || tokenInfo == null)
             {
-                var error = await response.Content.ReadAsStringAsync();
-                _logger.LogWarning("Failed to validate Google token. Status: {Status}, Error: {Error}", 
-                    response.StatusCode, error);
-                
                 return new GoogleTokenInfo 
                 { 
                     IsValid = false, 
@@ -53,21 +51,11 @@ public class GoogleTokenValidator
                 };
             }
 
-            var tokenInfo = await response.Content.ReadFromJsonAsync<GoogleTokenResponse>();
-            if (tokenInfo == null)
-            {
-                return new GoogleTokenInfo 
-                { 
-                    IsValid = false, 
-                    ErrorMessage = "Failed to parse token information" 
-                };
-            }
-
             // Verify the token is intended for your application
-            if (tokenInfo.Aud != _clientId)
+            if (tokenInfo.Aud != _settings.ClientId)
             {
                 _logger.LogWarning("Token has incorrect audience. Expected: {Expected}, Got: {Actual}", 
-                    _clientId, tokenInfo.Aud);
+                    _settings.ClientId, tokenInfo.Aud);
                 
                 return new GoogleTokenInfo 
                 { 
@@ -134,5 +122,22 @@ public class GoogleTokenValidator
                 ErrorMessage = "An unexpected error occurred" 
             };
         }
+    }
+
+    protected virtual async Task<(bool Success, GoogleTokenResponse? Response)> GetTokenInfoFromGoogleAsync(string idToken)
+    {
+        var response = await _httpClient.GetAsync(
+            $"{_settings.TokenInfoEndpoint}?id_token={idToken}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            _logger.LogWarning("Failed to validate Google token. Status: {Status}, Error: {Error}", 
+                response.StatusCode, error);
+            return (false, null);
+        }
+
+        var tokenInfo = await response.Content.ReadFromJsonAsync<GoogleTokenResponse>();
+        return (true, tokenInfo);
     }
 }

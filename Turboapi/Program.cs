@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -7,8 +6,8 @@ using Scalar.AspNetCore;
 using Turboapi.auth;
 using Turboapi.core;
 using TurboApi.Data.Entity;
-using Turboapi.Models;
 using Turboapi.services;
+using Turboapi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,11 +17,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+
+builder.Services.Configure<GoogleAuthSettings>(
+    builder.Configuration.GetSection("Authentication:Google"));
 builder.Services.AddScoped<GoogleTokenValidator>();
 
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+
 
 builder.Services.AddAuthentication(options =>
     {
@@ -55,10 +57,11 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 // Register services
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 
 // Register auth providers
 builder.Services.AddScoped<IAuthenticationProvider, GoogleAuthenticationProvider>();
+builder.Services.AddScoped<IAuthenticationProvider, PasswordAuthenticationProvider>();
+builder.Services.AddScoped<IAuthenticationProvider, RefreshTokenProvider>();
 
 // Configure HttpClient for Google auth
 builder.Services.AddHttpClient<GoogleTokenValidator>();
@@ -73,27 +76,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-
-// Run Flyway migrations before starting the app
-var startInfo = new ProcessStartInfo
-{
-    FileName = "flyway",
-    Arguments = "migrate",
-    RedirectStandardOutput = true,
-    RedirectStandardError = true,
-    UseShellExecute = false
-};
-
-using (var process = Process.Start(startInfo))
-{
-    await process.WaitForExitAsync();
-    if (process.ExitCode != 0)
-    {
-        throw new Exception("Flyway migration failed");
-    }
-}
-
 
 app.Run();
 

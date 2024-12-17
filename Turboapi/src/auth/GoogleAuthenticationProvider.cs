@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TurboApi.Data.Entity;
 using Turboapi.Models;
 using Turboapi.services;
+using Turboapi.Services;
 
 namespace Turboapi.auth;
 
@@ -50,7 +51,6 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
                 var account = new Account
                 {
                     Email = tokenInfo.Email,
-                    IsEmailVerified = true,
                     AuthenticationMethods = new List<AuthenticationMethod>
                     {
                         new OAuthAuthentication
