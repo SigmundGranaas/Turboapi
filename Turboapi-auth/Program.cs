@@ -1,11 +1,13 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Turboapi.auth;
 using Turboapi.core;
 using TurboApi.Data.Entity;
+using Turboapi.infrastructure;
 using Turboapi.services;
 using Turboapi.Services;
 
@@ -62,6 +64,7 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<IAuthenticationProvider, GoogleAuthenticationProvider>();
 builder.Services.AddScoped<IAuthenticationProvider, PasswordAuthenticationProvider>();
 builder.Services.AddScoped<IAuthenticationProvider, RefreshTokenProvider>();
+builder.Services.AddKafkaIntegration(builder.Configuration);
 
 // Configure HttpClient for Google auth
 builder.Services.AddHttpClient<GoogleTokenValidator>();
@@ -81,3 +84,21 @@ app.Run();
 
 // For testing
 public partial class Program { }
+
+public static class KafkaConfiguration
+{
+    public static IServiceCollection AddKafkaIntegration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<KafkaSettings>(
+            configuration.GetSection("Kafka"));
+        
+        services.AddSingleton<IEventPublisher>(sp => 
+            new KafkaEventPublisher(
+                sp.GetRequiredService<IOptions<KafkaSettings>>(),
+                sp.GetRequiredService<ILogger<KafkaEventPublisher>>()
+            ));        
+        return services;
+    }
+}

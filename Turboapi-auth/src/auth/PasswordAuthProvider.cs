@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Turboapi.core;
 using TurboApi.Data.Entity;
+using Turboapi.events;
+using Turboapi.infrastructure;
 using Turboapi.Models;
 using Turboapi.services;
 
@@ -12,6 +14,7 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
     private readonly IJwtService _jwtService;
     private readonly IPasswordHasher _passwordHasher;
     private readonly ILogger<PasswordAuthenticationProvider> _logger;
+    private readonly IEventPublisher _eventPublisher;
 
     public string Name => "Password";
 
@@ -19,12 +22,14 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
         AuthDbContext context,
         IJwtService jwtService,
         IPasswordHasher passwordHasher,
-        ILogger<PasswordAuthenticationProvider> logger)
+        ILogger<PasswordAuthenticationProvider> logger,
+        IEventPublisher eventPublisher)
     {
         _context = context;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<AuthResult> AuthenticateAsync(IAuthenticationCredentials credentials)
@@ -57,6 +62,14 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
             authMethod.Account.LastLoginAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
+            // Publish login event
+            await _eventPublisher.PublishAsync(new UserLoginEvent
+            {
+                AccountId = authMethod.Account.Id,
+                Provider = Name,
+                LoginTimestamp = DateTime.UtcNow
+            });
+
             return new AuthResult
             {
                 Success = true,
@@ -76,43 +89,48 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
     {
         try
         {
-            // Check if email already exists
             if (await _context.Accounts.AnyAsync(a => a.Email == email))
                 return new AuthResult { Success = false, ErrorMessage = "Email already registered" };
 
             var hashedPassword = _passwordHasher.HashPassword(password);
 
-            // Create account first
             var account = new Account
             {
                 Email = email,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Create authentication method separately and set up relationship
             var authMethod = new PasswordAuthentication
             {
                 Provider = Name,
                 PasswordHash = hashedPassword,
                 CreatedAt = DateTime.UtcNow,
-                Account = account  // This sets up the relationship properly
+                Account = account
             };
 
-            // Create user role
             var userRole = new UserRole
             {
                 Role = Roles.User,
                 CreatedAt = DateTime.UtcNow,
-                Account = account  // This sets up the relationship properly
+                Account = account
             };
 
-            // Add entities in correct order
             await _context.Accounts.AddAsync(account);
             await _context.AuthenticationMethods.AddAsync(authMethod);
             await _context.UserRoles.AddAsync(userRole);
-
-            // Save all changes in one transaction
             await _context.SaveChangesAsync();
+
+            // Publish user created event
+            await _eventPublisher.PublishAsync(new UserCreatedEvent
+            {
+                AccountId = account.Id,
+                Email = email,
+                Provider = Name,
+                AdditionalInfo = new Dictionary<string, string>
+                {
+                    { "registrationType", "password" }
+                }
+            });
 
             return new AuthResult
             {

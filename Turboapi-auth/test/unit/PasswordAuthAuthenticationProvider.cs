@@ -6,6 +6,8 @@ using Turboapi.auth;
 using Turboapi.core;
 using Turboapi.Models;
 using TurboApi.Data.Entity;
+using Turboapi.events;
+using Turboapi.infrastructure;
 using Turboapi.services;
 using Xunit;
 
@@ -18,6 +20,7 @@ public class PasswordAuthenticationProviderTests : IDisposable
     private readonly PasswordAuthenticationProvider _provider;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IJwtService _jwtService;
+    private readonly IEventPublisher _eventPublisher;
 
     public PasswordAuthenticationProviderTests()
     {
@@ -44,7 +47,6 @@ public class PasswordAuthenticationProviderTests : IDisposable
             TokenExpirationMinutes = 15,
             RefreshTokenExpirationDays = 7
         };
-        
 
         // Create logger (using minimal logging for tests)
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
@@ -52,9 +54,18 @@ public class PasswordAuthenticationProviderTests : IDisposable
         
         var jwtOptions = Options.Create(conf);
         _jwtService = new JwtService(jwtOptions, _context, loggerFactory.CreateLogger<JwtService>());
+        
+        // Create test event publisher
+        _eventPublisher = new TestEventPublisher();
 
-        // Create the provider
-        _provider = new PasswordAuthenticationProvider(_context, _jwtService, _passwordHasher, logger);
+        // Create the provider with the test event publisher
+        _provider = new PasswordAuthenticationProvider(
+            _context, 
+            _jwtService, 
+            _passwordHasher, 
+            logger,
+            _eventPublisher
+        );
     }
 
     [Fact]
@@ -183,3 +194,12 @@ public class PasswordAuthenticationProviderTests : IDisposable
 
 // Helper class for testing invalid credentials
 public class InvalidCredentials : IAuthenticationCredentials { }
+
+public class TestEventPublisher : IEventPublisher
+{
+    public Task PublishAsync<T>(T @event) where T : UserAccountEvent
+    {
+        // No-op for testing
+        return Task.CompletedTask;
+    }
+}
