@@ -117,8 +117,6 @@ export default function (data) {
         performRegistration();
     } else if (rand < 0.8 && data.registeredUsers && data.registeredUsers.length > 0) {
         performLogin(data.registeredUsers);
-    } else if (global.tokens && global.tokens.length > 0) {
-        performTokenRefresh();
     } else {
         // Fallback to registration if no users are available
         performRegistration();
@@ -177,42 +175,6 @@ function performLogin(registeredUsers) {
             tokens.push(body.refreshToken);
             if (tokens.length > 50) tokens.shift();
             global.tokens = tokens;
-        }
-    }
-}
-function performTokenRefresh() {
-    // Skip if no refresh tokens are available
-    if (!global.tokens || !global.tokens.length) {
-        console.log('No refresh tokens available, skipping refresh test');
-        return;
-    }
-
-    // Randomly select a stored refresh token
-    const refreshToken = global.tokens[Math.floor(Math.random() * global.tokens.length)];
-
-    const payload = JSON.stringify({
-        refreshToken: refreshToken
-    });
-
-    const res = http.post(`${BASE_URL}/api/auth/refresh`, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        tags: { name: 'RefreshEndpoint' },
-    });
-
-    check(res, {
-        'refresh success': (r) => r.status === 200,
-        'has new tokens': (r) => {
-            const body = JSON.parse(r.body);
-            return body.accessToken && body.refreshToken;
-        },
-    });
-
-    // Update stored refresh token if successful
-    if (res.status === 200) {
-        const body = JSON.parse(res.body);
-        const tokenIndex = global.tokens.indexOf(refreshToken);
-        if (tokenIndex !== -1) {
-            global.tokens[tokenIndex] = body.refreshToken;
         }
     }
 }
