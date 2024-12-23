@@ -5,6 +5,8 @@ using Turboapi.dto;
 using Turboapi.Models;
 using Xunit;
 using Testcontainers.PostgreSql;
+using Turboapi.events;
+using Turboapi.infrastructure;
 
 namespace Turboapi.Tests.E2E;
 
@@ -13,9 +15,12 @@ public class AuthenticationE2ETests : IAsyncLifetime
     private readonly PostgreSqlContainer _postgres;
     private readonly WebApplicationFactory<Program> _factory;
     private readonly HttpClient _client;
+    private readonly TestEventPublisher _eventPublisher;
 
     public AuthenticationE2ETests()
     {
+        _eventPublisher = new TestEventPublisher();
+        
         _postgres = new PostgreSqlBuilder()
             .WithDatabase("turbo")
             .WithUsername("postgres")
@@ -28,6 +33,13 @@ public class AuthenticationE2ETests : IAsyncLifetime
             
             builder.ConfigureServices(services =>
             {
+                var kafkaDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IEventPublisher));
+                if (kafkaDescriptor != null)
+                {
+                    services.Remove(kafkaDescriptor);
+                }
+                services.AddSingleton<IEventPublisher>(_eventPublisher);
+                
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AuthDbContext>));
                 services.Remove(descriptor);
 
@@ -196,5 +208,16 @@ public class AuthenticationE2ETests : IAsyncLifetime
         Assert.NotNull(result);
         Assert.False(result.Success);
         Assert.Equal("Token has been revoked", result.Error);
+    }
+}
+
+public class TestEventPublisher : IEventPublisher
+{
+    public List<UserAccountEvent> PublishedEvents { get; } = new();
+
+    public Task PublishAsync<T>(T @event) where T : UserAccountEvent
+    {
+        PublishedEvents.Add(@event);
+        return Task.CompletedTask;
     }
 }
