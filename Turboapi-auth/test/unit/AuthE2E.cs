@@ -63,8 +63,7 @@ public class AuthenticationE2ETests : IAsyncLifetime
         var registerRequest = new RegisterRequest("test@example.com", "SecurePass123!", "SecurePass123!");
         // Step 1: Register new user
         var registerResponse = await _client.PostAsJsonAsync("/api/auth/register", registerRequest);
-
-
+        
         Assert.True(registerResponse.IsSuccessStatusCode);
         var registerResult = await registerResponse.Content.ReadFromJsonAsync<AuthResponse>();
         Assert.NotNull(registerResult);

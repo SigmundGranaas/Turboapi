@@ -122,10 +122,10 @@ public class DbIntegration : IAsyncLifetime
         ).ToListAsync();
 
         // Assert
-        tableNames.Should().Contain("Accounts");
-        tableNames.Should().Contain("AuthenticationMethods");
-        tableNames.Should().Contain("UserRoles");
-        tableNames.Should().Contain("RefreshTokens");
+        tableNames.Should().Contain("accounts");
+        tableNames.Should().Contain("authentication_methods");
+        tableNames.Should().Contain("user_roles");
+        tableNames.Should().Contain("refresh_tokens");
     }
 
     
@@ -150,22 +150,22 @@ public class DbIntegration : IAsyncLifetime
         // Assert
         // Verify Accounts table
         columns.Should().Contain(c => 
-            c.table_name == "Accounts" && 
-            c.column_name == "Email" && 
+            c.table_name == "accounts" && 
+            c.column_name == "email" && 
             c.data_type == "character varying" &&
             !c.is_nullable);
 
         // Verify AuthenticationMethods table
         columns.Should().Contain(c =>
-            c.table_name == "AuthenticationMethods" &&
-            c.column_name == "AuthType" &&
+            c.table_name == "authentication_methods" &&
+            c.column_name == "auth_type" &&
             c.data_type == "character varying" &&
             !c.is_nullable);
         
         // Verify UUID columns
         columns.Should().Contain(c =>
-            c.table_name == "Accounts" &&
-            c.column_name == "Id" &&
+            c.table_name == "accounts" &&
+            c.column_name == "id" &&
             c.data_type == "uuid" &&
             !c.is_nullable);
     }
@@ -192,15 +192,15 @@ public class DbIntegration : IAsyncLifetime
         // Assert
         // Check primary keys
         constraints.Should().Contain(c =>
-            c.table_name == "Accounts" &&
+            c.table_name == "accounts" &&
             c.constraint_type == "PRIMARY KEY" &&
-            c.column_name == "Id");
+            c.column_name == "id");
 
         // Check foreign keys
         constraints.Should().Contain(c =>
-            c.table_name == "AuthenticationMethods" &&
+            c.table_name == "authentication_methods" &&
             c.constraint_type == "FOREIGN KEY" &&
-            c.column_name == "AccountId");
+            c.column_name == "account_id");
     }
 
     [Fact]
@@ -218,12 +218,12 @@ public class DbIntegration : IAsyncLifetime
         ")).ToListAsync();
 
         // Assert
-        indices.Should().Contain("IX_Accounts_Email");
-        indices.Should().Contain("IX_AuthenticationMethods_AccountId");
-        indices.Should().Contain("IX_AuthenticationMethods_Provider_ExternalUserId");
-        indices.Should().Contain("IX_UserRoles_AccountId_Role");
-        indices.Should().Contain("IX_RefreshTokens_Token");
-        indices.Should().Contain("IX_RefreshTokens_AccountId");
+        indices.Should().Contain("ix_accounts_email");
+        indices.Should().Contain("ix_authentication_methods_account_id");
+        indices.Should().Contain("ix_authentication_methods_provider_external_user_id");
+        indices.Should().Contain("ix_user_roles_account_id_role");
+        indices.Should().Contain("ix_refresh_tokens_token");
+        indices.Should().Contain("ix_refresh_tokens_account_id");
     }
 
     private record ColumnInfo(string table_name, string column_name, string data_type, bool is_nullable);

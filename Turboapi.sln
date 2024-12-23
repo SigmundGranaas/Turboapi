@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi", "Turboapi\Turboapi.csproj", "{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi-auth", "Turboapi-auth\Turboapi-auth.csproj", "{3AA6D570-6A96-4E9B-8B9F-5690F23F5B40}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0F2A4886-38D7-415C-B877-27D4370D59E1}"
 	ProjectSection(SolutionItems) = preProject

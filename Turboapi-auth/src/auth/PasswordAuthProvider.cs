@@ -32,7 +32,7 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
         if (credentials is not PasswordCredentials passwordCreds)
             throw new ArgumentException("Invalid credentials type");
     
-        if ( passwordCreds.IsRegistration)
+        if (passwordCreds.IsRegistration)
         {
             return await RegisterAsync(passwordCreds.Email, passwordCreds.Password);
         }
@@ -42,7 +42,7 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
             var authMethod = await _context.AuthenticationMethods
                 .OfType<PasswordAuthentication>()
                 .Include(a => a.Account)
-                .FirstOrDefaultAsync(a => 
+                .SingleOrDefaultAsync(a => 
                     a.Account.Email == passwordCreds.Email &&
                     a.Provider == Name);
 
@@ -52,7 +52,7 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
             if (!_passwordHasher.VerifyPassword(passwordCreds.Password, authMethod.PasswordHash))
                 return new AuthResult { Success = false, ErrorMessage = "Invalid email or password" };
 
-            // Update last used timestamp
+            // Update timestamps using tracked entity
             authMethod.LastUsedAt = DateTime.UtcNow;
             authMethod.Account.LastLoginAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -82,25 +82,36 @@ public class PasswordAuthenticationProvider : IAuthenticationProvider
 
             var hashedPassword = _passwordHasher.HashPassword(password);
 
-            // Create new account with password authentication
+            // Create account first
             var account = new Account
             {
                 Email = email,
-                AuthenticationMethods = new List<AuthenticationMethod>
-                {
-                    new PasswordAuthentication
-                    {
-                        Provider = Name,
-                        PasswordHash = hashedPassword
-                    }
-                },
-                Roles = new List<UserRole>
-                {
-                    new() { Role = Roles.User }
-                }
+                CreatedAt = DateTime.UtcNow
             };
 
+            // Create authentication method separately and set up relationship
+            var authMethod = new PasswordAuthentication
+            {
+                Provider = Name,
+                PasswordHash = hashedPassword,
+                CreatedAt = DateTime.UtcNow,
+                Account = account  // This sets up the relationship properly
+            };
+
+            // Create user role
+            var userRole = new UserRole
+            {
+                Role = Roles.User,
+                CreatedAt = DateTime.UtcNow,
+                Account = account  // This sets up the relationship properly
+            };
+
+            // Add entities in correct order
             await _context.Accounts.AddAsync(account);
+            await _context.AuthenticationMethods.AddAsync(authMethod);
+            await _context.UserRoles.AddAsync(userRole);
+
+            // Save all changes in one transaction
             await _context.SaveChangesAsync();
 
             return new AuthResult
