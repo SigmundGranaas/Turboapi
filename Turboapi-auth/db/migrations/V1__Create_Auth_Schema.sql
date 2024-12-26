@@ -17,7 +17,6 @@ CREATE TABLE authentication_methods (
                                         auth_type VARCHAR(20) NOT NULL,
     -- PasswordAuthentication fields
                                         password_hash VARCHAR(256) NULL,
-                                        salt VARCHAR(128) NULL,
     -- OAuthAuthentication fields
                                         external_user_id VARCHAR(100) NULL,
                                         access_token VARCHAR(2000) NULL,

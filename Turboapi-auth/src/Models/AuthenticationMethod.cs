@@ -15,7 +15,6 @@ public abstract class AuthenticationMethod
 public class PasswordAuthentication : AuthenticationMethod
 {
     public string PasswordHash { get; set; }
-    public string Salt { get; set; }
 }
 
 public class OAuthAuthentication : AuthenticationMethod

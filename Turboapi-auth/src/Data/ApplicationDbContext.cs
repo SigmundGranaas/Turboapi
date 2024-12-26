@@ -76,9 +76,6 @@ public class AuthDbContext : DbContext
         {
             entity.Property(e => e.PasswordHash)
                 .HasColumnName("password_hash");
-                
-            entity.Property(e => e.Salt)
-                .HasColumnName("salt");
         });
         
         modelBuilder.Entity<OAuthAuthentication>(entity =>
