@@ -1,12 +1,4 @@
 ﻿services:
-  turboapi:
-    image: turboapi
-    build:
-      context: .
-      dockerfile: Turboapi/Dockerfile
-    depends_on:
-      - kafka
-
   db:
     image: postgres
     container_name: postgres_db
@@ -16,7 +8,8 @@
       POSTGRES_PASSWORD: yourpassword
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    profiles: [db]
+    networks:
+      - turbo
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
@@ -26,8 +19,9 @@
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-    profiles: [kafka]
-
+    networks:
+      - turbo
+  
   kafka:
     image: confluentinc/cp-kafka:latest
     container_name: kafka
@@ -42,7 +36,8 @@
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    profiles: [kafka]
+    networks:
+      - turbo
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -55,7 +50,108 @@
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    profiles: [kafka]
+    networks:
+      - turbo  
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    volumes:
+      - ./otel-collector.yml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP http
+      - "8888:8888"   # metrics endpoint
+      - "8889:8889"   # prometheus metrics endpoint
+
+    depends_on:
+      - jaeger
+      - prometheus
+    networks:
+      - turbo
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/jaeger:2.1.0
+    ports:
+      - "16686:16686"  # UI
+      - "14250:14250"  # gRPC collector
+      - "14268:14268"  # HTTP collector
+      - "9411:9411"    # Zipkin collector
+      - "4319:4317"    # Otlp collector
+    networks:
+      - turbo
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - turbo
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:10.2.4
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - turbo
+
+  # Loki for logs
+  loki:
+    image: grafana/loki:3.3.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+      - loki-data:/wal    # Add this line
+    networks:
+      - turbo
+  
+  # Promtail for log collection
+  promtail:
+    image: grafana/promtail:3.3.2
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yaml
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yaml
+    depends_on:
+      - loki
+    networks:
+      - turbo
+
 
 volumes:
   postgres_data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+    
+networks:
+  turbo:
+    driver: bridge

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Turboapi.auth;
@@ -9,6 +10,7 @@ using AuthResponse = Turboapi.dto.AuthResponse;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
+    private readonly ActivitySource _activitySource;
     private readonly IAuthenticationService _authService;
     private readonly ILogger<AuthController> _logger;
 
@@ -18,12 +20,16 @@ public class AuthController : ControllerBase
     {
         _authService = authService;
         _logger = logger;
+        _activitySource = new ActivitySource("AuthController");
     }
 
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(
         [FromBody] RegisterRequest request)
     {
+        using var activity = _activitySource.StartActivity("Register");
+        activity?.SetTag("auth.register", "New registration");
+        
         if (request.Password != request.ConfirmPassword)
             return BadRequest(new AuthResponse 
             { 
@@ -70,6 +76,8 @@ public class AuthController : ControllerBase
     public async Task<ActionResult<AuthResponse>> Login(
         [FromBody] LoginRequest request)
     {
+        using var activity = _activitySource.StartActivity("Login");
+        activity?.SetTag("auth.login", "New login");
         try
         {
             var credentials = new PasswordCredentials(request.Email, request.Password);

@@ -11,7 +11,7 @@ using Turboapi.infrastructure;
 using Turboapi.services;
 using Xunit;
 
-namespace Turboapi.Tests;
+namespace Turboapi.Test.unit;
 
 public class PasswordAuthenticationProviderTests : IDisposable
 {
