@@ -8,6 +8,8 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+
+// Service-specific usings
 using Turboapi.auth;
 using Turboapi.core;
 using TurboApi.Data.Entity;
@@ -17,20 +19,30 @@ using Turboapi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// #############################################
+// # 1. Core API Configuration
+// #############################################
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// #############################################
+// # 2. Database Configuration
+// #############################################
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// #############################################
+// # 3. Authentication Configuration
+// #############################################
+// 3.1 Password and Token Services
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 
-builder.Services.Configure<GoogleAuthSettings>(
-    builder.Configuration.GetSection("Authentication:Google"));
-builder.Services.AddScoped<GoogleTokenValidator>();
-
+// 3.2 JWT Configuration
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
-
 
 builder.Services.AddAuthentication(options =>
     {
@@ -50,35 +62,40 @@ builder.Services.AddAuthentication(options =>
             ValidAudience = jwtConfig.Audience,
             ClockSkew = TimeSpan.Zero
         };
-    }).AddCookie(options =>
+    })
+    .AddCookie(options =>
     {
         options.Cookie.HttpOnly = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
     });
 
-
-builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Register services
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-
-// Register auth providers
+// 3.3 Authentication Providers
 builder.Services.AddScoped<IAuthenticationProvider, GoogleAuthenticationProvider>();
 builder.Services.AddScoped<IAuthenticationProvider, PasswordAuthenticationProvider>();
 builder.Services.AddScoped<IAuthenticationProvider, RefreshTokenProvider>();
-builder.Services.AddKafkaIntegration(builder.Configuration);
 
-// Configure HttpClient for Google auth
+// 3.4 Google Authentication
+builder.Services.Configure<GoogleAuthSettings>(
+    builder.Configuration.GetSection("Authentication:Google"));
+builder.Services.AddScoped<GoogleTokenValidator>();
 builder.Services.AddHttpClient<GoogleTokenValidator>();
 
+// #############################################
+// # 4. Integration Services
+// #############################################
+// 4.1 Kafka Configuration
+builder.Services.AddKafkaIntegration(builder.Configuration);
+
+// #############################################
+// # 5. Observability Configuration
+// #############################################
 var otel = builder.Services.AddOpenTelemetry();
 
-// Configure OpenTelemetry Resources with the application name
+// 5.1 Configure OpenTelemetry Resources
 otel.ConfigureResource(resource => resource
     .AddService(serviceName: builder.Environment.ApplicationName));
 
+// 5.2 Logging Configuration
 builder.Logging.AddOpenTelemetry(options =>
 {
     options
@@ -91,24 +108,20 @@ builder.Logging.AddOpenTelemetry(options =>
         });
 });
 
-
-// Add Metrics for ASP.NET Core and our custom metrics and export to Prometheus
+// 5.3 Metrics Configuration
 otel.WithMetrics(metrics => metrics
-    // Metrics provider from OpenTelemetry
     .AddAspNetCoreInstrumentation()
     .AddHttpClientInstrumentation()
-    // Metrics provides by ASP.NET Core in .NET 8
     .AddMeter("Microsoft.AspNetCore.Hosting")
     .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
     .AddOtlpExporter(otlpOptions =>
     {
-        // Change this to point to your collector instead of Jaeger
         otlpOptions.Endpoint = new Uri("http://localhost:4317");
         otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     })
     .AddPrometheusExporter());
 
-// Export to Jaeger
+// 5.4 Tracing Configuration
 otel.WithTracing(tracing =>
 {
     tracing.AddAspNetCoreInstrumentation();
@@ -117,14 +130,14 @@ otel.WithTracing(tracing =>
     tracing.SetSampler(new AlwaysOnSampler());
     tracing.AddOtlpExporter(otlpOptions =>
     {
-        // Change this to point to your collector instead of Jaeger
         otlpOptions.Endpoint = new Uri("http://localhost:4317");
         otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     });
 });
 
-
-
+// #############################################
+// # 6. App Configuration and Middleware
+// #############################################
 var app = builder.Build();
 
 app.MapOpenApi();
@@ -136,13 +149,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-
-
 app.Run();
 
 // For testing
 public partial class Program { }
 
+// #############################################
+// # 7. Extension Methods
+// #############################################
 public static class KafkaConfiguration
 {
     public static IServiceCollection AddKafkaIntegration(
@@ -160,29 +174,3 @@ public static class KafkaConfiguration
         return services;
     }
 }
-
-public static class EntityFrameworkCoreConfiguration
-{
-     static string GetStatementType(string sql)
-    {
-        sql = sql.TrimStart().ToUpper();
-        if (sql.StartsWith("SELECT")) return "SELECT";
-        if (sql.StartsWith("INSERT")) return "INSERT";
-        if (sql.StartsWith("UPDATE")) return "UPDATE";
-        if (sql.StartsWith("DELETE")) return "DELETE";
-        return "OTHER";
-    }
-
-     static string GetAffectedTables(string sql)
-    {
-        // Simple parsing - you might want to use a proper SQL parser in production
-        var fromIndex = sql.ToUpper().IndexOf("FROM ");
-        if (fromIndex == -1) return "";
-    
-        var tableSection = sql.Substring(fromIndex + 5);
-        var endIndex = tableSection.IndexOfAny(new[] { ' ', '\n', '\r' });
-    
-        return endIndex == -1 ? tableSection : tableSection.Substring(0, endIndex);
-    }
-}
-

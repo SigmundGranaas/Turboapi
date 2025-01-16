@@ -180,10 +180,10 @@ public class DatabaseFixture : IAsyncDisposable
 
 public class KafkaFixture : IAsyncDisposable
 {
-    public KafkaContainer Container { get; }
+    private KafkaContainer Container { get; }
     public IEventPublisher EventPublisher { get; private set; }
     private readonly ILogger<KafkaFixture> _logger;
-    public const string TopicName = "authentication-events"; // Match the topic name used in KafkaSettings
+    private const string TopicName = "authentication-events"; // Match the topic name used in KafkaSettings
     
     public KafkaFixture()
     {

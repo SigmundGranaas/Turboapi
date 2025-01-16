@@ -10,6 +10,18 @@
       - postgres_data:/var/lib/postgresql/data
     networks:
       - turbo
+        
+  geo-db:
+    image: postgis/postgis:17-master
+    container_name: geo_db
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - turbo
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
