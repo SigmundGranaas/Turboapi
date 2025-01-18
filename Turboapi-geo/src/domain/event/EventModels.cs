@@ -3,18 +3,6 @@ using Turboapi_geo.domain.events;
 namespace GeoSpatial.Domain.Events
 {
     /// <summary>
-    /// Publishes events to subscribers
-    /// </summary>
-    public interface IEventPublisher
-    {
-        /// <summary>
-        /// Publishes an event to all subscribers
-        /// </summary>
-        /// <param name="event">Event to publish</param>
-        Task Publish(DomainEvent @event);
-    }
-
-    /// <summary>
     /// Subscribes to events
     /// </summary>
     public interface IEventSubscriber

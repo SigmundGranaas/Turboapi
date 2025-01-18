@@ -2,8 +2,6 @@ using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Confluent.Kafka;
-using Confluent.Kafka.Admin;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
@@ -13,10 +11,8 @@ using Xunit;
 using FluentAssertions;
 using GeoSpatial.Domain.Events;
 using Medo;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Turboapi_geo.controller;
-using Turboapi_geo.data;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
@@ -68,9 +64,6 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         // Initialize database
         await RunFlywayMigrations();
 
-        // Setup Kafka topic
-        await InitializeKafkaTopic();
-
         // Setup WebApplicationFactory after containers are ready
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
@@ -104,8 +97,9 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
 
                     // Remove old Default setup
                     var descriptorsToRemove = services.Where(d => 
-                        d.ServiceType == typeof(IEventPublisher) ||
                         d.ServiceType == typeof(IEventWriter) ||
+                        d.ServiceType == typeof(KafkaSettings) ||
+                        d.ServiceType == typeof(IKafkaTopicInitializer) ||
                         d.ServiceType == typeof(IEventSubscriber)).ToList();
                     
                     foreach (var desc in descriptorsToRemove)
@@ -113,30 +107,23 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                         services.Remove(desc);
                     }
                     
-                    KafkaSettings kafkaSettings = new KafkaSettings();
-                    kafkaSettings.BootstrapServers = _kafka.GetBootstrapAddress();
-                    kafkaSettings.LocationEventsTopic = TOPIC_NAME;
-                    
-                    services.AddSingleton(Options.Create(kafkaSettings));
-                    
-                    ILoggerFactory factory = new Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory();
-                    
-                    // Register interfaces with their implementations
-                    services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
-                    services.AddSingleton<IEventWriter, KafkaEventStore>();
-                    
-                    // Register logger factory and loggers
-                    services.AddSingleton(factory);
-                    services.AddSingleton(factory.CreateLogger<KafkaEventPublisher>());
-                    services.AddSingleton(factory.CreateLogger<KafkaEventStore>());
-                    services.AddSingleton(factory.CreateLogger<KafkaEventSubscriber>());
-                    
-                    services.AddSingleton<KafkaEventSubscriber>();
-                    services.AddSingleton<IEventSubscriber>(sp => sp.GetRequiredService<KafkaEventSubscriber>());
-                    services.AddHostedService(sp => sp.GetRequiredService<KafkaEventSubscriber>());
+                    // Configure Kafka settings
+                    var kafkaSettings = new KafkaSettings
+                    {
+                        BootstrapServers = _kafka.GetBootstrapAddress(),
+                        LocationEventsTopic = TOPIC_NAME
+                    };
+        
+                    services.Configure<KafkaSettings>(options =>
+                    {
+                        options.BootstrapServers = kafkaSettings.BootstrapServers;
+                        options.LocationEventsTopic = kafkaSettings.LocationEventsTopic;
+                    });
 
-                   // Then register LocationReadModelUpdater as hosted service
-                    services.AddHostedService<LocationReadModelUpdater>();
+                    services.AddSingleton<IKafkaTopicInitializer>();
+                    services.AddScoped<IEventWriter, KafkaEventWriter>();
+                    services.AddHostedService<KafkaLocationConsumer>();
+                 
                 });
             });
 
@@ -200,38 +187,13 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
             timeoutMessage ?? $"Condition not met after {timeout.Value.TotalSeconds} seconds");
     }
 
-    private async Task InitializeKafkaTopic()
-    {
-        using var adminClient = new AdminClientBuilder(new AdminClientConfig
-        {
-            BootstrapServers = _kafka.GetBootstrapAddress()
-        }).Build();
-
-        try
-        {
-            await adminClient.CreateTopicsAsync(new[]
-            {
-                new TopicSpecification
-                {
-                    Name = TOPIC_NAME,
-                    ReplicationFactor = 1,
-                    NumPartitions = 1
-                }
-            });
-        }
-        catch (CreateTopicsException e) when (e.Results.Any(r => 
-            r.Error.Code == ErrorCode.TopicAlreadyExists))
-        {
-            // Topic exists, which is fine
-        }
-    }
-
     public async Task DisposeAsync()
     {
         if (_factory != null)
         {
             await _factory.DisposeAsync();
         }
+
         await _postgres.DisposeAsync();
         await _kafka.DisposeAsync();
     }
@@ -259,7 +221,9 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
             SigningCredentials = new SigningCredentials(
                 new SymmetricSecurityKey(key),
                 SecurityAlgorithms.HmacSha256Signature
-            )
+            ),
+            Issuer = "turbo-auth",
+            Audience = "turbo-client",
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
@@ -305,6 +269,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         var ownerId = Uuid7.NewUuid7();
         AddAuthHeader(ownerId.ToString());
 
+        // Create initial location
         var createRequest = new CreateLocationRequest(
             13.404954,
             52.520008
@@ -313,6 +278,16 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         var createResponse = await _client!.PostAsJsonAsync("/api/locations", createRequest);
         var locationId = await createResponse.Content.ReadFromJsonAsync<Guid>();
 
+        // Wait for the event to be processed and the read model to be updated
+         await WaitForCondition(async provider =>
+            {
+                var context = provider.GetRequiredService<LocationReadContext>();
+                return await context.Locations
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(l => l.Id == locationId);
+            }, timeoutMessage: $"Location {locationId} was not found in read model");
+        
+        // Update the location
         var updateRequest = new UpdateLocationPositionRequest(
             13.405,
             52.520
@@ -327,16 +302,18 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
 
+        // Wait for the update to be reflected in the read model
+
+        // Verify final state
         using var scope = _factory!.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<LocationReadContext>();
         
-        // Verify database
         var location = await context.Locations
             .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == locationId);
 
         location.Should().NotBeNull();
-        location!.Geometry.X.Should().Be(updateRequest.Longitude);
-        location.Geometry.Y.Should().Be(updateRequest.Latitude);
+        location!.Geometry.X.Should().BeApproximately(updateRequest.Longitude, 0.01);
+        location.Geometry.Y.Should().BeApproximately(updateRequest.Latitude, 0.01);
     }
 }

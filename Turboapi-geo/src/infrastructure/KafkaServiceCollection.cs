@@ -9,16 +9,17 @@ public static class KafkaServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        // Configure Kafka settings
         services.Configure<KafkaSettings>(
             configuration.GetSection("Kafka"));
 
-
+        // Register the topic initializer
+        services.AddSingleton<IKafkaTopicInitializer, KafkaTopicInitializer>();
+        
         // Register event infrastructure
-        services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
-        services.AddSingleton<IEventWriter, KafkaEventStore>();
-        services.AddSingleton<IEventSubscriber, KafkaEventSubscriber>();
-
+        services.AddSingleton<IEventWriter, KafkaEventWriter>();
+        
+        // Register the Kafka consumer as a hosted service
+        services.AddHostedService<KafkaLocationConsumer>();
         return services;
     }
 }

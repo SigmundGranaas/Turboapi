@@ -71,7 +71,7 @@ public class EfLocationWriteRepository
             double maxLatitude
            )
         {
-            var geometryFactory = new GeometryFactory(new PrecisionModel(), 3857);
+            var geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
             var extent = geometryFactory.CreatePolygon(new Coordinate[]
             {
                 new(minLongitude, minLatitude),

@@ -205,14 +205,11 @@ namespace GeoSpatial.Tests.Doubles
         private async void HandleEvent(object sender, DomainEvent @event)
         {
             var eventType = @event.GetType();
-            foreach (var handlerEntry in _handlers)
+            if (_handlers.TryGetValue(eventType, out var handlers))
             {
-                if (handlerEntry.Key.IsAssignableFrom(eventType))
+                foreach (var handler in handlers)
                 {
-                    foreach (var handler in handlerEntry.Value)
-                    {
-                        await handler(@event);
-                    }
+                    await handler(@event);
                 }
             }
         }

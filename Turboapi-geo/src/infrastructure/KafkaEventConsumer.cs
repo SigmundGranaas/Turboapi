@@ -1,36 +1,34 @@
 using System.Text.Json;
 using Confluent.Kafka;
-using GeoSpatial.Domain.Events;
 using Microsoft.Extensions.Options;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.geo;
+using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 
-public class KafkaEventSubscriber : IEventSubscriber, IHostedService, IDisposable
+public class KafkaLocationConsumer : BackgroundService 
 {
-    private readonly Dictionary<Type, List<Func<DomainEvent, Task>>> _handlers = new();
     private readonly IConsumer<string, string> _consumer;
-    private readonly ILogger<KafkaEventSubscriber> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IKafkaTopicInitializer _topicInitializer;
     private readonly string _topic;
-    private Task? _consumeTask;
-    private readonly CancellationTokenSource _cts = new();
-    private bool _disposed;
+    private readonly ILogger<KafkaLocationConsumer> _logger;
+    private readonly CancellationTokenSource _stopConsumer;
+    private volatile bool _isRunning;
+    private Task _consumeTask;
 
-    // Static mapping of event types for better performance and type safety
-    private static readonly Dictionary<string, Type> EventTypes = new()
-    {
-        { typeof(LocationCreated).Name, typeof(LocationCreated) },
-        { typeof(LocationPositionChanged).Name, typeof(LocationPositionChanged) },
-        { typeof(LocationDeleted).Name, typeof(LocationDeleted) }
-    };
-
-    public KafkaEventSubscriber(
+    public KafkaLocationConsumer(
+        IKafkaTopicInitializer topicInitializer,
         IOptions<KafkaSettings> settings,
-        ILogger<KafkaEventSubscriber> logger)
+        IServiceScopeFactory scopeFactory,
+        ILogger<KafkaLocationConsumer> logger)
     {
-        ArgumentNullException.ThrowIfNull(settings?.Value);
-        
+        _topicInitializer = topicInitializer;
+        _scopeFactory = scopeFactory;
         _logger = logger;
+        _stopConsumer = new CancellationTokenSource();
+        
+        ArgumentNullException.ThrowIfNull(settings?.Value);
         _topic = settings.Value.LocationEventsTopic;
 
         var config = new ConsumerConfig
@@ -39,209 +37,216 @@ public class KafkaEventSubscriber : IEventSubscriber, IHostedService, IDisposabl
             GroupId = "location-read-model-updater",
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
-            // Add some reasonable timeouts
+            EnablePartitionEof = true,
             SessionTimeoutMs = 45000,
             MaxPollIntervalMs = 300000,
-            HeartbeatIntervalMs = 3000
+            HeartbeatIntervalMs = 3000,
+            SecurityProtocol = SecurityProtocol.Plaintext,
+            AllowAutoCreateTopics = true,
+            EnableAutoOffsetStore = false
         };
 
         _consumer = new ConsumerBuilder<string, string>(config)
-            .SetErrorHandler((_, e) => _logger.LogError("Kafka error: {Error}", e.Reason))
-            .SetPartitionsAssignedHandler((_, partitions) =>
+            .SetErrorHandler((_, e) => 
             {
-                logger.LogInformation("Assigned partitions: {Partitions}", 
-                    string.Join(", ", partitions.Select(p => p.Partition.Value)));
-            })
-            .SetPartitionsRevokedHandler((_, partitions) =>
-            {
-                logger.LogInformation("Revoked partitions: {Partitions}", 
-                    string.Join(", ", partitions.Select(p => p.Partition.Value)));
+                _logger.LogError("Kafka error: {Error}", e.Reason);
+                if (e.IsFatal)
+                {
+                    _stopConsumer.Cancel();
+                }
             })
             .Build();
     }
-
-    public Task StartAsync(CancellationToken cancellationToken)
+    private static readonly Dictionary<string, Type> EventTypes = new()
     {
-        _logger.LogInformation("Starting Kafka consumer for topic: {Topic}", _topic);
-        _consumer.Subscribe(_topic);
-        _consumeTask = Task.Run(ConsumeAsync, cancellationToken);
-        return Task.CompletedTask;
-    }
+        { nameof(LocationCreated), typeof(LocationCreated) },
+        { nameof(LocationPositionChanged), typeof(LocationPositionChanged) },
+        { nameof(LocationDeleted), typeof(LocationDeleted) }
+    };
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
-            _cts.Cancel();
-            if (_consumeTask != null)
+            _isRunning = true;
+            _logger.LogInformation("Starting Kafka consumer for topic: {Topic}", _topic);
+            
+            await _topicInitializer.EnsureTopicExists(_topic);
+
+            // Start the consume loop in a separate task
+            _consumeTask = Task.Run(async () =>
             {
-                await Task.WhenAny(_consumeTask, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken));
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // Normal shutdown
-        }
-    }
-
-    private async Task ConsumeAsync()
-    {
-        while (!_cts.Token.IsCancellationRequested)
-        {
-            try
-            {
-                var result = _consumer.Consume(TimeSpan.FromMilliseconds(100));
-                if (result == null) continue;
-
-                _logger.LogDebug("Received message with key: {Key}", result.Message.Key);
-                
-                var domainEvent = DeserializeEvent(result.Message);
-                if (domainEvent == null) continue;
-
-                var eventType = domainEvent.GetType();
-                if (_handlers.TryGetValue(eventType, out var handlers))
+                try
                 {
-                    var success = true;
-                    foreach (var handler in handlers)
+                    _consumer.Subscribe(_topic);
+
+                    while (!stoppingToken.IsCancellationRequested && _isRunning)
                     {
                         try
                         {
-                            await handler(domainEvent);
+                            var consumeResult = _consumer.Consume(TimeSpan.FromMilliseconds(100));
+                            if (consumeResult == null) continue;
+
+                            if (consumeResult.IsPartitionEOF)
+                            {
+                                _logger.LogDebug("Reached end of partition: {Partition}", consumeResult.Partition);
+                                continue;
+                            }
+
+                            await ProcessMessage(consumeResult, stoppingToken);
+                        }
+                        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+                        {
+                            break;
                         }
                         catch (Exception ex)
                         {
-                            success = false;
-                            _logger.LogError(ex, "Error handling event {EventType} with ID {EventId}", 
-                                eventType.Name, domainEvent.Id);
+                            _logger.LogError(ex, "Error processing message");
+                            if (!stoppingToken.IsCancellationRequested)
+                            {
+                                await Task.Delay(1000, stoppingToken);
+                            }
                         }
                     }
-
-                    if (success)
-                    {
-                        _consumer.Commit(result);
-                        _logger.LogInformation("Successfully processed {EventType} with ID {EventId}", 
-                            eventType.Name, domainEvent.Id);
-                    }
                 }
-            }
-            catch (ConsumeException ex)
-            {
-                _logger.LogError(ex, "Error consuming message");
-                await Task.Delay(1000, _cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Unexpected error while consuming messages");
-                await Task.Delay(1000, _cts.Token);
-            }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Fatal error in consumer loop");
+                }
+                finally
+                {
+                    await CleanupAsync();
+                }
+            }, stoppingToken);
+
+            // Wait for the consume task to complete when the application is stopping
+            await Task.WhenAny(_consumeTask, Task.Delay(Timeout.Infinite, stoppingToken));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in ExecuteAsync");
         }
     }
 
-    private DomainEvent? DeserializeEvent(Message<string, string> message)
+    private async Task ProcessMessage(ConsumeResult<string, string> result, CancellationToken cancellationToken)
     {
         try
         {
+            var message = result.Message;
             if (string.IsNullOrEmpty(message.Key) || string.IsNullOrEmpty(message.Value))
             {
                 _logger.LogError("Received message with null/empty key or value");
-                return null;
+                _consumer.Commit(result);
+                return;
             }
 
             if (!EventTypes.TryGetValue(message.Key, out var eventType))
             {
                 _logger.LogError("Unknown event type: {EventType}", message.Key);
-                return null;
+                _consumer.Commit(result);
+                return;
             }
-            
 
             var domainEvent = (DomainEvent)JsonSerializer.Deserialize(message.Value, eventType, JsonConfig.CreateDefault())!;
-            
             if (domainEvent == null)
             {
                 _logger.LogError("Failed to deserialize event of type {EventType}", message.Key);
-                return null;
+                _consumer.Commit(result);
+                return;
             }
 
-            return domainEvent;
-        }
-        catch (JsonException ex)
-        {
-            _logger.LogError(ex, "JSON deserialization error for event type {EventType}", message.Key);
-            return null;
+            using var scope = _scopeFactory.CreateScope();
+            var handlerType = typeof(ILocationEventHandler<>).MakeGenericType(eventType);
+            var handler = scope.ServiceProvider.GetRequiredService(handlerType);
+
+            await ((dynamic)handler).HandleAsync((dynamic)domainEvent, cancellationToken);
+            
+            // Store the offset before committing
+            _consumer.StoreOffset(result);
+            _consumer.Commit(result);
+            
+            _logger.LogInformation("Successfully processed and committed {EventType} at offset {Offset}", 
+                eventType.Name, result.Offset.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error deserializing event");
-            return null;
+            _logger.LogError(ex, "Error processing message at offset {Offset}", result.Offset.Value);
+            // Don't rethrow - let the consumer continue processing
         }
     }
 
-    public void Subscribe<T>(Func<T, Task> handler) where T : DomainEvent
+
+    private async Task CleanupAsync()
     {
-        ArgumentNullException.ThrowIfNull(handler);
-        
-        var eventType = typeof(T);
-        
-        if (!EventTypes.ContainsValue(eventType))
+        try
         {
-            throw new ArgumentException($"Unsupported event type: {eventType.Name}");
-        }
-
-        lock (_handlers)
-        {
-            if (!_handlers.ContainsKey(eventType))
+            _isRunning = false;
+            var assignment = _consumer.Assignment;
+            if (assignment?.Count > 0)
             {
-                _handlers[eventType] = new List<Func<DomainEvent, Task>>();
-            }
-
-            _handlers[eventType].Add(@event => handler((T)@event));
-        }
-        
-        _logger.LogInformation("Subscribed to event type: {EventType}", typeof(T).Name);
-    }
-
-    public void Unsubscribe<T>(Func<T, Task> handler) where T : DomainEvent
-    {
-        ArgumentNullException.ThrowIfNull(handler);
-        
-        var eventType = typeof(T);
-        
-        lock (_handlers)
-        {
-            if (_handlers.TryGetValue(eventType, out var handlers))
-            {
-                handlers.RemoveAll(h => h.Target == handler.Target && h.Method == handler.Method);
-                
-                if (!handlers.Any())
+                try
                 {
-                    _handlers.Remove(eventType);
+                    _consumer.Commit();
+                    _logger.LogInformation("Successfully committed offsets during shutdown");
+                }
+                catch (KafkaException ex) when (ex.Error.Code == ErrorCode.OffsetNotAvailable)
+                {
+                    _logger.LogInformation("No offsets to commit during shutdown");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error committing offsets during shutdown");
                 }
             }
         }
-        
-        _logger.LogInformation("Unsubscribed from event type: {EventType}", typeof(T).Name);
-    }
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        
-        _cts.Cancel();
-        try
-        {
-            _consumer.Close();
-        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error closing Kafka consumer");
+            _logger.LogError(ex, "Error during cleanup");
         }
-        _consumer.Dispose();
-        _cts.Dispose();
-        
-        _disposed = true;
+        finally
+        {
+            try
+            {
+                _consumer.Close();
+                _logger.LogInformation("Consumer closed");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error closing consumer");
+            }
+        }
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _isRunning = false;
+        _stopConsumer.Cancel();
+
+        if (_consumeTask != null)
+        {
+            try
+            {
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                await Task.WhenAny(_consumeTask, Task.Delay(Timeout.Infinite, timeoutCts.Token));
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogWarning("Shutdown timeout reached");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during stop");
+            }
+        }
+
+        await base.StopAsync(cancellationToken);
+    }
+
+    public override void Dispose()
+    {
+        _consumer?.Dispose();
+        _stopConsumer?.Dispose();
+        base.Dispose();
     }
 }
+

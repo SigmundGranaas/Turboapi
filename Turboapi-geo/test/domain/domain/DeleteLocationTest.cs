@@ -31,7 +31,7 @@ namespace Turboapi_geo.test.domain.domain;
             _readRepository = new InMemoryLocationReadModel(dict);
             _writeRepository = new InMemoryLocationWriteRepository(dict);
             _handler = new DeleteLocationHandler( _eventStore, _readRepository);
-            _geometryFactory = new GeometryFactory(new PrecisionModel(), 3857);
+            _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         }
 
         [Fact]

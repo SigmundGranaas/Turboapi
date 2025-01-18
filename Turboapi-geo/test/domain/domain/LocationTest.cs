@@ -10,7 +10,7 @@ public class LocationTests
 
     public LocationTests()
     {
-        _geometryFactory = new GeometryFactory(new PrecisionModel(), 3857);
+        _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
     }
 
     [Fact]

@@ -36,7 +36,7 @@ namespace Turboapi_geo.controller;
 
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Guid>> Create([FromBody] CreateLocationRequest request)
         {
@@ -57,7 +57,7 @@ namespace Turboapi_geo.controller;
             return CreatedAtAction(
                 nameof(GetById), 
                 new { id = locationId }, 
-                locationId
+                new CreateLocationResponse(locationId)
             );
         }
 
@@ -173,6 +173,10 @@ namespace Turboapi_geo.controller;
     public record UpdateLocationPositionRequest(
         double Longitude,
         double Latitude
+    );
+
+    public record CreateLocationResponse(
+        Guid Id
     );
 
     public record LocationResponse(

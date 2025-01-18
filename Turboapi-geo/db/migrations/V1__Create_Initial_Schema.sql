@@ -42,7 +42,7 @@ EXECUTE FUNCTION update_updated_at_column();
 COMMENT ON TABLE locations_read IS 'Read model for location data with PostGIS support';
 COMMENT ON COLUMN locations_read.id IS 'UUID primary key';
 COMMENT ON COLUMN locations_read.owner_id IS 'Owner identifier for access control';
-COMMENT ON COLUMN locations_read.geometry IS 'PostGIS Point geometry in EPSG:3857 (Web Mercator)';
+COMMENT ON COLUMN locations_read.geometry IS 'PostGIS Point geometry in EPSG:4326';
 COMMENT ON COLUMN locations_read.is_deleted IS 'Soft delete flag';
 COMMENT ON COLUMN locations_read.created_at IS 'Timestamp of record creation';
 COMMENT ON COLUMN locations_read.updated_at IS 'Timestamp of last update';

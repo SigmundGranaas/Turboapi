@@ -23,7 +23,7 @@ namespace Turboapi_geo.test.domain.domain
             var bus = new TestMessageBus();
             _eventStore = new TestEventWriter(bus);
             _eventReader = new TestEventReader(bus);
-            _geometryFactory = new GeometryFactory(new PrecisionModel(), 3857);
+            _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
             _handler = new CreateLocationHandler( _eventStore, _geometryFactory);
         }
 

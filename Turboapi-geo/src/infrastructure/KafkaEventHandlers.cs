@@ -3,11 +3,13 @@ using System.Diagnostics.Metrics;
 using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using GeoSpatial.Domain.Events;
 using Microsoft.Extensions.Options;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using Turboapi_geo.domain.events;
+using Turboapi_geo.geo;
 using Turboapi.infrastructure;
 
 namespace Turboapi_geo.infrastructure;
@@ -16,17 +18,24 @@ public class KafkaEventWriter : IEventWriter, IDisposable
 {
     private readonly IProducer<string, string> _producer;
     private readonly string _topic;
+    private IKafkaTopicInitializer _topicInitializer;
+
     private readonly ILogger<KafkaEventWriter> _logger;
     private readonly ActivitySource _activitySource;
     private readonly Meter _meter;
+    private bool _topicCreated;
+
     private readonly Counter<long> _eventWriteCounter;
     private readonly Histogram<double> _writeLatencyHistogram;
     private readonly Counter<long> _writeErrorCounter;
 
     public KafkaEventWriter(
+        IKafkaTopicInitializer topicInitializer,
         IOptions<KafkaSettings> settings,
         ILogger<KafkaEventWriter> logger)
     {
+        _topicInitializer = topicInitializer;
+
         _logger = logger;
         _activitySource = new ActivitySource("KafkaEventWriter");
         _meter = new Meter("KafkaEventWriter");
@@ -50,7 +59,8 @@ public class KafkaEventWriter : IEventWriter, IDisposable
         var config = new ProducerConfig
         {
             BootstrapServers = settings.Value.BootstrapServers,
-            EnableIdempotence = true
+            EnableIdempotence = true,
+            SecurityProtocol = SecurityProtocol.Plaintext,
         };
 
         _producer = new ProducerBuilder<string, string>(config)
@@ -65,9 +75,12 @@ public class KafkaEventWriter : IEventWriter, IDisposable
             "Initialized Kafka event writer for topic {Topic} with bootstrap servers {Servers}", 
             _topic, settings.Value.BootstrapServers);
     }
-
+    
+    
     public async Task AppendEvents(IEnumerable<DomainEvent> events)
     {
+        await _topicInitializer.EnsureTopicExists(_topic);
+
         using var activity = _activitySource.StartActivity(
             "Append Events",
             ActivityKind.Producer);
@@ -77,19 +90,21 @@ public class KafkaEventWriter : IEventWriter, IDisposable
         
         try 
         {
+
             _logger.LogInformation(
                 "Starting to append {Count} events to topic {Topic}", 
                 eventsList.Count, _topic);
-
+            
             foreach (var @event in eventsList)
             {
+                var headers = new Headers();
+
                 var message = new Message<string, string>
                 {
                     Key = @event.GetType().Name,
-                    Value = JsonSerializer.Serialize(@event),
-                    Headers = CreateHeaders(activity)
+                    Value = JsonSerializer.Serialize(@event, JsonConfig.CreateDefault()),
+                    Headers = headers
                 };
-
                 var result = await _producer.ProduceAsync(_topic, message);
                 
                 _eventWriteCounter.Add(1);
