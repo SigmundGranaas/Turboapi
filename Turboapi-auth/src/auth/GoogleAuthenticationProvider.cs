@@ -79,7 +79,7 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
             }
 
             // Update token information
-            ((OAuthAuthentication)authMethod).AccessToken = tokenInfo.AccessToken;
+            authMethod.AccessToken = tokenInfo.AccessToken;
             authMethod.LastUsedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
