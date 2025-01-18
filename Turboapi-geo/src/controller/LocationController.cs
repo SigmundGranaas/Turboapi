@@ -36,9 +36,9 @@ namespace Turboapi_geo.controller;
 
         [HttpPost]
         [Authorize]
-        [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status201Created)]
+        [ProducesResponseType(typeof(CreateLocationResponse), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<Guid>> Create([FromBody] CreateLocationRequest request)
+        public async Task<ActionResult<CreateLocationResponse>> Create([FromBody] CreateLocationRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)

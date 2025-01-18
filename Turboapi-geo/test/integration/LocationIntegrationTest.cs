@@ -120,10 +120,9 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                         options.LocationEventsTopic = kafkaSettings.LocationEventsTopic;
                     });
 
-                    services.AddSingleton<IKafkaTopicInitializer>();
-                    services.AddScoped<IEventWriter, KafkaEventWriter>();
+                    services.AddSingleton<IKafkaTopicInitializer, KafkaTopicInitializer>();
+                    services.AddSingleton<IEventWriter, KafkaEventWriter>();
                     services.AddHostedService<KafkaLocationConsumer>();
-                 
                 });
             });
 
@@ -247,7 +246,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
 
         // Assert
         response.IsSuccessStatusCode.Should().BeTrue();
-        var locationId = await response.Content.ReadFromJsonAsync<Guid>();
+        var locationId = await response.Content.ReadFromJsonAsync<CreateLocationResponse>();
 
         // Wait for the event to be processed and the read model to be updated
         var location = await WaitForCondition(async provider =>
@@ -255,7 +254,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
             var context = provider.GetRequiredService<LocationReadContext>();
             return await context.Locations
                 .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Id == locationId);
+                .FirstOrDefaultAsync(l => l.Id == locationId.Id);
         }, timeoutMessage: $"Location {locationId} was not found in read model");
         
         location!.OwnerId.Should().Be(ownerId.ToString());
@@ -276,7 +275,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         );
 
         var createResponse = await _client!.PostAsJsonAsync("/api/locations", createRequest);
-        var locationId = await createResponse.Content.ReadFromJsonAsync<Guid>();
+        var locationId = await createResponse.Content.ReadFromJsonAsync<CreateLocationResponse>();
 
         // Wait for the event to be processed and the read model to be updated
          await WaitForCondition(async provider =>
@@ -284,7 +283,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                 var context = provider.GetRequiredService<LocationReadContext>();
                 return await context.Locations
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(l => l.Id == locationId);
+                    .FirstOrDefaultAsync(l => l.Id == locationId.Id);
             }, timeoutMessage: $"Location {locationId} was not found in read model");
         
         // Update the location
@@ -295,7 +294,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
 
         // Act
         var response = await _client.PutAsJsonAsync(
-            $"/api/locations/{locationId}/position", 
+            $"/api/locations/{locationId.Id}/position", 
             updateRequest
         );
 
@@ -310,7 +309,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         
         var location = await context.Locations
             .AsNoTracking()
-            .FirstOrDefaultAsync(l => l.Id == locationId);
+            .FirstOrDefaultAsync(l => l.Id == locationId.Id);
 
         location.Should().NotBeNull();
         location!.Geometry.X.Should().BeApproximately(updateRequest.Longitude, 0.01);

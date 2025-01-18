@@ -23,7 +23,7 @@ public class CreateLocationHandler
         );
 
         var location = Location.Create(command.OwnerId.ToString(), point);
-         await _eventStore.AppendEvents(location.Events);
+        _eventStore.AppendEvents(location.Events);
 
         return location.Id;
     }

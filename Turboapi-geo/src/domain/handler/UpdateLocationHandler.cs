@@ -37,6 +37,6 @@ public class UpdateLocationPositionHandler
         );
 
         location.UpdatePosition(newPoint);
-        await _eventStore.AppendEvents(location.Events);
+        _eventStore.AppendEvents(location.Events);
     }
 }
