@@ -24,6 +24,11 @@ public class DeleteLocationHandler
         if (location == null)
             throw new LocationNotFoundException(command.LocationId.ToString());
 
+        if (location.OwnerId != command.OwnerId.ToString())
+        {
+            throw new UnauthorizedException("Only the owner is allowed to delete the location");
+        }
+        
         location.Delete();
         await _eventStore.AppendEvents(location.Events);
     }

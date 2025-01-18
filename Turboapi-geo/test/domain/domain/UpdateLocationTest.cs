@@ -1,5 +1,6 @@
 using GeoSpatial.Domain.Events;
 using GeoSpatial.Tests.Doubles;
+using Medo;
 using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.exception;
@@ -37,9 +38,10 @@ namespace Turboapi_geo.test.domain.domain;
     [Fact]
     public async Task Handle_WithValidCommand_ShouldUpdateLocationAndPublishEvents()
     {
+        var owner = Uuid7.NewUuid7();
         // Arrange
         var location = Location.Create(
-            "owner123",
+            owner.ToString(),
             _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
         );
 
@@ -52,6 +54,7 @@ namespace Turboapi_geo.test.domain.domain;
         _store.Add(locationEntity.Id, locationEntity);
 
         var command = new Commands.UpdateLocationPositionCommand(
+            owner,
             location.Id, 
             13.405, 
             52.520);
@@ -81,6 +84,7 @@ namespace Turboapi_geo.test.domain.domain;
         // Arrange
         var command = new Commands.UpdateLocationPositionCommand(
             Guid.NewGuid(), 
+            Guid.NewGuid(), 
             13.405, 
             52.520);
 
@@ -92,5 +96,46 @@ namespace Turboapi_geo.test.domain.domain;
         // Verify no events were published
         var events = await _eventReader.GetEventsAfter(0);
         Assert.Empty(events);
+    }
+    
+    [Fact]
+    public async Task Handle_WithIncorrectOwner_ShouldThrowNotFoundException()
+    {
+        // Arrange
+        var correctOwner = Uuid7.NewUuid7();
+        var incorrectOwner = Uuid7.NewUuid7();
+    
+        var location = Location.Create(
+            correctOwner.ToString(),
+            _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+        );
+
+        var locationEntity = new LocationReadEntity
+        {
+            Geometry = location.Geometry,
+            Id = location.Id,
+            OwnerId = location.OwnerId
+        };
+        _store.Add(locationEntity.Id, locationEntity);
+
+        var command = new Commands.UpdateLocationPositionCommand(
+            incorrectOwner,  // Using incorrect owner ID
+            location.Id,     // Existing location ID
+            13.405, 
+            52.520);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<UnauthorizedException>(
+            () => _handler.Handle(command)
+        );
+
+        // Verify no events were published
+        var events = await _eventReader.GetEventsAfter(0);
+        Assert.Empty(events);
+
+        // Verify location was not modified
+        var unchangedLocation = await _readRepository.GetById(location.Id);
+        Assert.Equal(13.404954, unchangedLocation.Geometry.X, 2);
+        Assert.Equal(52.520008, unchangedLocation.Geometry.Y, 2);
     }
 }

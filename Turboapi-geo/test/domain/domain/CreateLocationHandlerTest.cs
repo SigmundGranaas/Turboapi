@@ -1,5 +1,6 @@
 using GeoSpatial.Domain.Events;
 using GeoSpatial.Tests.Doubles;
+using Medo;
 using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.handler;
@@ -29,8 +30,9 @@ namespace Turboapi_geo.test.domain.domain
         [Fact]
         public async Task Handle_WithValidCommand_ShouldCreateLocationAndPublishEvents()
         {
+            var owner = Uuid7.NewUuid7();
             // Arrange
-            var command = new Commands.CreateLocationCommand("owner123", 13.404954, 52.520008);
+            var command = new Commands.CreateLocationCommand(owner, 13.404954, 52.520008);
 
             // Act
             var locationId = await _handler.Handle(command);

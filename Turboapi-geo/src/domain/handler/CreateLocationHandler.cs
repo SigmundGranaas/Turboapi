@@ -22,7 +22,7 @@ public class CreateLocationHandler
             new Coordinate(command.Longitude, command.Latitude)
         );
 
-        var location = Location.Create(command.OwnerId, point);
+        var location = Location.Create(command.OwnerId.ToString(), point);
         await _eventStore.AppendEvents(location.Events);
 
         return location.Id;

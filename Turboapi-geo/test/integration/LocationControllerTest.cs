@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using GeoSpatial.Domain.Events;
 using GeoSpatial.Tests.Doubles;
 using Medo;
@@ -67,6 +68,24 @@ public class LocationsControllerTests
         );
     }
     
+    private void SetupControllerContext(string userId)
+    {
+        var claims = new List<Claim>
+        {
+            new (ClaimTypes.NameIdentifier, userId)
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        var claimsPrincipal = new ClaimsPrincipal(identity);
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = claimsPrincipal
+            }
+        };
+    }
+    
     private async Task InitializeAsync()
     {
         await _locationReadModelUpdater.StartAsync(_cts.Token);
@@ -77,9 +96,12 @@ public class LocationsControllerTests
     {
         await InitializeAsync();
         var owner = Uuid7.NewUuid7();
+        
+        // Setup user context
+        SetupControllerContext(owner.ToString());
+        
         // Arrange
         var request = new CreateLocationRequest(
-            owner.ToString(),
             13.404954,
             52.520008
         );
@@ -97,7 +119,7 @@ public class LocationsControllerTests
         // Verify domain model
         var location = await _writeRepository.GetById(locationId);
         Assert.NotNull(location);
-        Assert.Equal(request.OwnerId, location.OwnerId);
+        Assert.Equal(owner.ToString(), location.OwnerId);
         Assert.Equal(request.Longitude, location.Geometry.X);
         Assert.Equal(request.Latitude, location.Geometry.Y);
 
@@ -106,12 +128,12 @@ public class LocationsControllerTests
         var createdEvent = Assert.Single(events);
         var locationCreated = Assert.IsType<LocationCreated>(createdEvent);
         Assert.Equal(locationId, locationCreated.LocationId);
-        Assert.Equal(request.OwnerId, locationCreated.OwnerId);
+        Assert.Equal(owner.ToString(), locationCreated.OwnerId);
 
         // Verify read model was updated
         var readModel = await _readModel.GetById(locationId);
         Assert.NotNull(readModel);
-        Assert.Equal(request.OwnerId, readModel.OwnerId);
+        Assert.Equal(owner.ToString(), readModel.OwnerId);
         Assert.Equal(request.Longitude, readModel.Geometry.X);
         Assert.Equal(request.Latitude, readModel.Geometry.Y);
     }
@@ -120,13 +142,14 @@ public class LocationsControllerTests
     public async Task UpdatePosition_ShouldUpdateLocationAndReadModel()
     {
         await InitializeAsync();
-
-        
         var owner = Uuid7.NewUuid7();
+
+        // Setup user context
+        SetupControllerContext(owner.ToString());
+        
 
         // Arrange - Create a location first
         var createRequest = new CreateLocationRequest(
-            owner.ToString(),
             13.404954,
             52.520008
         );
@@ -173,10 +196,12 @@ public class LocationsControllerTests
         await InitializeAsync();
 
         var owner = Uuid7.NewUuid7();
+        
+        // Setup user context
+        SetupControllerContext(owner.ToString());
 
         // Arrange - Create a location first
         var createRequest = new CreateLocationRequest(
-            owner.ToString(),
             13.404954,
             52.520008
         );
@@ -210,10 +235,12 @@ public class LocationsControllerTests
         await InitializeAsync();
 
         var owner = Uuid7.NewUuid7().ToString();
+        
+        // Setup user context
+        SetupControllerContext(owner);
 
         // Arrange - Create two locations
         var oslo = new CreateLocationRequest(
-            owner,
             10.757933,
             59.911491
         );
@@ -223,7 +250,6 @@ public class LocationsControllerTests
         await Task.Delay(100); // Allow event processing
 
         var berlin = new CreateLocationRequest(
-            guid,
             13.404954,
             52.520008
         );
@@ -234,7 +260,6 @@ public class LocationsControllerTests
         
         // Act - Query for Berlin area
         var result = await _controller.GetInExtent(
-            guid,
             13.404,
             52.519,
             13.405,

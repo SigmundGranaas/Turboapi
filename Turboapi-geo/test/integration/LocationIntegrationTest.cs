@@ -1,14 +1,20 @@
 using System.Diagnostics;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.PostgreSql;
 using Testcontainers.Kafka;
-using Confluent.Kafka;
-using Confluent.Kafka.Admin;
+
 using Xunit;
 using FluentAssertions;
 using GeoSpatial.Domain.Events;
+using Medo;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Turboapi_geo.controller;
 using Turboapi_geo.data;
 using Turboapi_geo.domain.query.model;
@@ -25,12 +31,13 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
     private HttpClient? _client;
     private readonly string _projectRoot;
     private const string TOPIC_NAME = "location-events";
+    private string? _jwtSecret;
 
     public LocationControllerIntegrationTests()
     {
         // Setup PostgreSQL with PostGIS
         _postgres = new PostgreSqlBuilder()
-            .WithImage("postgis/postgis:17-master")
+            .WithImage("postgis/postgis:17-3.5-alpine")
             .WithDatabase("geodb")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -38,6 +45,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
 
         // Setup Kafka
         _kafka = new KafkaBuilder()
+            .WithImage("confluentinc/cp-kafka:6.2.10")
             .WithName("kafka-integration")
             .WithPortBinding(9092, true)  // External port
             .Build();
@@ -69,8 +77,17 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
             {
                 builder.UseEnvironment("Test");
                 
-                builder.ConfigureServices(services =>
+                builder.ConfigureServices((context, services) =>
                 {
+                    // Get JWT secret from configuration
+                    _jwtSecret = context.Configuration["Jwt:Key"];
+                    
+                    if (string.IsNullOrEmpty(_jwtSecret))
+                    {
+                        throw new Exception("JWT secret not found in configuration");
+                    }
+
+                    
                     // Replace default DbContext
                     var descriptor = services.SingleOrDefault(d => 
                         d.ServiceType == typeof(DbContextOptions<LocationReadContext>));
@@ -218,17 +235,49 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         await _postgres.DisposeAsync();
         await _kafka.DisposeAsync();
     }
+    
+    // Helper method to add auth header to requests
+    private void AddAuthHeader(string userId)
+    {
+        var token = GenerateJwtToken(userId);
+        _client!.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+    }
+    
+    private string GenerateJwtToken(string userId)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(_jwtSecret!);
+        
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[]
+            {
+                new Claim(ClaimTypes.NameIdentifier, userId),
+            }),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature
+            )
+        };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
+    }
+
 
     [Fact]
     public async Task CreateLocation_ShouldPersistToDatabase_AndPublishEvent()
     {
-        // Arrange
+        var ownerId = Uuid7.NewUuid7();
+        AddAuthHeader(ownerId.ToString());
+
         var createRequest = new CreateLocationRequest(
-            "integration_test_owner",
             13.404954,
             52.520008
         );
-
+        
         // Act
         var response = await _client!.PostAsJsonAsync("/api/locations", createRequest);
 
@@ -245,21 +294,22 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                 .FirstOrDefaultAsync(l => l.Id == locationId);
         }, timeoutMessage: $"Location {locationId} was not found in read model");
         
-        location!.OwnerId.Should().Be(createRequest.OwnerId);
+        location!.OwnerId.Should().Be(ownerId.ToString());
         location.Geometry.X.Should().Be(createRequest.Longitude);
         location.Geometry.Y.Should().Be(createRequest.Latitude);
-        
     }
 
     [Fact]
     public async Task UpdateLocation_ShouldUpdateDatabase_AndPublishEvent()
     {
-        // Arrange - First create a location
+        var ownerId = Uuid7.NewUuid7();
+        AddAuthHeader(ownerId.ToString());
+
         var createRequest = new CreateLocationRequest(
-            "integration_test_owner",
             13.404954,
             52.520008
         );
+
         var createResponse = await _client!.PostAsJsonAsync("/api/locations", createRequest);
         var locationId = await createResponse.Content.ReadFromJsonAsync<Guid>();
 

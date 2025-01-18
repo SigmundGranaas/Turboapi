@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.handler;
@@ -33,12 +35,19 @@ namespace Turboapi_geo.controller;
         }
 
         [HttpPost]
+        [Authorize]
         [ProducesResponseType(typeof(Guid), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<Guid>> Create([FromBody] CreateLocationRequest request)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Forbid();
+            }
+            
             var command = new Commands.CreateLocationCommand(
-                request.OwnerId,
+                Guid.Parse(userId),
                 request.Longitude,
                 request.Latitude
             );
@@ -53,13 +62,21 @@ namespace Turboapi_geo.controller;
         }
 
         [HttpPut("{id}/position")]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePosition(
             Guid id, 
             [FromBody] UpdateLocationPositionRequest request)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Forbid();
+            }
+            
             var command = new Commands.UpdateLocationPositionCommand(
+                Guid.Parse(userId),
                 id,
                 request.Longitude,
                 request.Latitude
@@ -77,11 +94,18 @@ namespace Turboapi_geo.controller;
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var command = new Commands.DeleteLocationCommand(id);
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Forbid();
+            }
+            
+            var command = new Commands.DeleteLocationCommand(id, Guid.Parse(userId));
 
             try
             {
@@ -95,11 +119,19 @@ namespace Turboapi_geo.controller;
         }
 
         [HttpGet("{id}")]
+        [Authorize]
         [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<LocationResponse>> GetById(Guid id)
         {
-            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id));
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Forbid();
+            }
+            
+            
+            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, Guid.Parse(userId)));
             if (location == null)
                 return NotFound();
 
@@ -107,16 +139,22 @@ namespace Turboapi_geo.controller;
         }
 
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(IEnumerable<LocationResponse>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<LocationResponse>>> GetInExtent(
-            [FromQuery] string ownerId,
             [FromQuery] double minLon,
             [FromQuery] double minLat,
             [FromQuery] double maxLon,
             [FromQuery] double maxLat)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId == null)
+            {
+                return Forbid();
+            }
+            
             var locations = await _locationsQueryHandler.Handle(new GetLocationsInExtentQuery(
-                ownerId,
+                Guid.Parse(userId),
                 minLon,
                 minLat,
                 maxLon,
@@ -128,7 +166,6 @@ namespace Turboapi_geo.controller;
     }
 
     public record CreateLocationRequest(
-        string OwnerId,
         double Longitude,
         double Latitude
     );
@@ -140,14 +177,12 @@ namespace Turboapi_geo.controller;
 
     public record LocationResponse(
         Guid Id,
-        Guid OwnerId,
         double Longitude,
         double Latitude
         )
     {
         public static LocationResponse FromDto(LocationDto dto) => new(
             dto.id,
-            dto.ownerId,
             dto.geometry.X,
             dto.geometry.Y
         );

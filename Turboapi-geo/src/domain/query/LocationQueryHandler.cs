@@ -39,12 +39,13 @@ public class GetLocationsInExtentHandler
     public async Task<IEnumerable<LocationDto>> Handle(GetLocationsInExtentQuery query)
     {
         var locations = await _readModel.GetLocationsInExtent(
-            query.OwnerId,
+            query.Owner.ToString(),
             query.MinLongitude,
             query.MinLatitude,
             query.MaxLongitude,
             query.MaxLatitude
         );
+        
         return locations.Select(loc => new LocationDto(loc.Id, Guid.Parse(loc.OwnerId), loc.Geometry));
     }
 }

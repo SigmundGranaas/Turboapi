@@ -27,6 +27,11 @@ public class UpdateLocationPositionHandler
         if (location == null)
             throw new LocationNotFoundException(command.LocationId.ToString());
 
+        if (location.OwnerId != command.OwnerId.ToString())
+        {
+            throw new UnauthorizedException("Only the owner is allowed to update the location");
+        }
+
         var newPoint = _geometryFactory.CreatePoint(
             new Coordinate(command.Longitude, command.Latitude)
         );

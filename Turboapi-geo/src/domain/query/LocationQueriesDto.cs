@@ -3,10 +3,10 @@ using NetTopologySuite.Geometries;
 
 namespace Turboapi_geo.domain.queries
 {
-    public record GetLocationByIdQuery(Guid LocationId);
+    public record GetLocationByIdQuery(Guid LocationId, Guid Owner);
     
     public record GetLocationsInExtentQuery(
-        string OwnerId,
+        Guid Owner,
         double MinLongitude,
         double MinLatitude,
         double MaxLongitude,
