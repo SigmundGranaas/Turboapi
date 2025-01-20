@@ -25,7 +25,7 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AThrowHelper_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FSourcesCache_003F8874fa6fbc50b05ba8332188d36141eb4bba81fb1f92189ba9d7a25f545_003FThrowHelper_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003ATracerProviderBuilderExtensions_002EProducer_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FSourcesCache_003Fa86f744215d39b5e63a947fa0d1c66b23136056c2f55b36f7c7b1f762dddb9f_003FTracerProviderBuilderExtensions_002EProducer_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AWebApplicationBuilder_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FSourcesCache_003F504c8bdd5124a1bbe189b9d9082277bdbfeff4c69af26aa899960a929e99_003FWebApplicationBuilder_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4698929d_002D3917_002D42f0_002Db97d_002Dad362d2ce31e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="All tests from LocationIntegrationTest.cs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4698929d_002D3917_002D42f0_002Db97d_002Dad362d2ce31e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from LocationIntegrationTest.cs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
   &lt;Or&gt;
     &lt;ProjectFile&gt;816F75C5-73CC-4045-A4EF-00D55A3C8C11/d:test/d:integration/f:LocationIntegrationTest.cs&lt;/ProjectFile&gt;
     &lt;TestAncestor&gt;
@@ -33,12 +33,7 @@
     &lt;/TestAncestor&gt;
   &lt;/Or&gt;
 &lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=6e5609d3_002D1fb6_002D486a_002Db093_002Da4ec99539f79/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="CreateLocation_ShouldPersistToDatabase_AndPublishEvent" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.integration.LocationControllerIntegrationTests.CreateLocation_ShouldPersistToDatabase_AndPublishEvent&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.integration.LocationControllerIntegrationTests.UpdateLocation_ShouldUpdateDatabase_AndPublishEvent&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
-&lt;/SessionState&gt;</s:String>
+	
 	
 	
 	

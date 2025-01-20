@@ -39,6 +39,7 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddDataProtection();
 
 // 3.2 JWT Configuration
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
