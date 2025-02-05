@@ -21,9 +21,7 @@ public class GetLocationByIdHandler
         else
         {
             return  new LocationDto(locationRead.Id, Guid.Parse(locationRead.OwnerId), locationRead.Geometry);
-
         }
-
     }
 }
 

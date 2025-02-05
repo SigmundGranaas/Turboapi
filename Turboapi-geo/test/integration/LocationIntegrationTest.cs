@@ -166,7 +166,7 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         TimeSpan? timeout = null,
         string? timeoutMessage = null)
     {
-        timeout ??= TimeSpan.FromSeconds(10);
+        timeout ??= TimeSpan.FromSeconds(1);
         var stopwatch = Stopwatch.StartNew();
         
         while (stopwatch.Elapsed < timeout)

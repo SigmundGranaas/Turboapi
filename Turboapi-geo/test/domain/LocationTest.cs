@@ -2,7 +2,7 @@ using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Xunit;
 
-namespace Turboapi_geo.test.domain.domain;
+namespace Turboapi_geo.test.domain;
 
 public class LocationTests
 {

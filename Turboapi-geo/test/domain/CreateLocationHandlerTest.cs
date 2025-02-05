@@ -7,7 +7,7 @@ using Turboapi_geo.domain.handler;
 using Xunit;
 
 
-namespace Turboapi_geo.test.domain.domain
+namespace Turboapi_geo.test.domain
 {
     public class CreateLocationHandlerTests
     {

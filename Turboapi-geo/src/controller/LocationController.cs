@@ -61,8 +61,8 @@ namespace Turboapi_geo.controller;
             );
         }
 
-        [HttpPut("{id}/position")]
         [Authorize]
+        [HttpPut("{id}/position")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePosition(

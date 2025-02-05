@@ -5,7 +5,6 @@ using Turboapi_geo.domain.events;
 
     public class Location : AggregateRoot
     {
-     
             public Guid Id { get; private set; }
             public string OwnerId { get; private set; }
             public Point Geometry { get; private set; }
