@@ -33,7 +33,7 @@ public class LocationsControllerTests : IAsyncDisposable
         _readModel = new InMemoryLocationReadModel(locationStore);
 
         // Setup test event infrastructure
-        _messageBus = new TestMessageBus();
+        _messageBus = new GeoSpatial.Tests.Doubles.TestMessageBus();
         _eventWriter = new TestEventWriter(_messageBus);
         _eventReader = new TestEventReader(_messageBus);
         _eventSubscriber = new TestEventSubscriber(_messageBus);

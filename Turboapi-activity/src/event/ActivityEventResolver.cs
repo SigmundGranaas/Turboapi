@@ -8,10 +8,10 @@ public class ActivityEventTopicResolver : IEventTopicResolver
     {
         _topicMappings = new Dictionary<Type, string>
         {
-            { typeof(ActivityCreated), "activities" },
-            { typeof(ActivityUpdated), "activities" },
-            { typeof(ActivityDeleted), "activities" },
-            { typeof(ActivityPositionCreated), "positions" }
+            { typeof(ActivityCreated), "activities.created" },
+            { typeof(ActivityUpdated), "activities.updated" },
+            { typeof(ActivityDeleted), "activities.deleted" },
+            { typeof(ActivityPositionCreated), "location.create_command" }
         };
     }
 

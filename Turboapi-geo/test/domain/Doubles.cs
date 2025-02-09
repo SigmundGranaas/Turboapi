@@ -1,5 +1,4 @@
 using GeoSpatial.Domain.Events;
-using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;

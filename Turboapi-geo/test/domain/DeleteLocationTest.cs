@@ -24,7 +24,7 @@ namespace Turboapi_geo.test.domain;
         public DeleteLocationHandlerTests()
         {
             var dict = new Dictionary<Guid, LocationReadEntity>();
-            var bus = new TestMessageBus();
+            var bus = new GeoSpatial.Tests.Doubles.TestMessageBus();
             _reader = new TestEventReader(bus);
             _eventStore = new TestEventWriter(bus);
             

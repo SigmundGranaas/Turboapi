@@ -27,4 +27,16 @@ public class CreateLocationHandler
 
         return location.Id;
     }
+    
+    public async Task<Guid> Handle(Commands.CreatePredefinedLocationCommand command)
+    {
+        var point = _geometryFactory.CreatePoint(
+            new Coordinate(command.Longitude, command.Latitude)
+        );
+
+        var location = Location.Create(command.id ,command.OwnerId.ToString(), point);
+        await _eventStore.AppendEvents(location.Events);
+
+        return location.Id;
+    }
 }

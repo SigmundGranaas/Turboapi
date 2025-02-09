@@ -24,7 +24,7 @@ namespace Turboapi_geo.test.domain;
     public UpdateLocationPositionHandlerTests()
     {
         _store = new Dictionary<Guid, LocationReadEntity>();
-        _messageBus = new TestMessageBus();
+        _messageBus = new GeoSpatial.Tests.Doubles.TestMessageBus();
         _eventWriter = new TestEventWriter(_messageBus);
         _eventReader = new TestEventReader(_messageBus);
         _readRepository = new InMemoryLocationReadModel(_store);

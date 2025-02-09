@@ -12,6 +12,7 @@ using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
+using Turboapi_geo.eventbus_adapter;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 
@@ -79,6 +80,7 @@ builder.Services.AddScoped<GeometryFactory>();
 builder.Services.AddScoped<ILocationEventHandler<LocationCreated>, LocationCreatedHandler>();
 builder.Services.AddScoped<ILocationEventHandler<LocationPositionChanged>, LocationPositionChangedHandler>();
 builder.Services.AddScoped<ILocationEventHandler<LocationDeleted>, LocationDeletedHandler>();
+builder.Services.AddScoped<ILocationEventHandler<CreatePositionEvent>, CreatePositionCommandEventAdapter>();
 
 builder.Services.AddKafkaEventInfrastructure(builder.Configuration);
 

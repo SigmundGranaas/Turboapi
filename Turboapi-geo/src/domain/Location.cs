@@ -37,6 +37,20 @@ using Turboapi_geo.domain.events;
                 location.AddEvent(new LocationCreated(location.Id, ownerId, geometry));
                 return location;
             }
+            
+            public static Location Create(Guid id, string ownerId, Point geometry)
+            {
+                var location = new Location
+                {
+                    Id = id,
+                    OwnerId = ownerId,
+                    Geometry = geometry,
+                    IsDeleted = false
+                };
+
+                location.AddEvent(new LocationCreated(location.Id, ownerId, geometry));
+                return location;
+            }
 
             public void UpdatePosition(Point newGeometry)
             {

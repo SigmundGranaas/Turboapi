@@ -20,7 +20,7 @@ namespace Turboapi_geo.test.domain
 
         public CreateLocationHandlerTests()
         {
-            var bus = new TestMessageBus();
+            var bus = new GeoSpatial.Tests.Doubles.TestMessageBus();
             _eventStore = new TestEventWriter(bus);
             _eventReader = new TestEventReader(bus);
             _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);

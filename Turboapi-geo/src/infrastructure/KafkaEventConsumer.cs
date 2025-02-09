@@ -2,6 +2,7 @@ using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Options;
 using Turboapi_geo.domain.events;
+using Turboapi_geo.domain.handler;
 using Turboapi_geo.geo;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
@@ -34,7 +35,7 @@ public class KafkaLocationConsumer : BackgroundService
         var config = new ConsumerConfig
         {
             BootstrapServers = settings.Value.BootstrapServers,
-            GroupId = "location-read-model-updater",
+            GroupId = settings.Value.LocationEventsTopic,
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
             EnablePartitionEof = true,
@@ -61,7 +62,9 @@ public class KafkaLocationConsumer : BackgroundService
     {
         { nameof(LocationCreated), typeof(LocationCreated) },
         { nameof(LocationPositionChanged), typeof(LocationPositionChanged) },
-        { nameof(LocationDeleted), typeof(LocationDeleted) }
+        { nameof(LocationDeleted), typeof(LocationDeleted) },
+        { nameof(CreatePositionEvent), typeof(CreatePositionEvent) }
+
     };
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
