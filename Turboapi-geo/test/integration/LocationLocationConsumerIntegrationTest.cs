@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using FluentAssertions;
-using GeoSpatial.Domain.Events;
 using Medo;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -16,21 +15,16 @@ using Xunit;
 
 namespace Turboapi_geo.test.integration;
 
-public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
+
+public class LocationConsumerIntegrationTest : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres;
     private readonly KafkaContainer _kafka;
     private WebApplicationFactory<Program>? _factory;
-    private HttpClient? _client;
     private readonly string _projectRoot;
-    private const string TOPIC_NAME = "location";
-    private const string COMMAND_TOPIC = "location.create_command";
-
-    private string? _jwtSecret;
-
-    public LocationLocationConsumerIntegrationTest()
+    
+    public LocationConsumerIntegrationTest()
     {
-        // Setup PostgreSQL with PostGIS
         _postgres = new PostgreSqlBuilder()
             .WithImage("postgis/postgis:17-3.5-alpine")
             .WithDatabase("geodb")
@@ -38,14 +32,12 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
             .WithPassword("postgres")
             .Build();
 
-        // Setup Kafka
         _kafka = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:6.2.10")
             .WithName("kafka-integration")
-            .WithPortBinding(9092, true)  // External port
+            .WithPortBinding(9092, true)
             .Build();
 
-        // Find project root
         var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (currentDir != null && !Directory.Exists(Path.Combine(currentDir.FullName, "db")))
         {
@@ -56,31 +48,33 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // Start containers
         await _postgres.StartAsync();
         await _kafka.StartAsync();
-
-        // Initialize database
         await RunFlywayMigrations();
 
-        // Setup WebApplicationFactory after containers are ready
+        // Configure Kafka settings for test
+        var kafkaSettings = new KafkaSettings
+        {
+            BootstrapServers = _kafka.GetBootstrapAddress(),
+            LocationEventsTopic = "location-events"
+        };
+        
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var topicInitializer = new KafkaTopicInitializer(
+            Options.Create(kafkaSettings), 
+            loggerFactory.CreateLogger<KafkaTopicInitializer>());
+
+        await topicInitializer.EnsureTopicExists("location.create_command");
+        await topicInitializer.EnsureTopicExists("location-events");
+
+        
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Test");
-                
                 builder.ConfigureServices((context, services) =>
                 {
-                    // Get JWT secret from configuration
-                    _jwtSecret = context.Configuration["Jwt:Key"];
-                    
-                    if (string.IsNullOrEmpty(_jwtSecret))
-                    {
-                        throw new Exception("JWT secret not found in configuration");
-                    }
-
-                    
-                    // Replace default DbContext
+                    // Replace DbContext
                     var descriptor = services.SingleOrDefault(d => 
                         d.ServiceType == typeof(DbContextOptions<LocationReadContext>));
                     if (descriptor != null)
@@ -94,38 +88,30 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
                         )
                     );
 
-                    // Remove old Default setup
+                    // Remove existing Kafka-related services
                     var descriptorsToRemove = services.Where(d => 
-                        d.ServiceType == typeof(IEventWriter) ||
-                        d.ServiceType == typeof(KafkaSettings) ||
-                        d.ServiceType == typeof(IKafkaTopicInitializer) ||
-                        d.ServiceType == typeof(IEventSubscriber)).ToList();
+                        d.ServiceType == typeof(KafkaSettings))
+                        .ToList();
                     
                     foreach (var desc in descriptorsToRemove)
                     {
                         services.Remove(desc);
                     }
-                    
-                    // Configure Kafka settings
-                    var kafkaSettings = new KafkaSettings
-                    {
-                        BootstrapServers = _kafka.GetBootstrapAddress(),
-                        LocationEventsTopic = TOPIC_NAME
-                    };
+
+  
         
                     services.Configure<KafkaSettings>(options =>
                     {
                         options.BootstrapServers = kafkaSettings.BootstrapServers;
-                        options.LocationEventsTopic = kafkaSettings.LocationEventsTopic;
                     });
-
-                    services.AddSingleton<IKafkaTopicInitializer, KafkaTopicInitializer>();
-                    services.AddSingleton<IEventWriter, KafkaEventWriter>();
-                    services.AddHostedService<KafkaLocationConsumer>();
                 });
             });
-
-        _client = _factory.CreateClient();
+        var client = _factory.CreateClient();
+    
+        // Verify services are ready
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<LocationReadContext>();
+        await context.Database.CanConnectAsync();
     }
 
     private async Task RunFlywayMigrations()
@@ -161,7 +147,7 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
     }
 
     private async Task<T?> WaitForCondition<T>(
-        Func<IServiceProvider, Task<T?>> condition,
+        Func<Task<T?>> condition,
         TimeSpan? timeout = null,
         string? timeoutMessage = null)
     {
@@ -170,9 +156,8 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
         
         while (stopwatch.Elapsed < timeout)
         {
-            using var scope = _factory!.Services.CreateScope();
-            var result = await condition(scope.ServiceProvider);
-                
+            var result = await condition();
+
             if (result != null)
             {
                 return result;
@@ -199,6 +184,23 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
     [Fact]
     public async Task CreateLocation_ShouldPersistToDatabase_AndPublishEvent()
     {
+        // Create a publisher for testing
+        var options = Options.Create(new KafkaSettings
+        {
+            BootstrapServers = _kafka.GetBootstrapAddress(),
+            LocationEventsTopic = "location.create_command"
+        });
+        
+        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var writerLogger = loggerFactory.CreateLogger<KafkaEventWriter>();
+        var initLogger = loggerFactory.CreateLogger<KafkaTopicInitializer>();
+
+        var topicInitializer = new KafkaTopicInitializer(options, initLogger);
+        var publisher = new KafkaEventWriter(topicInitializer, options, writerLogger);
+        
+        using var scope = _factory!.Services.CreateScope();
+
+        // Arrange
         var ownerId = Uuid7.NewUuid7();
         var positionId = Guid.Parse(Uuid7.NewUuid7().ToString());
         var activityId = Uuid7.NewUuid7();
@@ -209,40 +211,23 @@ public class LocationLocationConsumerIntegrationTest: IAsyncLifetime
         };
 
         var @event = new CreatePositionEvent(positionId, pos, activityId, ownerId);
-
-        var options = Options.Create(new KafkaSettings
-        {
-            BootstrapServers = _kafka.GetBootstrapAddress(),
-            LocationEventsTopic = COMMAND_TOPIC
-        });
         
-        var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-        var writerLogger = loggerFactory.CreateLogger<KafkaEventWriter>();
-        var initLogger = loggerFactory.CreateLogger<KafkaTopicInitializer>();
-        var consumerLogger = loggerFactory.CreateLogger<KafkaLocationConsumer>();
-
-        var publisher = new KafkaEventWriter(new KafkaTopicInitializer(options, initLogger), options, writerLogger);
-        var consumer = new KafkaLocationConsumer(new KafkaTopicInitializer(options, initLogger), options, (IServiceScopeFactory)_factory.Services.GetService(typeof(IServiceScopeFactory)), consumerLogger);
-        
-        var token = new CancellationTokenSource();
-        await consumer.StartAsync(token.Token);
-        
+        // Act
         await publisher.AppendEvents(new List<CreatePositionEvent> { @event });
         
-        // Wait for the event to be processed and the read model to be updated
-        var location = await WaitForCondition(async provider =>
+        // Assert - Wait for the event to be processed and the read model to be updated
+        var location = await WaitForCondition(async () =>
         {
-            var context = provider.GetRequiredService<LocationReadContext>();
+            var context = scope.ServiceProvider.GetRequiredService<LocationReadContext>();
             return await context.Locations
                 .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Id== positionId);
+                .FirstOrDefaultAsync(l => l.Id == positionId);
         }, timeoutMessage: $"Location {positionId} was not found in read model");
         
-        
-        location!.OwnerId.Should().Be(ownerId.ToString());
+        // Verify the results
+        location.Should().NotBeNull();
+        location.OwnerId.Should().Be(ownerId.ToString());
         location.Geometry.X.Should().Be(pos.Longitude);
         location.Geometry.Y.Should().Be(pos.Latitude);
-        
-        await token.CancelAsync();
     }
 }

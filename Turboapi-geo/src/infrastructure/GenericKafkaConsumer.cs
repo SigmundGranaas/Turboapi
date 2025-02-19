@@ -3,50 +3,50 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Options;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.geo;
-using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 
-public class KafkaLocationConsumer : BackgroundService 
+public class KafkaConsumerConfig<TEvent> where TEvent : DomainEvent
+{
+    public string Topic { get; set; } = null!;
+    public string GroupId { get; set; } = null!;
+}
+
+public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : DomainEvent
 {
     private readonly IConsumer<string, string> _consumer;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IKafkaTopicInitializer _topicInitializer;
-    private readonly string _topic;
-    private readonly ILogger<KafkaLocationConsumer> _logger;
+    private readonly KafkaConsumerConfig<TEvent> _config;
+    private readonly ILogger<GenericKafkaConsumer<TEvent>> _logger;
+    private readonly string _expectedEventType;
     private readonly CancellationTokenSource _stopConsumer;
     private volatile bool _isRunning;
     private Task _consumeTask;
 
-    public KafkaLocationConsumer(
-        IKafkaTopicInitializer topicInitializer,
-        IOptions<KafkaSettings> settings,
+    public GenericKafkaConsumer(
         IServiceScopeFactory scopeFactory,
-        ILogger<KafkaLocationConsumer> logger)
+        KafkaConsumerConfig<TEvent> config,
+        IOptions<KafkaSettings> settings,
+        ILogger<GenericKafkaConsumer<TEvent>> logger)
     {
-        _topicInitializer = topicInitializer;
         _scopeFactory = scopeFactory;
+        _config = config;
         _logger = logger;
+        _expectedEventType = typeof(TEvent).Name;
         _stopConsumer = new CancellationTokenSource();
-        
-        ArgumentNullException.ThrowIfNull(settings?.Value);
-        _topic = settings.Value.LocationEventsTopic;
 
-        var config = new ConsumerConfig
+        var consumerConfig = new ConsumerConfig
         {
             BootstrapServers = settings.Value.BootstrapServers,
-            GroupId = settings.Value.LocationEventsTopic,
+            GroupId = config.GroupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
             EnableAutoCommit = false,
             EnablePartitionEof = true,
             SessionTimeoutMs = 45000,
             MaxPollIntervalMs = 300000,
-            HeartbeatIntervalMs = 3000,
-            SecurityProtocol = SecurityProtocol.Plaintext,
-            AllowAutoCreateTopics = true,
-            EnableAutoOffsetStore = false
+            HeartbeatIntervalMs = 3000
         };
 
-        _consumer = new ConsumerBuilder<string, string>(config)
+        _consumer = new ConsumerBuilder<string, string>(consumerConfig)
             .SetErrorHandler((_, e) => 
             {
                 _logger.LogError("Kafka error: {Error}", e.Reason);
@@ -57,31 +57,21 @@ public class KafkaLocationConsumer : BackgroundService
             })
             .Build();
     }
-    private static readonly Dictionary<string, Type> EventTypes = new()
-    {
-        { nameof(LocationCreated), typeof(LocationCreated) },
-        { nameof(LocationPositionChanged), typeof(LocationPositionChanged) },
-        { nameof(LocationDeleted), typeof(LocationDeleted) },
-        { nameof(CreatePositionEvent), typeof(CreatePositionEvent) }
 
-    };
-
-  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             _isRunning = true;
-            _logger.LogInformation("Starting Kafka consumer for topic: {Topic}", _topic);
+            _logger.LogInformation("Starting Kafka consumer for topic: {Topic}", _config.Topic);
             
-            await _topicInitializer.EnsureTopicExists(_topic);
+            _consumer.Subscribe(_config.Topic);
 
-            // Start the consume loop in a separate task
+            // Run the consume loop in a separate task
             _consumeTask = Task.Run(async () =>
             {
                 try
                 {
-                    _consumer.Subscribe(_topic);
-
                     while (!stoppingToken.IsCancellationRequested && _isRunning)
                     {
                         try
@@ -95,7 +85,7 @@ public class KafkaLocationConsumer : BackgroundService
                                 continue;
                             }
 
-                            await ProcessMessage(consumeResult, stoppingToken);
+                            await ProcessMessageAsync(consumeResult, stoppingToken);
                         }
                         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                         {
@@ -121,7 +111,6 @@ public class KafkaLocationConsumer : BackgroundService
                 }
             }, stoppingToken);
 
-            // Wait for the consume task to complete when the application is stopping
             await Task.WhenAny(_consumeTask, Task.Delay(Timeout.Infinite, stoppingToken));
         }
         catch (Exception ex)
@@ -130,53 +119,51 @@ public class KafkaLocationConsumer : BackgroundService
         }
     }
 
-    private async Task ProcessMessage(ConsumeResult<string, string> result, CancellationToken cancellationToken)
+    private async Task ProcessMessageAsync(ConsumeResult<string, string> result, CancellationToken stoppingToken)
     {
         try
         {
-            var message = result.Message;
-            if (string.IsNullOrEmpty(message.Key) || string.IsNullOrEmpty(message.Value))
+            if (result.Message.Key != _expectedEventType)
             {
-                _logger.LogError("Received message with null/empty key or value");
+                _consumer.StoreOffset(result);
                 _consumer.Commit(result);
                 return;
             }
 
-            if (!EventTypes.TryGetValue(message.Key, out var eventType))
-            {
-                _logger.LogError("Unknown event type: {EventType}", message.Key);
-                _consumer.Commit(result);
-                return;
-            }
+            var domainEvent = JsonSerializer.Deserialize<TEvent>(
+                result.Message.Value,
+                JsonConfig.CreateDefault());
 
-            var domainEvent = (DomainEvent)JsonSerializer.Deserialize(message.Value, eventType, JsonConfig.CreateDefault())!;
             if (domainEvent == null)
             {
-                _logger.LogError("Failed to deserialize event of type {EventType}", message.Key);
+                _logger.LogError("Failed to deserialize event of type {EventType}", _expectedEventType);
+                return;
+            }
+
+            if (domainEvent.GetType() != typeof(TEvent))
+            {
+                _logger.LogWarning(
+                    "Event type mismatch. Expected {ExpectedType} but got {ActualType}",
+                    typeof(TEvent).Name,
+                    domainEvent.GetType().Name);
+                _consumer.StoreOffset(result);
                 _consumer.Commit(result);
                 return;
             }
 
             using var scope = _scopeFactory.CreateScope();
-            var handlerType = typeof(ILocationEventHandler<>).MakeGenericType(eventType);
-            var handler = scope.ServiceProvider.GetRequiredService(handlerType);
+            var handler = scope.ServiceProvider.GetRequiredService<ILocationEventHandler<TEvent>>();
 
-            await ((dynamic)handler).HandleAsync((dynamic)domainEvent, cancellationToken);
+            await handler.HandleAsync(domainEvent, stoppingToken);
             
-            // Store the offset before committing
             _consumer.StoreOffset(result);
             _consumer.Commit(result);
-            
-            _logger.LogInformation("Successfully processed and committed {EventType} at offset {Offset}", 
-                eventType.Name, result.Offset.Value);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message at offset {Offset}", result.Offset.Value);
-            // Don't rethrow - let the consumer continue processing
+            _logger.LogError(ex, "Error processing message");
         }
     }
-
 
     private async Task CleanupAsync()
     {
@@ -207,15 +194,7 @@ public class KafkaLocationConsumer : BackgroundService
         }
         finally
         {
-            try
-            {
-                _consumer.Close();
-                _logger.LogInformation("Consumer closed");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error closing consumer");
-            }
+            _consumer.Close();
         }
     }
 
@@ -251,4 +230,3 @@ public class KafkaLocationConsumer : BackgroundService
         base.Dispose();
     }
 }
-

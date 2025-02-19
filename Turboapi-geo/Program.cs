@@ -77,11 +77,6 @@ builder.Services.AddScoped<GeometryFactory>();
 // #############################################
 // 4.1 Kafka Configuration
 // Register handlers
-builder.Services.AddScoped<ILocationEventHandler<LocationCreated>, LocationCreatedHandler>();
-builder.Services.AddScoped<ILocationEventHandler<LocationPositionChanged>, LocationPositionChangedHandler>();
-builder.Services.AddScoped<ILocationEventHandler<LocationDeleted>, LocationDeletedHandler>();
-builder.Services.AddScoped<ILocationEventHandler<CreatePositionEvent>, CreatePositionCommandEventAdapter>();
-
 builder.Services.AddKafkaEventInfrastructure(builder.Configuration);
 
 // #############################################
