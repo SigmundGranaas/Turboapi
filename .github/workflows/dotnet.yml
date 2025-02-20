@@ -34,5 +34,18 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore
-    - name: Test
+    - name: Test activity
+      working-directory: ./Turboapi-activity
+      run: dotnet test --no-build --verbosity normal
+    - name: Test auth
+      working-directory: ./Turboapi-auth
+      run: dotnet test --no-build --verbosity normal
+    - name: Test geo
+      working-directory: ./Turboapi-geo
+      run: dotnet test --no-build --verbosity normal
+    - name: Test events
+      working-directory: ./Turbo-event
+      run: dotnet test --no-build --verbosity normal
+    - name: Test data
+      working-directory: ./Turbo-pg-data
       run: dotnet test --no-build --verbosity normal
