@@ -22,6 +22,17 @@ public class KafkaConsumerTests : IAsyncLifetime
     private readonly List<TestEvent> _processedEvents;
     private IServiceProvider? _serviceProvider;
     
+    public KafkaConsumerTests()
+    {
+        _processedEvents = new List<TestEvent>();
+
+        _kafka = new KafkaBuilder()
+            .WithImage("confluentinc/cp-kafka:6.2.10")
+            .WithPortBinding(9092, true)
+            .Build();
+    }
+
+    
     public class TestEvent
     {
         public string Id { get; set; } = "";
@@ -60,7 +71,9 @@ public class KafkaConsumerTests : IAsyncLifetime
 
         services.AddSingleton<ITopicInitializer, KafkaTopicInitializer>();
         services.AddSingleton<JsonSerializerOptions>();
-        services.AddSingleton(typeof(KafkaMessageProcessor<>));
+        services.AddSingleton<KafkaMessageProcessor<TestEvent>>();
+        services.AddScoped<KafkaMessageProcessor<TestEvent>>(sp => new KafkaMessageProcessor<TestEvent>(sp.GetRequiredService<IServiceScopeFactory>(), new JsonSerializerOptions(), _serviceProvider.GetRequiredService<ILogger<KafkaMessageProcessor<TestEvent>>>()));
+
         services.AddScoped<IEventHandler<TestEvent>>(sp => new TestEventHandler(_processedEvents));
 
         _serviceProvider = services.BuildServiceProvider();

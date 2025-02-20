@@ -28,7 +28,6 @@ public class KafkaEventStoreWriterTests : IAsyncLifetime
     {
         _kafka = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:6.2.10")
-            .WithName($"kafka-test-{Guid.NewGuid()}")
             .WithPortBinding(9092, true)
             .Build();
     }

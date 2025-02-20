@@ -39,7 +39,6 @@ public class ControllerIntegrationTest: IAsyncLifetime
         
         _kafka = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:6.2.10")
-            .WithName("kafka-integration")
             .WithPortBinding(9092, true)
             .Build();
     }

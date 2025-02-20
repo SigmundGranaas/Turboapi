@@ -42,7 +42,6 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
         // Setup Kafka
         _kafka = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:6.2.10")
-            .WithName("kafka-integration")
             .WithPortBinding(9092, true)  // External port
             .Build();
 
