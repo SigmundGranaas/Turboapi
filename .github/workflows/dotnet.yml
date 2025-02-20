@@ -24,7 +24,7 @@ jobs:
     - name: Install Flyway
       run: |
         wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/7.7.0/flyway-commandline-7.7.0-linux-x64.tar.gz | tar xvz
-        sudo mv flyway-9.22.3 /usr/local/flyway
+        sudo mv flyway-7.7.0 /usr/local/flyway
         sudo ln -s /usr/local/flyway/flyway /usr/local/bin/flyway
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
