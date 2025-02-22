@@ -37,12 +37,12 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
             };
 
             await _repo.Add(entity);
-            _logger.LogInformation("Created location {LocationId} for owner {OwnerId}",
+            _logger.LogInformation("Stored activity {LocationId} for owner {OwnerId}",
                 @event.activity, @event.OwnerId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to handle LocationCreated event for {LocationId}",
+            _logger.LogError(ex, "Failed to handle Activity event for {LocationId}",
                 @event.activity);
             throw;
         }

@@ -14,7 +14,7 @@ public interface IKafkaTopicInitializer
 public class KafkaTopicInitializer : IKafkaTopicInitializer
 {
     private readonly IAdminClient _adminClient;
-    private readonly ILogger<KafkaTopicInitializer> _logger;
+    private readonly ILogger<KafkaTopicInitializer>? _logger;
     private readonly ConcurrentDictionary<string, bool> _initializedTopics;
     private readonly SemaphoreSlim _initLock;
 
@@ -31,6 +31,21 @@ public class KafkaTopicInitializer : IKafkaTopicInitializer
 
         _adminClient = new AdminClientBuilder(config).Build();
         _logger = logger;
+        _initializedTopics = new ConcurrentDictionary<string, bool>();
+        _initLock = new SemaphoreSlim(1, 1);
+    }
+    
+    public KafkaTopicInitializer(
+        IOptions<KafkaSettings> settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings?.Value);
+
+        var config = new AdminClientConfig
+        {
+            BootstrapServers = settings.Value.BootstrapServers
+        };
+
+        _adminClient = new AdminClientBuilder(config).Build();
         _initializedTopics = new ConcurrentDictionary<string, bool>();
         _initLock = new SemaphoreSlim(1, 1);
     }
@@ -60,7 +75,7 @@ public class KafkaTopicInitializer : IKafkaTopicInitializer
             {
                 try
                 {
-                    _logger.LogInformation("Creating topic: {Topic}", topic);
+                    _logger?.LogInformation("Creating topic: {Topic}", topic);
                     
                     await _adminClient.CreateTopicsAsync(new TopicSpecification[]
                     {
@@ -72,11 +87,11 @@ public class KafkaTopicInitializer : IKafkaTopicInitializer
                         }
                     });
                     
-                    _logger.LogInformation("Successfully created topic: {Topic}", topic);
+                    _logger?.LogInformation("Successfully created topic: {Topic}", topic);
                 }
                 catch (CreateTopicsException ex) when (ex.Results.Any(r => r.Error.Code == ErrorCode.TopicAlreadyExists))
                 {
-                    _logger.LogInformation("Topic already exists: {Topic}", topic);
+                    _logger?.LogInformation("Topic already exists: {Topic}", topic);
                 }
             }
 

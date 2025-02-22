@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Microsoft.Extensions.Options;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.geo;
+using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 
 public class KafkaConsumerConfig<TEvent> where TEvent : DomainEvent
@@ -14,6 +15,7 @@ public class KafkaConsumerConfig<TEvent> where TEvent : DomainEvent
 public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : DomainEvent
 {
     private readonly IConsumer<string, string> _consumer;
+    private readonly KafkaTopicInitializer _initializer;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly KafkaConsumerConfig<TEvent> _config;
     private readonly ILogger<GenericKafkaConsumer<TEvent>> _logger;
@@ -26,13 +28,15 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
         IServiceScopeFactory scopeFactory,
         KafkaConsumerConfig<TEvent> config,
         IOptions<KafkaSettings> settings,
-        ILogger<GenericKafkaConsumer<TEvent>> logger)
+        ILogger<GenericKafkaConsumer<TEvent>> logger
+       )
     {
         _scopeFactory = scopeFactory;
         _config = config;
         _logger = logger;
         _expectedEventType = typeof(TEvent).Name;
         _stopConsumer = new CancellationTokenSource();
+        _initializer = new KafkaTopicInitializer(settings);
 
         var consumerConfig = new ConsumerConfig
         {
@@ -64,6 +68,8 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
         {
             _isRunning = true;
             _logger.LogInformation("Starting Kafka consumer for topic: {Topic}", _config.Topic);
+            
+            await _initializer.EnsureTopicExists(_config.Topic);
             
             _consumer.Subscribe(_config.Topic);
 
@@ -125,7 +131,7 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
         {
             if (result.Message.Key != _expectedEventType)
             {
-                _consumer.StoreOffset(result);
+                // Don't try to store offset separately, just commit directly
                 _consumer.Commit(result);
                 return;
             }
@@ -137,6 +143,7 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
             if (domainEvent == null)
             {
                 _logger.LogError("Failed to deserialize event of type {EventType}", _expectedEventType);
+                _consumer.Commit(result);
                 return;
             }
 
@@ -146,7 +153,6 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
                     "Event type mismatch. Expected {ExpectedType} but got {ActualType}",
                     typeof(TEvent).Name,
                     domainEvent.GetType().Name);
-                _consumer.StoreOffset(result);
                 _consumer.Commit(result);
                 return;
             }
@@ -155,13 +161,15 @@ public class GenericKafkaConsumer<TEvent> : BackgroundService where TEvent : Dom
             var handler = scope.ServiceProvider.GetRequiredService<ILocationEventHandler<TEvent>>();
 
             await handler.HandleAsync(domainEvent, stoppingToken);
-            
-            _consumer.StoreOffset(result);
+        
+            // Remove the separate StoreOffset call, just commit
             _consumer.Commit(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing message");
+            // Optionally commit even on error to prevent reprocessing
+            // _consumer.Commit(result);
         }
     }
 

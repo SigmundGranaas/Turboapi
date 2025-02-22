@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Turboauth_activity.domain;
 using Turboauth_activity.domain.command;
@@ -26,6 +27,7 @@ public class ActivityController: ControllerBase
     
     
     [HttpPost]
+    [Authorize]
     [ProducesResponseType(typeof(CreateActivityResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<CreateActivityResponse>> Create(
         [FromBody] CreateActivityRequest request)
@@ -52,6 +54,7 @@ public class ActivityController: ControllerBase
          new CreateActivityResponse(activityId));
     }
     
+    [Authorize]
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status404NotFound)]
@@ -76,12 +79,13 @@ public class ActivityController: ControllerBase
         return Ok(response);
     }
     
-    [HttpGet]
+    [Authorize]
+    [HttpPatch("{id}")]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ActivityResponse), StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<ActivityResponse>> EditActivityById(
-        [FromBody] EditActivityRequest request, [FromRoute] Guid activityId)
+        [FromBody] EditActivityRequest request, [FromRoute] Guid id)
     {
         var userId = HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -92,7 +96,7 @@ public class ActivityController: ControllerBase
         var query = new EditActivityCommand
         {
             UserID = new Guid(userId),
-            ActivityID = activityId,
+            ActivityID = id,
             Name = request.Name,
             Description = request.Description,
             Icon = request.Icon,
@@ -109,11 +113,12 @@ public class ActivityController: ControllerBase
         return Ok(response);
     }
 
-    [HttpGet]
+    [Authorize]
+    [HttpDelete("{id}")]
     [ProducesResponseType(typeof(DeletedActivityResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(DeletedActivityResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<DeletedActivityResponse>> DeleteActivityById(
-        [FromQuery] Guid id)
+        [FromRoute] Guid id)
     {
         var userId = HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
