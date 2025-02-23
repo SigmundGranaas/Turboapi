@@ -17,16 +17,20 @@ jobs:
         run: |
           docker compose -f compose.yaml -f compose.services.yaml up -d
           
-          echo "Waiting for services to be healthy..."
-          services=(
+          echo "Waiting for API services..."
+          apis=(
             "turboapi_auth"
             "turboapi_geo"
             "turboapi_activity"
           )
           
-          for service in "${services[@]}"; do
-            echo "Waiting for $service..."
-            docker compose -f compose.yaml -f compose.services.yaml wait "$service"
+          for api in "${apis[@]}"; do
+            echo "Waiting for $api..."
+            while ! docker ps --filter "name=$api" --filter "status=running" --format "{{.Names}}" | grep -q "$api"; do
+              sleep 2
+              echo "Still waiting for $api..."
+              done
+            echo "$api is running!"
           done
 
       - name: Install k6
