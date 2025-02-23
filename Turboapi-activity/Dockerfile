@@ -7,17 +7,17 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Turboauth-activity/Turboauth-activity.csproj", "Turboauth-activity/"]
-RUN dotnet restore "Turboauth-activity/Turboauth-activity.csproj"
+COPY ["Turboapi-activity/Turboapi-activity.csproj", "Turboapi-activity/"]
+RUN dotnet restore "Turboapi-activity/Turboapi-activity.csproj"
 COPY . .
-WORKDIR "/src/Turboauth-activity"
-RUN dotnet build "Turboauth-activity.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR "/src/Turboapi-activity"
+RUN dotnet build "Turboapi-activity.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Turboauth-activity.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "Turboapi-activity.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Turboauth-activity.dll"]
+ENTRYPOINT ["dotnet", "Turboapi-activity.dll"]

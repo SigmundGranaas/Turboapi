@@ -84,9 +84,8 @@ export const options = {
     },
 };
 
-const AUTH_URL = 'http://localhost:5098';
-const ACTIVITY_URL = 'http://localhost:5107';
-const GEO_URL = 'http://localhost:5028';
+const AUTH_URL = 'http://localhost:5001';
+const ACTIVITY_URL = 'http://localhost:5003';
 
 function generateActivityData() {
     return {
@@ -132,6 +131,8 @@ function authenticateUser(user) {
         if (loginAfterRegister.status === 200) {
             return { token: JSON.parse(loginAfterRegister.body).accessToken };
         }
+    }else{
+        console.log(`${loginRes.status} failed:`, {loginRes})
     }
 
     return null;
@@ -172,7 +173,7 @@ function performCreateActivity(config, session) {
 
     if (check(res, {
         'create activity success': (r) => r.status === 201,
-        'has activity id': (r) => JSON.parse(r.body).activityId !== undefined
+        'has activity id': (r) => JSON.parse(r.body)?.activityId !== undefined
     })) {
         const activityId = JSON.parse(res.body).activityId;
         if (!sessionActivityIds[session.token]) {
@@ -318,8 +319,6 @@ function performDeleteActivity(config, session) {
     })) {
         activeActivities.add(-1);
     } else {
-        console.log(res)
-
         activityErrors.add(1);
         // If delete failed and it wasn't a 404, put the ID back
         if (res.status !== 404) {

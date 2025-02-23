@@ -5,6 +5,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0F2A4886-38D7-415C-B877-27D4370D59E1}"
 	ProjectSection(SolutionItems) = preProject
 		compose.yaml = compose.yaml
+		compose.monitoring.yaml = compose.monitoring.yaml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi-geo", "Turboapi-geo\Turboapi-geo.csproj", "{816F75C5-73CC-4045-A4EF-00D55A3C8C11}"

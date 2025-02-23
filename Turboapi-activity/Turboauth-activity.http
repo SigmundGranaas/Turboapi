@@ -1,6 +1,3 @@
-@Turboauth_activity_HostAddress = http://localhost:5107
-
-GET {{Turboauth_activity_HostAddress}}/weatherforecast/
-Accept: application/json
+@Turboauth_activity_HostAddress = http://localhost:5003
 
 ###
