@@ -42,17 +42,3 @@ jobs:
       - name: Stop containers
         if: always()
         run: docker compose -f compose.yaml -f compose.services.yaml down
-
-      - name: Install k6
-        run: |
-          curl -L https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-amd64.tar.gz -o k6.tar.gz
-          tar xzf k6.tar.gz
-          sudo mv k6-v0.49.0-linux-amd64/k6 /usr/local/bin/
-
-      - name: Run k6 tests
-        working-directory: Turboapi-activity/test/performance
-        run: k6 run --tag test_type=smoke --vus 1 --duration 30s test.js
-
-      - name: Stop containers
-        if: always()
-        run: docker compose -f compose.yaml -f compose.services.yaml down
