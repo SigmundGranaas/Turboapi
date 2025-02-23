@@ -2,7 +2,7 @@
 
 services:
   auth-db:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: auth-db
     ports:
       - "5432:5432"
@@ -41,7 +41,7 @@ services:
       - turbo
   
   activity-db:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: activity-db
     ports:
       - "5436:5436"
