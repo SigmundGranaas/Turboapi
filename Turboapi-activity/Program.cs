@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json;
 using Scalar.AspNetCore;
 using Turbo_event.di;
 using Turbo_event.kafka;
 using Turbo_event.test.kafka;
+using Turboapi.Infrastructure.Kafka;
 using Turboauth_activity.data;
 using Turboauth_activity.domain.events;
 using Turboauth_activity.domain.handler;
 using Turboauth_activity.domain.query;
+using KafkaSettings = Turbo_event.kafka.KafkaSettings;
+using KafkaTopicInitializer = Turbo_event.test.kafka.KafkaTopicInitializer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,14 +86,16 @@ builder.Services.Configure<KafkaSettings>(
     builder.Configuration.GetSection("Kafka"));
 
 // Register the topic initializer
-builder.Services.AddSingleton<ITopicInitializer, KafkaTopicInitializer>();
-        
+builder.Services.AddSingleton<ITopicInitializer, SimpleKafkaTopicInitializer>();
+
 // Register event infrastructure
 builder.Services.AddSingleton<IEventTopicResolver, ActivityEventTopicResolver>();
 builder.Services.AddSingleton<IEventStoreWriter, KafkaEventStoreWriter>();
+builder.Services.AddSingleton<IKafkaConsumerFactory, KafkaConsumerFactory>();
 
-builder.Services.AddSingleton(typeof(KafkaMessageProcessor<>));
-builder.Services.AddHostedService<KafkaConsumer<ActivityCreated>>();
+builder.Services.AddKafkaConsumer<ActivityCreated, ActivityEventHandler>("activities", "activity-created");
+builder.Services.AddKafkaConsumer<ActivityUpdated, ActivityEventHandler>("activities", "activity-updated");
+builder.Services.AddKafkaConsumer<ActivityDeleted, ActivityEventHandler>("activities", "activity-deleted");
 
 builder.Services.AddScoped<ActivityQueryHandler>();
 

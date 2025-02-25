@@ -1,7 +1,6 @@
-using Turboapi_geo.domain.events;
-using Turboapi_geo.eventbus_adapter;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Turboapi_geo.infrastructure;
+namespace Turboapi.Infrastructure.Kafka;
 
 public static class KafkaConsumerExtensions
 {
@@ -9,11 +8,11 @@ public static class KafkaConsumerExtensions
         this IServiceCollection services,
         string topic,
         string groupId)
-        where TEvent : DomainEvent
-        where THandler : class, ILocationEventHandler<TEvent>
+        where TEvent : Event
+        where THandler : class, IEventHandler<TEvent>
     {
         // Register the handler
-        services.AddScoped<ILocationEventHandler<TEvent>, THandler>();
+        services.AddScoped<IEventHandler<TEvent>, THandler>();
         
         // Register the consumer configuration
         var config = new KafkaConsumerConfig<TEvent>
@@ -25,7 +24,7 @@ public static class KafkaConsumerExtensions
         services.AddSingleton(config);
         
         // Register the consumer as a hosted service
-        services.AddHostedService<GenericKafkaConsumer<TEvent>>();
+        services.AddHostedService<KafkaConsumer<TEvent>>();
 
         return services;
     }
