@@ -6,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-using Testcontainers.Kafka;
 using Turbo_event.kafka;
 using Turboapi.Infrastructure.Kafka;
 using Xunit;
@@ -15,36 +14,20 @@ namespace Turboapi.Tests
 {
     public class WebApiStyleKafkaTests : IAsyncLifetime
     {
-        private readonly KafkaContainer _kafka;
+        private readonly KafkaTestUtilities _kafkaUtils = new();
         private const string TOPIC_NAME = "webapi-test-events";
-        private IProducer<string, string>? _producer;
         private IHost? _host;
-        private readonly EventTracker _eventTracker = new();
-        
-        public WebApiStyleKafkaTests()
-        {
-            _kafka = new KafkaBuilder()
-                .WithImage("confluentinc/cp-kafka:6.2.10")
-                .WithPortBinding(9092, true)
-                .Build();
-        }
+        private readonly EventTracker<TestEvent> _eventTracker = new();
         
         public async Task InitializeAsync()
         {
-            // Start Kafka container
-            await _kafka.StartAsync();
-            
-            // Create Kafka producer
-            _producer = new ProducerBuilder<string, string>(new ProducerConfig
-            {
-                BootstrapServers = _kafka.GetBootstrapAddress()
-            }).Build();
+            await _kafkaUtils.InitializeContainerAsync();
             
             // Create configuration
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string>
                 {
-                    ["Kafka:BootstrapServers"] = _kafka.GetBootstrapAddress(),
+                    ["Kafka:BootstrapServers"] = _kafkaUtils.Kafka.GetBootstrapAddress(),
                     ["Kafka:AutoCreateTopics"] = "true",
                     ["Kafka:DefaultPartitions"] = "1",
                     ["Kafka:ReplicationFactor"] = "1",
@@ -73,8 +56,14 @@ namespace Turboapi.Tests
                     // Register event registry
                     var registry = new EventTypeRegistry();
                     registry.RegisterEventType<TestEvent>();
-                    services.AddSingleton<EventJsonConverter>(new EventJsonConverter(registry));
                     
+                    services.AddSingleton<EventJsonConverter>(new EventJsonConverter(registry));
+                    services.AddSingleton(sp => {
+                        var options = new JsonSerializerOptions();
+                        options.Converters.Add(sp.GetRequiredService<EventJsonConverter>());
+                        return options;
+                    });
+
                     // Register event handlers
                     services.AddScoped<IEventHandler<TestEvent>, TestEventHandler>();
                     
@@ -90,6 +79,11 @@ namespace Turboapi.Tests
                 })
                 .Build();
             
+            // Setup serializer options
+            var registry = new EventTypeRegistry();
+            registry.RegisterEventType<TestEvent>();
+            _kafkaUtils.CreateJsonSerializerOptions(registry);
+            
             // Start the host
             await _host.StartAsync();
         }
@@ -102,9 +96,7 @@ namespace Turboapi.Tests
                 _host.Dispose();
             }
             
-            _producer?.Dispose();
-            
-            await _kafka.DisposeAsync();
+            await _kafkaUtils.DisposeAsync();
         }
         
         [Fact]
@@ -120,15 +112,14 @@ namespace Turboapi.Tests
             };
             
             // Act - Send message to Kafka
-            await _producer!.ProduceAsync(TOPIC_NAME, 
-                new Message<string, string> 
-                {
-                    Key = nameof(TestEvent),
-                    Value = JsonSerializer.Serialize(testEvent)
-                });
+            await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, new Message<string, string> 
+            {
+                Key = nameof(TestEvent),
+                Value = JsonSerializer.Serialize(testEvent, _kafkaUtils.SerializerOptions)
+            });
             
             // Assert - Wait for message to be processed
-            await WaitForConditionAsync(() => _eventTracker.Count > 0, TimeSpan.FromSeconds(10));
+            await KafkaTestUtilities.WaitForConditionAsync(() => _eventTracker.Count > 0, TimeSpan.FromSeconds(10));
             
             // Verify the event was processed
             _eventTracker.GetEvents().Should().ContainSingle()
@@ -141,31 +132,18 @@ namespace Turboapi.Tests
                 Data = "Second WebAPI-style Test Data" 
             };
             
-            await _producer.ProduceAsync(TOPIC_NAME, 
-                new Message<string, string> 
-                {
-                    Key = nameof(TestEvent),
-                    Value = JsonSerializer.Serialize(secondEvent)
-                });
+            await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, new Message<string, string> 
+            {
+                Key = nameof(TestEvent),
+                Value = JsonSerializer.Serialize(secondEvent, _kafkaUtils.SerializerOptions)
+            });
             
             // Wait for second message to be processed
-            await WaitForConditionAsync(() => _eventTracker.Count > 1, TimeSpan.FromSeconds(10));
+            await KafkaTestUtilities.WaitForConditionAsync(() => _eventTracker.Count > 1, TimeSpan.FromSeconds(10));
             
             // Verify both events were processed
             _eventTracker.GetEvents().Should().HaveCount(2);
             _eventTracker.GetEvents()[1].Data.Should().Be(secondEvent.Data);
-        }
-        
-        private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
-        {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            while (sw.Elapsed < timeout)
-            {
-                if (condition())
-                    return;
-                await Task.Delay(100);
-            }
-            throw new TimeoutException($"Condition not met within {timeout.TotalSeconds} seconds");
         }
         
         // Event class
@@ -175,55 +153,13 @@ namespace Turboapi.Tests
             public string Data { get; set; } = "";
         }
         
-        // Thread-safe event tracker
-        public class EventTracker
-        {
-            private readonly List<TestEvent> _events = new();
-            private readonly object _lock = new();
-            
-            public void Add(TestEvent @event)
-            {
-                lock (_lock)
-                {
-                    _events.Add(@event);
-                }
-            }
-            
-            public void Clear()
-            {
-                lock (_lock)
-                {
-                    _events.Clear();
-                }
-            }
-            
-            public int Count
-            {
-                get
-                {
-                    lock (_lock)
-                    {
-                        return _events.Count;
-                    }
-                }
-            }
-            
-            public List<TestEvent> GetEvents()
-            {
-                lock (_lock)
-                {
-                    return _events.ToList();
-                }
-            }
-        }
-        
         // Event handler that adds events to the tracker
         public class TestEventHandler : IEventHandler<TestEvent>
         {
-            private readonly EventTracker _eventTracker;
+            private readonly EventTracker<TestEvent> _eventTracker;
             private readonly ILogger<TestEventHandler> _logger;
             
-            public TestEventHandler(EventTracker eventTracker, ILogger<TestEventHandler> logger)
+            public TestEventHandler(EventTracker<TestEvent> eventTracker, ILogger<TestEventHandler> logger)
             {
                 _eventTracker = eventTracker;
                 _logger = logger;

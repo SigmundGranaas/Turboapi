@@ -2,14 +2,7 @@ using Confluent.Kafka;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using Testcontainers.Kafka;
 using Turbo_event.kafka;
 using Turboapi.Infrastructure.Kafka;
 using Xunit;
@@ -18,25 +11,11 @@ namespace Turboapi.Tests
 {
     public class KafkaConsumerIntegrationTests : IAsyncLifetime
     {
-        private readonly KafkaContainer _kafka;
+        private readonly KafkaTestUtilities _kafkaUtils = new();
         private const string TOPIC_NAME = "test-events";
         private Infrastructure.Kafka.KafkaConsumer<TestEvent>? _consumer;
-        private IProducer<string, string>? _producer;
-        private readonly List<TestEvent> _processedEvents;
-        private IServiceProvider? _serviceProvider;
-        private readonly CancellationTokenSource _cts;
+        private readonly EventTracker<TestEvent> _processedEvents = new();
         
-        public KafkaConsumerIntegrationTests()
-        {
-            _processedEvents = new List<TestEvent>();
-            _cts = new CancellationTokenSource();
-
-            _kafka = new KafkaBuilder()
-                .WithImage("confluentinc/cp-kafka:6.2.10")
-                .WithPortBinding(9092, true)
-                .Build();
-        }
-
         // Test event class
         public record TestEvent : Event
         {
@@ -45,37 +24,13 @@ namespace Turboapi.Tests
             public string Data { get; set; } = "";
         }
         
-        // Test event handler
-        public class TestEventHandler : IEventHandler<TestEvent>
-        {
-            private readonly List<TestEvent> _processedEvents;
-
-            public TestEventHandler(List<TestEvent> processedEvents)
-            {
-                _processedEvents = processedEvents;
-            }
-
-            public Task HandleAsync(TestEvent @event, CancellationToken cancellationToken)
-            {
-                _processedEvents.Add(@event);
-                return Task.CompletedTask;
-            }
-        }
-        
         public async Task InitializeAsync()
         {
-            await _kafka.StartAsync();
+            await _kafkaUtils.InitializeContainerAsync();
 
             // Setup DI container for testing
-            var services = new ServiceCollection();
-            services.AddLogging(b => b.AddConsole());
+            var services = _kafkaUtils.CreateBaseServiceCollection();
             
-            // Register Kafka settings with bootstrap server from container
-            services.AddSingleton(Options.Create(new KafkaSettings
-            {
-                BootstrapServers = _kafka.GetBootstrapAddress(),
-            }));
-
             // Register consumer config
             services.AddSingleton(new KafkaConsumerConfig<TestEvent>
             {
@@ -84,37 +39,24 @@ namespace Turboapi.Tests
             });
 
             // Register test event handler that adds events to our collection
-            services.AddSingleton<IEventHandler<TestEvent>>(sp => new TestEventHandler(_processedEvents));
+            services.AddSingleton<IEventHandler<TestEvent>>(sp => 
+                new TrackedEventHandler<TestEvent>(_processedEvents, 
+                    sp.GetRequiredService<ILogger<TrackedEventHandler<TestEvent>>>()));
             
-            // Register topic initializer and consumer factory
-            services.AddSingleton<ITopicInitializer, SimpleKafkaTopicInitializer>();
-            services.AddSingleton<IKafkaConsumerFactory, KafkaConsumerFactory>();
+            _kafkaUtils.InitializeServiceProvider(services);
 
-            _serviceProvider = services.BuildServiceProvider();
-
+            // Setup registry and serializer
             var registry = new EventTypeRegistry();
             registry.RegisterEventType<TestEvent>("test");
-            var converter1 = new EventJsonConverter(registry);
-            var opt = new JsonSerializerOptions();
-            opt.Converters.Add(converter1);
+            _kafkaUtils.CreateJsonSerializerOptions(registry);
+            
             // Create the consumer
-            _consumer = new Infrastructure.Kafka.KafkaConsumer<TestEvent>(
-                _serviceProvider.GetRequiredService<IEventHandler<TestEvent>>(),
-                _serviceProvider.GetRequiredService<KafkaConsumerConfig<TestEvent>>(),
-                _serviceProvider.GetRequiredService<IOptions<KafkaSettings>>(),
-                _serviceProvider.GetRequiredService<ITopicInitializer>(),
-                _serviceProvider.GetRequiredService<IKafkaConsumerFactory>(),
-                opt,
-                _serviceProvider.GetRequiredService<ILogger<Infrastructure.Kafka.KafkaConsumer<TestEvent>>>());
-
-            // Create the producer
-            _producer = new ProducerBuilder<string, string>(new ProducerConfig
-            {
-                BootstrapServers = _kafka.GetBootstrapAddress()
-            }).Build();
+            _consumer = _kafkaUtils.CreateConsumer(
+                _kafkaUtils.ServiceProvider!.GetRequiredService<IEventHandler<TestEvent>>(),
+                _kafkaUtils.ServiceProvider!.GetRequiredService<KafkaConsumerConfig<TestEvent>>());
             
             // Start the consumer
-            _ = _consumer.StartAsync(_cts.Token);
+            await _consumer.StartAsync(_kafkaUtils.Cts.Token);
             
             // Give some time for the consumer to start and topic to be created
             await Task.Delay(2000);
@@ -122,39 +64,27 @@ namespace Turboapi.Tests
 
         public async Task DisposeAsync()
         {
-            _cts.Cancel();
-            
             if (_consumer != null)
             {
                 await _consumer.StopAsync(CancellationToken.None);
-                _consumer.Dispose();
             }
             
-            _producer?.Dispose();
-            (_serviceProvider as IDisposable)?.Dispose();
-            _cts.Dispose();
-            
-            await _kafka.DisposeAsync();
+            await _kafkaUtils.DisposeAsync();
         }
 
         [Fact]
         public async Task Consumer_ShouldProcessMessages_WhenProduced()
         {
             // Arrange
+            _processedEvents.Clear();
             var testEvent = new TestEvent { Id = "1", Data = "Test Data" };
-            var serializedEvent = JsonSerializer.Serialize(testEvent);
 
             // Act
-            await _producer!.ProduceAsync(TOPIC_NAME, 
-                new Message<string, string> 
-                { 
-                    Key = nameof(TestEvent),
-                    Value = serializedEvent 
-                });
+            await _kafkaUtils.PublishEventAsync(TOPIC_NAME, testEvent);
 
             // Assert
-            await WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
-            _processedEvents.Select(x => x.Data).Should().ContainSingle()
+            await KafkaTestUtilities.WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
+            _processedEvents.GetEvents().Select(x => x.Data).Should().ContainSingle()
                 .Which.Should().BeEquivalentTo(testEvent.Data);
         }
 
@@ -162,6 +92,7 @@ namespace Turboapi.Tests
         public async Task Consumer_ShouldHandleMultipleMessages_InOrder()
         {
             // Arrange
+            _processedEvents.Clear();
             var events = Enumerable.Range(1, 5)
                 .Select(i => new TestEvent { Id = i.ToString(), Data = $"Data {i}" })
                 .ToList();
@@ -169,28 +100,24 @@ namespace Turboapi.Tests
             // Act
             foreach (var @event in events)
             {
-                await _producer!.ProduceAsync(TOPIC_NAME, 
-                    new Message<string, string> 
-                    { 
-                        Key = nameof(TestEvent),
-                        Value = JsonSerializer.Serialize(@event) 
-                    });
+                await _kafkaUtils.PublishEventAsync(TOPIC_NAME, @event);
             }
 
             // Assert
-            await WaitForConditionAsync(() => _processedEvents.Count == 5, TimeSpan.FromSeconds(10));
-            _processedEvents.Select(e => e.Id).Should().BeEquivalentTo(events.Select(e => e.Id));
+            await KafkaTestUtilities.WaitForConditionAsync(() => _processedEvents.Count == 5, TimeSpan.FromSeconds(10));
+            _processedEvents.GetEvents().Select(e => e.Id).Should().BeEquivalentTo(events.Select(e => e.Id));
         }
 
         [Fact]
         public async Task Consumer_ShouldIgnoreMessagesWithWrongKey()
         {
             // Arrange
+            _processedEvents.Clear();
             var testEvent = new TestEvent { Id = "1", Data = "Test Data" };
-            var serializedEvent = JsonSerializer.Serialize(testEvent);
+            var serializedEvent = JsonSerializer.Serialize(testEvent, _kafkaUtils.SerializerOptions);
 
             // Act - Send with wrong event type key
-            await _producer!.ProduceAsync(TOPIC_NAME, 
+            await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, 
                 new Message<string, string> 
                 { 
                     Key = "WrongEventType", 
@@ -201,24 +128,25 @@ namespace Turboapi.Tests
             await Task.Delay(2000);
 
             // Assert - Event should not be processed
-            _processedEvents.Should().BeEmpty();
+            _processedEvents.GetEvents().Should().BeEmpty();
 
             // Now send with correct key and verify it gets processed
-            await _producer.ProduceAsync(TOPIC_NAME, 
+            await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, 
                 new Message<string, string> 
                 { 
                     Key = nameof(TestEvent), 
                     Value = serializedEvent 
                 });
 
-            await WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
+            await KafkaTestUtilities.WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
         }
 
         [Fact]
         public async Task Consumer_ShouldHandleInvalidJson_Gracefully()
         {
             // Arrange - Send invalid JSON
-            await _producer!.ProduceAsync(TOPIC_NAME, 
+            _processedEvents.Clear();
+            await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, 
                 new Message<string, string> 
                 { 
                     Key = nameof(TestEvent), 
@@ -229,31 +157,14 @@ namespace Turboapi.Tests
             await Task.Delay(2000);
 
             // Verify no events were processed
-            _processedEvents.Should().BeEmpty();
+            _processedEvents.GetEvents().Should().BeEmpty();
 
             // Now send valid event and verify it's processed
             var validEvent = new TestEvent { Id = "valid", Data = "Valid data" };
-            await _producer.ProduceAsync(TOPIC_NAME, 
-                new Message<string, string> 
-                { 
-                    Key = nameof(TestEvent), 
-                    Value = JsonSerializer.Serialize(validEvent) 
-                });
+            await _kafkaUtils.PublishEventAsync(TOPIC_NAME, validEvent);
 
-            await WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
-            _processedEvents.First().Id.Should().Be("valid");
-        }
-
-        private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
-        {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            while (sw.Elapsed < timeout)
-            {
-                if (condition())
-                    return;
-                await Task.Delay(100);
-            }
-            throw new TimeoutException($"Condition not met within {timeout.TotalSeconds} seconds");
+            await KafkaTestUtilities.WaitForConditionAsync(() => _processedEvents.Count == 1, TimeSpan.FromSeconds(10));
+            _processedEvents.GetEvents().First().Id.Should().Be("valid");
         }
     }
 }
