@@ -28,16 +28,13 @@ public class KafkaEventStoreWriter : IEventStoreWriter, IDisposable
     private readonly Counter<long> _eventWriteCounter;
     private readonly Histogram<double> _writeLatencyHistogram;
     private readonly Counter<long> _writeErrorCounter;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     public KafkaEventStoreWriter(
         ITopicInitializer topicInitializer,
         IEventTopicResolver topicResolver,
-        JsonSerializerOptions jsonSerializerOptions,
         IOptions<KafkaSettings> settings,
         ILogger<KafkaEventStoreWriter> logger)
     {
-        _jsonSerializerOptions = jsonSerializerOptions;
         _topicResolver = topicResolver;
         _topicInitializer = topicInitializer;
         _logger = logger;
