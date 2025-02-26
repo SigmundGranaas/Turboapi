@@ -67,12 +67,6 @@ namespace Turboapi.Tests
             
             var serviceProvider1 = services1.BuildServiceProvider();
             
-            var registry1 = new EventTypeRegistry();
-            registry1.RegisterEventType<TestEvent>();
-            var converter1 = new EventJsonConverter(registry1);
-            var opt = new JsonSerializerOptions();
-            opt.Converters.Add(converter1);
-            
             var consumer1 = new Infrastructure.Kafka.KafkaConsumer<TestEvent>(
                 serviceProvider1.GetRequiredService<IEventHandler<TestEvent>>(),
                 serviceProvider1.GetRequiredService<KafkaConsumerConfig<TestEvent>>(),
@@ -100,7 +94,7 @@ namespace Turboapi.Tests
                 new Confluent.Kafka.Message<string, string> 
                 { 
                     Key = nameof(TestEvent),
-                    Value = JsonSerializer.Serialize(initialEvent, opt) 
+                    Value = JsonSerializer.Serialize(initialEvent) 
                 });
             
             // Wait for it to be processed
@@ -145,13 +139,6 @@ namespace Turboapi.Tests
             });
             
             var serviceProvider2 = services2.BuildServiceProvider();
-            
-            var registry2 = new EventTypeRegistry();
-            registry2.RegisterEventType<TestEvent>();
-            var converter2 = new EventJsonConverter(registry2);
-            var options = new JsonSerializerOptions();
-            options.Converters.Add(converter2);
-            
             var consumer2 = new Infrastructure.Kafka.KafkaConsumer<TestEvent>(
                 serviceProvider2.GetRequiredService<IEventHandler<TestEvent>>(),
                 serviceProvider2.GetRequiredService<KafkaConsumerConfig<TestEvent>>(),
@@ -179,7 +166,7 @@ namespace Turboapi.Tests
                 new Confluent.Kafka.Message<string, string> 
                 { 
                     Key = nameof(TestEvent),
-                    Value = JsonSerializer.Serialize(newEvent, options) 
+                    Value = JsonSerializer.Serialize(newEvent) 
                 });
             
             Console.WriteLine("Sent event to second consumer");

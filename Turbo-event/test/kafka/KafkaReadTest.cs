@@ -42,14 +42,9 @@ public class KafkaEventReaderTests : IAsyncLifetime
         
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         _logger = loggerFactory.CreateLogger<KafkaEventReader>();
-
-        var registry = new EventTypeRegistry();
-        registry.RegisterEventType<TestEvent>(nameof(TestEvent));
         
-        var converter = new EventJsonConverter(registry);
-         _jsonOptions = JsonConfig.CreateDefault(converter);
         
-        _reader = new KafkaEventReader(_jsonOptions,Options.Create(_settings), _logger);
+        _reader = new KafkaEventReader(new JsonSerializerOptions(),Options.Create(_settings), _logger);
 
         var producerConfig = new ProducerConfig
         {

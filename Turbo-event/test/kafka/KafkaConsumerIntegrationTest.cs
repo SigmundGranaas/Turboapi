@@ -44,11 +44,6 @@ namespace Turboapi.Tests
                     sp.GetRequiredService<ILogger<TrackedEventHandler<TestEvent>>>()));
             
             _kafkaUtils.InitializeServiceProvider(services);
-
-            // Setup registry and serializer
-            var registry = new EventTypeRegistry();
-            registry.RegisterEventType<TestEvent>("test");
-            _kafkaUtils.CreateJsonSerializerOptions(registry);
             
             // Create the consumer
             _consumer = _kafkaUtils.CreateConsumer(
@@ -114,7 +109,7 @@ namespace Turboapi.Tests
             // Arrange
             _processedEvents.Clear();
             var testEvent = new TestEvent { Id = "1", Data = "Test Data" };
-            var serializedEvent = JsonSerializer.Serialize(testEvent, _kafkaUtils.SerializerOptions);
+            var serializedEvent = JsonSerializer.Serialize(testEvent);
 
             // Act - Send with wrong event type key
             await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, 

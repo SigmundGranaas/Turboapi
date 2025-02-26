@@ -94,7 +94,6 @@ namespace Turboapi.Tests
             registry.RegisterEventType<LocationCreatedEvent>();
             registry.RegisterEventType<UserRegisteredEvent>();
             registry.RegisterEventType<OrderPlacedEvent>();
-            _kafkaUtils.CreateJsonSerializerOptions(registry);
             
             // Create the consumers
             _locationConsumer = _kafkaUtils.CreateConsumer(

@@ -53,9 +53,7 @@ public class KafkaEventStoreWriterTests : IAsyncLifetime
         var registry = new EventTypeRegistry();
         registry.RegisterEventType<TestCreated>(nameof(TestCreated));
         
-        var converter = new EventJsonConverter(registry);
-        JsonSerializerOptions opts = JsonConfig.CreateDefault(converter);
-        _writer = new KafkaEventStoreWriter(_topicInitializer, new TestCreatedTopicResolver(), opts, settings, _writerLogger);
+        _writer = new KafkaEventStoreWriter(_topicInitializer, new TestCreatedTopicResolver(), new JsonSerializerOptions(), settings, _writerLogger);
 
         // Setup consumer for verification
         var consumerConfig = new ConsumerConfig

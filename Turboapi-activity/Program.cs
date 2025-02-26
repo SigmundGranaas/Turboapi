@@ -63,24 +63,6 @@ builder.Services.AddScoped<IEventHandler<ActivityCreated>, ActivityEventHandler>
 builder.Services.AddScoped<IEventHandler<ActivityUpdated>, ActivityEventHandler>();
 builder.Services.AddScoped<IEventHandler<ActivityDeleted>, ActivityEventHandler>();
 
-// Register event types
-builder.Services.AddSingleton<IEventTypeRegistry>(sp => {
-    var registry = new EventTypeRegistry();
-    registry.RegisterEventType<ActivityCreated>(nameof(ActivityCreated));
-    registry.RegisterEventType<ActivityUpdated>(nameof(ActivityUpdated));
-    registry.RegisterEventType<ActivityPositionCreated>(nameof(ActivityPositionCreated));
-    registry.RegisterEventType<ActivityDeleted>(nameof(ActivityDeleted));
-    return registry;
-});
-
-builder.Services.AddSingleton<EventJsonConverter>();
-
-builder.Services.AddSingleton(sp => {
-    var options = new JsonSerializerOptions();
-    options.Converters.Add(sp.GetRequiredService<EventJsonConverter>());
-    return options;
-});
-
 // Kafka
 builder.Services.Configure<KafkaSettings>(
     builder.Configuration.GetSection("Kafka"));

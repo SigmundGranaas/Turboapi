@@ -52,17 +52,6 @@ namespace Turboapi.Tests
                     services.Configure<KafkaSettings>(configuration.GetSection("Kafka"));
                     services.AddSingleton<ITopicInitializer, SimpleKafkaTopicInitializer>();
                     services.AddSingleton<IKafkaConsumerFactory, KafkaConsumerFactory>();
-                    
-                    // Register event registry
-                    var registry = new EventTypeRegistry();
-                    registry.RegisterEventType<TestEvent>();
-                    
-                    services.AddSingleton<EventJsonConverter>(new EventJsonConverter(registry));
-                    services.AddSingleton(sp => {
-                        var options = new JsonSerializerOptions();
-                        options.Converters.Add(sp.GetRequiredService<EventJsonConverter>());
-                        return options;
-                    });
 
                     // Register event handlers
                     services.AddScoped<IEventHandler<TestEvent>, TestEventHandler>();
@@ -78,11 +67,6 @@ namespace Turboapi.Tests
                     services.AddHostedService<ScopedKafkaConsumerService<TestEvent>>();
                 })
                 .Build();
-            
-            // Setup serializer options
-            var registry = new EventTypeRegistry();
-            registry.RegisterEventType<TestEvent>();
-            _kafkaUtils.CreateJsonSerializerOptions(registry);
             
             // Start the host
             await _host.StartAsync();
@@ -115,7 +99,7 @@ namespace Turboapi.Tests
             await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, new Message<string, string> 
             {
                 Key = nameof(TestEvent),
-                Value = JsonSerializer.Serialize(testEvent, _kafkaUtils.SerializerOptions)
+                Value = JsonSerializer.Serialize(testEvent)
             });
             
             // Assert - Wait for message to be processed
@@ -135,7 +119,7 @@ namespace Turboapi.Tests
             await _kafkaUtils.PublishRawMessageAsync(TOPIC_NAME, new Message<string, string> 
             {
                 Key = nameof(TestEvent),
-                Value = JsonSerializer.Serialize(secondEvent, _kafkaUtils.SerializerOptions)
+                Value = JsonSerializer.Serialize(secondEvent)
             });
             
             // Wait for second message to be processed

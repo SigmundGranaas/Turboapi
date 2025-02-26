@@ -20,7 +20,6 @@ namespace Turboapi.Tests
         public IServiceProvider? ServiceProvider { get; private set; }
         public CancellationTokenSource Cts { get; } = new();
         public List<IDisposable> Disposables { get; } = new();
-        public JsonSerializerOptions? SerializerOptions { get; private set; }
         
         public KafkaTestUtilities()
         {
@@ -69,29 +68,17 @@ namespace Turboapi.Tests
             Disposables.Add((ServiceProvider as IDisposable)!);
         }
         
-        public JsonSerializerOptions CreateJsonSerializerOptions(EventTypeRegistry registry)
-        {
-            var converter = new EventJsonConverter(registry);
-            var options = new JsonSerializerOptions();
-            options.Converters.Add(converter);
-            SerializerOptions = options;
-            return options;
-        }
-        
         public async Task<DeliveryResult<string, string>> PublishEventAsync<TEvent>(string topic, TEvent @event) 
             where TEvent : Event
         {
             if (Producer == null)
                 throw new InvalidOperationException("Producer has not been initialized");
             
-            if (SerializerOptions == null)
-                throw new InvalidOperationException("SerializerOptions has not been initialized");
-                
             return await Producer.ProduceAsync(topic, 
                 new Message<string, string> 
                 { 
                     Key = typeof(TEvent).Name,
-                    Value = JsonSerializer.Serialize(@event, SerializerOptions) 
+                    Value = JsonSerializer.Serialize(@event) 
                 });
         }
         
@@ -109,10 +96,7 @@ namespace Turboapi.Tests
         {
             if (ServiceProvider == null)
                 throw new InvalidOperationException("ServiceProvider has not been initialized");
-                
-            if (SerializerOptions == null)
-                throw new InvalidOperationException("SerializerOptions has not been initialized");
-                
+            
             var consumer = new KafkaConsumer<TEvent>(
                 handler,
                 config,
