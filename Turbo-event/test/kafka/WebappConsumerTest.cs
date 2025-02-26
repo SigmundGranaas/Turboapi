@@ -215,7 +215,6 @@ namespace Turboapi.Tests
                     _settings,
                     _topicInitializer,
                     _consumerFactory,
-                    _converter,
                     _logger);
                 
                 return _consumer.StartAsync(cancellationToken);

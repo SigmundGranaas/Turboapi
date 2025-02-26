@@ -40,7 +40,6 @@ namespace Turboapi.Infrastructure.Kafka
         private readonly ILogger<KafkaConsumer<TEvent>> _logger;
         private readonly string _expectedEventType;
         private readonly CancellationTokenSource _stopConsumer;
-        private readonly JsonSerializerOptions _options;
         private volatile bool _isRunning;
         private Task _consumeTask;
 
@@ -50,10 +49,8 @@ namespace Turboapi.Infrastructure.Kafka
             IOptions<KafkaSettings> settings,
             ITopicInitializer topicInitializer,
             IKafkaConsumerFactory consumerFactory,
-            JsonSerializerOptions options,
             ILogger<KafkaConsumer<TEvent>> logger)
         {
-            _options = options;
             _eventHandler = eventHandler ?? throw new ArgumentNullException(nameof(eventHandler));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -153,8 +150,7 @@ namespace Turboapi.Infrastructure.Kafka
                 }
 
                 var domainEvent = JsonSerializer.Deserialize<TEvent>(
-                    result.Message.Value,
-                    _options);
+                    result.Message.Value);
 
                 if (domainEvent == null)
                 {

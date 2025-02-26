@@ -79,7 +79,6 @@ namespace Turboapi.Tests
                 serviceProvider1.GetRequiredService<IOptions<KafkaSettings>>(),
                 serviceProvider1.GetRequiredService<ITopicInitializer>(),
                 serviceProvider1.GetRequiredService<IKafkaConsumerFactory>(),
-                opt,
                 serviceProvider1.GetRequiredService<ILogger<Infrastructure.Kafka.KafkaConsumer<TestEvent>>>());
             
             // Start first consumer
@@ -159,7 +158,6 @@ namespace Turboapi.Tests
                 serviceProvider2.GetRequiredService<IOptions<KafkaSettings>>(),
                 serviceProvider2.GetRequiredService<ITopicInitializer>(),
                 serviceProvider2.GetRequiredService<IKafkaConsumerFactory>(),
-                options,
                 serviceProvider2.GetRequiredService<ILogger<Infrastructure.Kafka.KafkaConsumer<TestEvent>>>());
             
             // Start second consumer

@@ -45,7 +45,6 @@ namespace Turboapi.Tests
                 _serviceProvider.GetRequiredService<IOptions<KafkaSettings>>(),
                 _serviceProvider.GetRequiredService<ITopicInitializer>(),
                 _serviceProvider.GetRequiredService<IKafkaConsumerFactory>(),
-                _serializerOptions,
                 _serviceProvider.GetRequiredService<ILogger<Infrastructure.Kafka.KafkaConsumer<TEvent>>>());
                 
             _disposables.Add(consumer);

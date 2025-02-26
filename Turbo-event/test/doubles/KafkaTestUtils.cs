@@ -103,7 +103,7 @@ namespace Turboapi.Tests
             return await Producer.ProduceAsync(topic, message);
         }
         
-        public Infrastructure.Kafka.KafkaConsumer<TEvent> CreateConsumer<TEvent>(
+        public KafkaConsumer<TEvent> CreateConsumer<TEvent>(
             IEventHandler<TEvent> handler,
             KafkaConsumerConfig<TEvent> config) where TEvent : Event
         {
@@ -113,14 +113,13 @@ namespace Turboapi.Tests
             if (SerializerOptions == null)
                 throw new InvalidOperationException("SerializerOptions has not been initialized");
                 
-            var consumer = new Infrastructure.Kafka.KafkaConsumer<TEvent>(
+            var consumer = new KafkaConsumer<TEvent>(
                 handler,
                 config,
                 ServiceProvider.GetRequiredService<IOptions<KafkaSettings>>(),
                 ServiceProvider.GetRequiredService<ITopicInitializer>(),
                 ServiceProvider.GetRequiredService<IKafkaConsumerFactory>(),
-                SerializerOptions,
-                ServiceProvider.GetRequiredService<ILogger<Infrastructure.Kafka.KafkaConsumer<TEvent>>>());
+                ServiceProvider.GetRequiredService<ILogger<KafkaConsumer<TEvent>>>());
                 
             Disposables.Add(consumer);
             return consumer;
