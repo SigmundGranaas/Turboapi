@@ -174,7 +174,7 @@ namespace Turboapi.Tests
                 IOptions<KafkaSettings> settings,
                 ITopicInitializer topicInitializer,
                 IKafkaConsumerFactory consumerFactory,
-                ILogger<Infrastructure.Kafka.KafkaConsumer<TEvent>> logger)
+                ILogger<KafkaConsumer<TEvent>> logger)
             {
                 _scopeFactory = scopeFactory;
                 _config = config;
@@ -190,7 +190,7 @@ namespace Turboapi.Tests
                 var handler = new ScopedEventHandlerWrapper<TEvent>(_scopeFactory);
                 
                 // Create the actual consumer
-                _consumer = new Infrastructure.Kafka.KafkaConsumer<TEvent>(
+                _consumer = new KafkaConsumer<TEvent>(
                     handler,
                     _config,
                     _settings,

@@ -18,15 +18,12 @@ public class KafkaEventReader : IEventStoreReader, IDisposable
     private readonly Counter<long> _eventReadCounter;
     private readonly Histogram<double> _readLatencyHistogram;
     private readonly Counter<long> _deserializationErrorCounter;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly SemaphoreSlim _consumeLock = new(1, 1);
 
     public KafkaEventReader(
-        JsonSerializerOptions jsonSerializerOptions,
         IOptions<KafkaSettings> settings,
         ILogger<KafkaEventReader> logger)
     {
-        _jsonSerializerOptions = jsonSerializerOptions;
         _logger = logger;
         
         _activitySource = new ActivitySource("KafkaEventReader");
@@ -159,8 +156,7 @@ public class KafkaEventReader : IEventStoreReader, IDisposable
 
             return JsonSerializer.Deserialize(
                 message.Value, 
-                type, 
-                _jsonSerializerOptions) as Event;
+                type) as Event;
         }
         catch (Exception ex)
         {

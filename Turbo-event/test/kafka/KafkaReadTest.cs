@@ -19,7 +19,6 @@ public class KafkaEventReaderTests : IAsyncLifetime
     private IProducer<string, string>? _producer;
     private ILogger<KafkaEventReader>? _logger;
     private KafkaSettings _settings;
-    private JsonSerializerOptions? _jsonOptions;
 
     public KafkaEventReaderTests()
     {
@@ -44,7 +43,7 @@ public class KafkaEventReaderTests : IAsyncLifetime
         _logger = loggerFactory.CreateLogger<KafkaEventReader>();
         
         
-        _reader = new KafkaEventReader(new JsonSerializerOptions(),Options.Create(_settings), _logger);
+        _reader = new KafkaEventReader(Options.Create(_settings), _logger);
 
         var producerConfig = new ProducerConfig
         {
@@ -77,14 +76,14 @@ public class KafkaEventReaderTests : IAsyncLifetime
         await _kafka.DisposeAsync();
     }
 
-    private async Task ProduceEvents(IEnumerable<Event> events)
+    private async Task ProduceEvents<TEvent>(IEnumerable<TEvent> events)
     {
         foreach (var @event in events)
         {
             await _producer!.ProduceAsync(TOPIC_NAME, new Message<string, string>
             {
                 Key = @event.GetType().FullName,
-                Value = JsonSerializer.Serialize(@event, _jsonOptions)
+                Value = JsonSerializer.Serialize(@event)
             });
         }
     }
