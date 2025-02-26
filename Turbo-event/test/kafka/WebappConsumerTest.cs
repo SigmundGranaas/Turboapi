@@ -165,7 +165,6 @@ namespace Turboapi.Tests
             private readonly IOptions<KafkaSettings> _settings;
             private readonly ITopicInitializer _topicInitializer;
             private readonly IKafkaConsumerFactory _consumerFactory;
-            private readonly JsonSerializerOptions _converter;
             private readonly ILogger<KafkaConsumer<TEvent>> _logger;
             private KafkaConsumer<TEvent>? _consumer;
             
@@ -175,7 +174,6 @@ namespace Turboapi.Tests
                 IOptions<KafkaSettings> settings,
                 ITopicInitializer topicInitializer,
                 IKafkaConsumerFactory consumerFactory,
-                JsonSerializerOptions converter,
                 ILogger<Infrastructure.Kafka.KafkaConsumer<TEvent>> logger)
             {
                 _scopeFactory = scopeFactory;
@@ -183,7 +181,6 @@ namespace Turboapi.Tests
                 _settings = settings;
                 _topicInitializer = topicInitializer;
                 _consumerFactory = consumerFactory;
-                _converter = converter;
                 _logger = logger;
             }
             
