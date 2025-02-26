@@ -1,12 +1,8 @@
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json;
 using Scalar.AspNetCore;
-using Turbo_event.di;
 using Turbo_event.kafka;
 using Turbo_event.test.kafka;
 using Turboapi.Infrastructure.Kafka;
@@ -15,7 +11,6 @@ using Turboauth_activity.domain.events;
 using Turboauth_activity.domain.handler;
 using Turboauth_activity.domain.query;
 using KafkaSettings = Turbo_event.kafka.KafkaSettings;
-using KafkaTopicInitializer = Turbo_event.test.kafka.KafkaTopicInitializer;
 
 var builder = WebApplication.CreateBuilder(args);
 
