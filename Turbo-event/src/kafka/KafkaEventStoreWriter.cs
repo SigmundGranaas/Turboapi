@@ -2,9 +2,12 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Confluent.Kafka;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 using OpenTelemetry;
 using OpenTelemetry.Context.Propagation;
 using Turbo_event.kafka;
@@ -25,16 +28,13 @@ public class KafkaEventStoreWriter : IEventStoreWriter, IDisposable
     private readonly Counter<long> _eventWriteCounter;
     private readonly Histogram<double> _writeLatencyHistogram;
     private readonly Counter<long> _writeErrorCounter;
-    private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     public KafkaEventStoreWriter(
         ITopicInitializer topicInitializer,
         IEventTopicResolver topicResolver,
-        JsonSerializerOptions jsonSerializerOptions,
         IOptions<KafkaSettings> settings,
         ILogger<KafkaEventStoreWriter> logger)
     {
-        _jsonSerializerOptions = jsonSerializerOptions;
         _topicResolver = topicResolver;
         _topicInitializer = topicInitializer;
         _logger = logger;
@@ -100,11 +100,10 @@ public class KafkaEventStoreWriter : IEventStoreWriter, IDisposable
             {
                 var topic = _topicResolver.ResolveTopicFor(@event);
                 await _topicInitializer.EnsureTopicExists(topic);
-                
                 var message = new Message<string, string>
                 {
                     Key = @event.GetType().Name,
-                    Value = JsonSerializer.Serialize(@event, _jsonSerializerOptions),
+                    Value = JsonConvert.SerializeObject(@event),
                     Headers = CreateHeaders(activity)
                 };
 
@@ -130,6 +129,16 @@ public class KafkaEventStoreWriter : IEventStoreWriter, IDisposable
                 "Failed to append {Count} events to topic {Topic}", 
                 eventsList.Count, _topic);
             throw;
+        }
+    }
+    private void AddPolymorphicTypeModifier(JsonTypeInfo typeInfo)
+    {
+        if (typeInfo.Type == typeof(Event) || typeInfo.Type.IsSubclassOf(typeof(Event)))
+        {
+            typeInfo.PolymorphismOptions = new JsonPolymorphismOptions
+            {
+                UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType
+            };
         }
     }
 

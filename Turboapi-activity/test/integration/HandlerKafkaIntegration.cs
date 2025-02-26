@@ -51,7 +51,6 @@ public class HandlerKafkaIntegration: IAsyncLifetime
         registry.RegisterEventType<ActivityDeleted>(nameof(ActivityDeleted));
         registry.RegisterEventType<ActivityUpdated>(nameof(ActivityUpdated));
 
-        var converter = new EventJsonConverter(registry);
         var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
         var writerLogger = loggerFactory.CreateLogger<KafkaEventStoreWriter>();
 
@@ -59,8 +58,7 @@ public class HandlerKafkaIntegration: IAsyncLifetime
 
         _topicInitializer = new KafkaTopicInitializer(settings, initializerLogger);
 
-        JsonSerializerOptions opts = JsonConfig.CreateDefault(converter);
-        _writer = new KafkaEventStoreWriter(_topicInitializer,new ActivityEventTopicResolver() ,opts, settings, writerLogger);
+        _writer = new KafkaEventStoreWriter(_topicInitializer, new ActivityEventTopicResolver(), settings, writerLogger);
         
         var consumerConfig = new ConsumerConfig
         {
