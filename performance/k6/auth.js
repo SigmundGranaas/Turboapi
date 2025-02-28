@@ -50,16 +50,46 @@ export function authenticateUser(user) {
 
 // Setup authenticated sessions
 export function setupSessions(testUsers) {
-    const sessions = testUsers.map(user => {
+    console.log(`Starting authentication setup for ${testUsers.length} users...`);
+
+    const sessions = testUsers.map((user, index) => {
+        console.log(`Authenticating user ${index + 1}/${testUsers.length}: ${user.email}`);
         const session = authenticateUser(user);
+
         if (session) {
-            return {
+            // Create a properly structured session object
+            const formattedSession = {
                 user: user,
                 token: session.token,
                 createdLocations: [],
-                createdActivities: []
+                createdActivities: {
+                    all: [],
+                    ready: []
+                }
             };
+
+            // Validate the structure after creation
+            if (!Array.isArray(formattedSession.createdLocations)) {
+                formattedSession.createdLocations = [];
+            }
+
+            if (!formattedSession.createdActivities) {
+                formattedSession.createdActivities = { all: [], ready: [] };
+            }
+
+            if (!Array.isArray(formattedSession.createdActivities.all)) {
+                formattedSession.createdActivities.all = [];
+            }
+
+            if (!Array.isArray(formattedSession.createdActivities.ready)) {
+                formattedSession.createdActivities.ready = [];
+            }
+
+            console.log(`User ${user.email} authenticated successfully`);
+            return formattedSession;
         }
+
+        console.log(`Failed to authenticate user ${user.email}`);
         return null;
     }).filter(session => session !== null);
 

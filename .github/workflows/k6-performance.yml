@@ -38,8 +38,8 @@ jobs:
           sudo mv k6-v0.55.0-linux-amd64/k6 /usr/local/bin/
 
       - name: Run k6 tests
-        working-directory: Turboapi-activity/test/performance
-        run: k6 run --tag test_type=smoke --vus 1 --duration 30s test.js
+        working-directory: performance/k6/
+        run:  k6 run -e VUS=50 -e DURATION=1m run-all.js
 
       - name: Stop containers
         if: always()

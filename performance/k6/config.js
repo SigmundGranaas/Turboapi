@@ -1,6 +1,6 @@
 export const config = {
-    AUTH_URL: __ENV.AUTH_URL || 'http://localhost:5098',
-    GEO_URL: __ENV.GEO_URL || 'http://localhost:5028',
+    AUTH_URL: __ENV.AUTH_URL || 'http://localhost:5001',
+    GEO_URL: __ENV.GEO_URL || 'http://localhost:5002',
     ACTIVITY_URL: __ENV.ACTIVITY_URL || 'http://localhost:5003',
     TEST_USER_COUNT: parseInt(__ENV.TEST_USER_COUNT || '10'),
 
