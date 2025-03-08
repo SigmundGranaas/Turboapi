@@ -46,17 +46,14 @@ export function setup() {
 // Auth test executor
 export function runAuthTests(data) {
     authTest.default(data.auth);
-    sleep(1);
 }
 
 // Locations test executor
 export function runLocationTests(data) {
     locationsTest.default(data.locations);
-    sleep(1);
 }
 
 // Activities test executor
 export function runActivityTests(data) {
     activitiesTest.default(data.activities);
-    sleep(1);
 }

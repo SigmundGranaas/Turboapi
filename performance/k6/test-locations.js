@@ -65,5 +65,5 @@ export default function(data) {
         deleteLocation(requestConfig, session);
     }
 
-    sleep(1);
+    sleep(0.1);
 }

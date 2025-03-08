@@ -99,9 +99,7 @@ export default function(data) {
         // Choose a random operation to perform based on current state
         const rand = Math.random();
         const currentActive = metrics.activeActivities.value || 0;
-
-        console.log(`Current active activities: ${currentActive}, random value: ${rand}`);
-
+        
         if (currentActive < 10 || rand < 0.4) {
             console.log('Performing createActivity operation');
             createActivity(requestConfig, session);
@@ -116,7 +114,7 @@ export default function(data) {
             deleteActivity(requestConfig, session);
         }
 
-        sleep(1);
+        sleep(0.1);
     } catch (error) {
         console.log(`Error in default function: ${error.message}`);
         sleep(1);
