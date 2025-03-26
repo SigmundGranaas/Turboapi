@@ -9,9 +9,6 @@ public record LoginRequest(
     string Email,
     string Password);
 
-public record GoogleLoginRequest(
-    string IdToken);
-
 public record AuthResponse
 {
     public bool Success { get; init; }
@@ -22,3 +19,13 @@ public record AuthResponse
 
 public record RefreshTokenRequest(
     string RefreshToken);
+    
+public class ValidateAuthResponse
+{
+    public bool IsAuthenticated { get; set; }
+    public string? Email { get; set; }
+    public string? UserId { get; set; }
+    public string? AuthType { get; set; }
+    public string? Error { get; set; }
+    public bool RequiresRefresh { get; set; }
+}

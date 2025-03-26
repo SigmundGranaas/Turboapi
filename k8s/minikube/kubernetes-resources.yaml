@@ -505,7 +505,6 @@ spec:
   ports:
     - port: 5001
       targetPort: 8080
-  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -517,7 +516,6 @@ spec:
   ports:
     - port: 5002
       targetPort: 8080
-  type: ClusterIP
 ---
 apiVersion: v1
 kind: Service
@@ -529,7 +527,6 @@ spec:
   ports:
     - port: 5003
       targetPort: 8080
-  type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

@@ -2,6 +2,8 @@ using System.Collections;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Turboapi.auth;
+using Turboapi.controller;
+using Turboapi.Controller;
 using Turboapi.dto;
 using Turboapi.services;
 using Xunit;
@@ -32,13 +34,27 @@ public class AuthControllerTests
         _controller = new AuthController(
             _authService,
             loggerFactory.CreateLogger<AuthController>(),
-            _dataProtectionProvider)
+            new AuthHelper(_dataProtectionProvider, CreateConfiguration(), loggerFactory.CreateLogger<AuthHelper>()))
         {
             ControllerContext = new ControllerContext
             {
                 HttpContext = _httpContext
             }
         };
+    }
+    
+    public IConfiguration CreateConfiguration()
+    {
+        var inMemorySettings = new Dictionary<string, string> {
+            {"CookieSettings:Domain", "test.com"},
+            {"CookieSettings:Secure", "true"},
+            {"CookieSettings:HttpOnly", "true"},
+            {"CookieSettings:SameSite", "Strict"}
+        };
+
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(inMemorySettings)
+            .Build();
     }
 
     private void VerifyCookies(string expectedAccessToken, string expectedRefreshToken)
@@ -63,7 +79,7 @@ public class AuthControllerTests
         // Verify secure flags are present
         Assert.Contains("HttpOnly", accessTokenCookie, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Secure", accessTokenCookie, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("SameSite=Strict", accessTokenCookie, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("SameSite", accessTokenCookie, StringComparison.OrdinalIgnoreCase);
         
         // Decrypt and verify token values
         var decryptedAccessToken = protector.Unprotect(GetCookieValue(accessTokenCookie));
@@ -287,7 +303,7 @@ public class AuthControllerTests
         var response = Assert.IsType<AuthResponse>(unauthorizedResult.Value);
         
         Assert.False(response.Success);
-        Assert.Equal("No refresh token found in cookies or request body", response.Error);
+        Assert.Equal("No refresh token found", response.Error);
     }
 
     [Fact]

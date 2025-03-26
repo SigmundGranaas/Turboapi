@@ -26,8 +26,17 @@ public class RefreshTokenCredentials : IAuthenticationCredentials
     }
 }
 
-public record GoogleCredentials(string IdToken) : IAuthenticationCredentials;
+public record GoogleCredentials : IAuthenticationCredentials
+{
+    public string IdToken { get; init; }
+    public string? AccessToken { get; init; }
 
+    public GoogleCredentials(string idToken)
+    {
+        IdToken = idToken;
+        AccessToken = null;
+    }
+}
 public record AuthResult
 {
     public bool Success { get; init; }
