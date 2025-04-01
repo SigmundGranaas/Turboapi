@@ -2,14 +2,13 @@ using Microsoft.EntityFrameworkCore;
 using TurboApi.Data.Entity;
 using Turboapi.Models;
 using Turboapi.services;
-using Turboapi.Services;
 
 namespace Turboapi.auth;
 
 public class GoogleAuthenticationProvider : IAuthenticationProvider
 {
     private readonly AuthDbContext _context;
-    private readonly GoogleTokenValidator _tokenValidator;
+    private readonly IGoogleAuthenticationService _googleAuthService;
     private readonly IJwtService _jwtService;
     private readonly ILogger<GoogleAuthenticationProvider> _logger;
 
@@ -17,12 +16,12 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
 
     public GoogleAuthenticationProvider(
         AuthDbContext context,
-        GoogleTokenValidator tokenValidator,
+        IGoogleAuthenticationService googleAuthService,
         IJwtService jwtService,
         ILogger<GoogleAuthenticationProvider> logger)
     {
         _context = context;
-        _tokenValidator = tokenValidator;
+        _googleAuthService = googleAuthService;
         _jwtService = jwtService;
         _logger = logger;
     }
@@ -34,7 +33,7 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
 
         try
         {
-            var tokenInfo = await _tokenValidator.ValidateIdTokenAsync(googleCreds.IdToken);
+            var tokenInfo = await _googleAuthService.ValidateIdTokenAsync(googleCreds.IdToken);
             if (!tokenInfo.IsValid)
                 return new AuthResult { Success = false, ErrorMessage = tokenInfo.ErrorMessage };
 
@@ -57,7 +56,7 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
                         {
                             Provider = Name,
                             ExternalUserId = tokenInfo.Subject,
-                            AccessToken = tokenInfo.AccessToken
+                            LastUsedAt = DateTime.UtcNow
                         }
                     },
                     Roles = new List<UserRole>
@@ -78,9 +77,19 @@ public class GoogleAuthenticationProvider : IAuthenticationProvider
                 };
             }
 
-            // Update token information
-            authMethod.AccessToken = tokenInfo.AccessToken;
+            // Update user info
             authMethod.LastUsedAt = DateTime.UtcNow;
+            
+            // Update account information if needed
+            if (authMethod.Account != null)
+            {
+                if (authMethod.Account.Email != tokenInfo.Email
+                   )
+                {
+                    authMethod.Account.Email = tokenInfo.Email;
+                }
+            }   
+            
             await _context.SaveChangesAsync();
 
             return new AuthResult

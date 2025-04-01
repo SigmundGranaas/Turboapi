@@ -11,11 +11,11 @@ using Scalar.AspNetCore;
 
 // Service-specific usings
 using Turboapi.auth;
+using Turboapi.controller;
 using Turboapi.core;
 using TurboApi.Data.Entity;
 using Turboapi.infrastructure;
 using Turboapi.services;
-using Turboapi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-
+builder.Configuration.AddEnvironmentVariables();
 // #############################################
 // # 2. Database Configuration
 // #############################################
@@ -36,9 +36,13 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
 // # 3. Authentication Configuration
 // #############################################
 // 3.1 Password and Token Services
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<AuthHelper>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+builder.Services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
+
 builder.Services.AddDataProtection();
 
 // 3.2 JWT Configuration
@@ -70,6 +74,19 @@ builder.Services.AddAuthentication(options =>
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "Default",
+        policy  =>
+        {
+            policy
+                .WithOrigins("http://localhost:8080")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
+});
+
 // 3.3 Authentication Providers
 builder.Services.AddScoped<IAuthenticationProvider, GoogleAuthenticationProvider>();
 builder.Services.AddScoped<IAuthenticationProvider, PasswordAuthenticationProvider>();
@@ -78,8 +95,7 @@ builder.Services.AddScoped<IAuthenticationProvider, RefreshTokenProvider>();
 // 3.4 Google Authentication
 builder.Services.Configure<GoogleAuthSettings>(
     builder.Configuration.GetSection("Authentication:Google"));
-builder.Services.AddScoped<GoogleTokenValidator>();
-builder.Services.AddHttpClient<GoogleTokenValidator>();
+
 
 // #############################################
 // # 4. Integration Services
@@ -149,7 +165,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
+app.UseCors("Default");
 app.Run();
 
 // For testing

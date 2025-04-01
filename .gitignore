@@ -1,10 +1,46 @@
-/Turboapi-auth/bin/
-/Turboapi-auth/obj/
-/Turboapi-geo/bin/
-/Turboapi-geo/obj/
-/Turboapi-activity/bin/
-/Turboapi-activity/obj/
-/Turbo-event/bin/
-/Turbo-event/obj/
-/Turbo-pg-data/bin/
-/Turbo-pg-data/obj/
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+*.env
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.userprefs
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.vspscc
+*.vssscc
+*_i.c
+*_p.c
+*.ncb
+*.sdf
+*.opensdf
+*.cachefile
+*.VC.db
+
+# JetBrains Rider
+.idea/
+*.sln.iml
+
+
+/data/

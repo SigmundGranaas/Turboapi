@@ -86,6 +86,7 @@
       &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.MultiConsumerIntegrationTests&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.KafkaConsumerRestartTest&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.WebApiStyleKafkaTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Tests.AuthControllerTests&lt;/TestId&gt;
     &lt;/TestAncestor&gt;
   &lt;/Or&gt;
 &lt;/SessionState&gt;</s:String>

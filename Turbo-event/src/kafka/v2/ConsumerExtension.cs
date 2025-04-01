@@ -24,7 +24,7 @@ public static class KafkaConsumerExtensions
         services.AddSingleton(config);
         
         // Register the consumer as a hosted service
-        services.AddHostedService<KafkaConsumer<TEvent>>();
+        services.AddHostedService<ScopedKafkaConsumer<TEvent>>();
 
         return services;
     }

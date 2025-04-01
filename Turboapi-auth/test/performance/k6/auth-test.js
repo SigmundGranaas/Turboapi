@@ -17,8 +17,8 @@ export const options = {
         // Smoke test
         smoke: {
             executor: 'constant-vus',
-            vus: 1,
-            duration: '30s',
+            vus: 5,
+            duration: '2m',
             tags: { test_type: 'smoke' },
         },
         // Load test
