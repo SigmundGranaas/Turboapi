@@ -86,7 +86,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-        images: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration
+          images: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration
 
       - name: Build and push migration Docker image
         uses: docker/build-push-action@v5
