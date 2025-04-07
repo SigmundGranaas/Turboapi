@@ -3,6 +3,7 @@ using GeoSpatial.Tests.Doubles;
 using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
+using Turboapi_geo.domain.value;
 using Xunit;
 
 public class LocationEventHandlerTests : IAsyncDisposable
@@ -50,7 +51,8 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var @event = new LocationCreated(
             Guid.NewGuid(),
             "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
+            DisplayInformation.CreateDefault()
         );
 
         // Act
@@ -63,7 +65,6 @@ public class LocationEventHandlerTests : IAsyncDisposable
         Assert.Equal(@event.Geometry, location.Geometry);
         Assert.Equal(@event.OwnerId, location.OwnerId);
         Assert.Equal(@event.OccurredAt, location.CreatedAt);
-        Assert.False(location.IsDeleted);
     }
 
     [Fact]
@@ -76,7 +77,8 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var createEvent = new LocationCreated(
             locationId,
             "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
+            DisplayInformation.CreateDefault()
         );
         await _createdHandler.HandleAsync(createEvent, _cts.Token);
 
@@ -92,7 +94,6 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var location = await _writer.GetById(locationId);
         Assert.NotNull(location);
         Assert.Equal(updateEvent.Geometry, location.Geometry);
-        Assert.False(location.IsDeleted);
     }
 
     [Fact]
@@ -105,7 +106,8 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var createEvent = new LocationCreated(
             locationId,
             "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
+            DisplayInformation.CreateDefault()
         );
         await _createdHandler.HandleAsync(createEvent, _cts.Token);
 

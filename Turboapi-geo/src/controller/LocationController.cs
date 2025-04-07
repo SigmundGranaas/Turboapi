@@ -5,11 +5,12 @@ using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.queries;
 using Turboapi_geo.domain.query;
+using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.controller;
 
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/geo/[controller]")]
     public class LocationsController : ControllerBase
     {
         private readonly CreateLocationHandler _createHandler;
@@ -45,11 +46,19 @@ namespace Turboapi_geo.controller;
             {
                 return Forbid();
             }
+
+            var displayInformation = new DisplayInformation()
+            {
+                Name = request.display.Name,
+                Description = request.display.Description ?? "",
+                Icon = request.display.Icon ?? ""
+            };
             
             var command = new Commands.CreateLocationCommand(
                 Guid.Parse(userId),
-                request.Longitude,
-                request.Latitude
+                request.location.Longitude,
+                request.location.Latitude,
+                displayInformation
             );
 
             var locationId = await _createHandler.Handle(command);
@@ -67,7 +76,7 @@ namespace Turboapi_geo.controller;
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePosition(
             Guid id, 
-            [FromBody] UpdateLocationPositionRequest request)
+            [FromBody] UpdateLocationRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
@@ -78,8 +87,10 @@ namespace Turboapi_geo.controller;
             var command = new Commands.UpdateLocationPositionCommand(
                 Guid.Parse(userId),
                 id,
-                request.Longitude,
-                request.Latitude
+                request.Location,
+                request.Name,
+                request.Description,
+                request.Icon
             );
 
             try
@@ -130,7 +141,6 @@ namespace Turboapi_geo.controller;
                 return Forbid();
             }
             
-            
             var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, Guid.Parse(userId)));
             if (location == null)
                 return NotFound();
@@ -138,8 +148,8 @@ namespace Turboapi_geo.controller;
             return Ok(LocationResponse.FromDto(location));
         }
 
-        [HttpGet]
         [Authorize]
+        [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<LocationResponse>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<LocationResponse>>> GetInExtent(
             [FromQuery] double minLon,
@@ -166,13 +176,21 @@ namespace Turboapi_geo.controller;
     }
 
     public record CreateLocationRequest(
-        double Longitude,
-        double Latitude
+        LocationData location,
+        DisplayInformationData display
     );
 
-    public record UpdateLocationPositionRequest(
+    public record LocationData(
         double Longitude,
-        double Latitude
+        double Latitude);
+
+    public record DisplayInformationData(string Name, string? Description, string? Icon);
+
+    public record UpdateLocationRequest(
+        LocationData? Location,
+        string? Name = null,
+        string? Description = null,
+        string? Icon = null
     );
 
     public record CreateLocationResponse(
@@ -182,12 +200,14 @@ namespace Turboapi_geo.controller;
     public record LocationResponse(
         Guid Id,
         double Longitude,
-        double Latitude
+        double Latitude,
+        DisplayInformationData DisplayData
         )
     {
         public static LocationResponse FromDto(LocationDto dto) => new(
             dto.id,
             dto.geometry.X,
-            dto.geometry.Y
+            dto.geometry.Y,
+            new DisplayInformationData(dto.displayInformation.Name, dto.displayInformation.Description, dto.displayInformation.Icon)
         );
     }

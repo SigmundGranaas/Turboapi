@@ -1,5 +1,6 @@
 
 using NetTopologySuite.Geometries;
+using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.domain.queries
 {
@@ -13,7 +14,7 @@ namespace Turboapi_geo.domain.queries
         double MaxLatitude
         ); 
     
-    public record LocationDto(Guid id, Guid ownerId, Point geometry);
+    public record LocationDto(Guid id, Guid ownerId, Point geometry, DisplayInformation displayInformation);
 }
 
 

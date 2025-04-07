@@ -22,6 +22,7 @@ public class LocationsControllerTests : IAsyncDisposable
     private readonly GeometryFactory _geometryFactory;
     private readonly LocationCreatedHandler _createdHandler;
     private readonly LocationPositionChangedHandler _positionChangedHandler;
+    private readonly LocationDisplayInformationChangedHandler _displayChangedHandler;
     private readonly LocationDeletedHandler _deletedHandler;
     private readonly CancellationTokenSource _cts;
 
@@ -49,7 +50,11 @@ public class LocationsControllerTests : IAsyncDisposable
         _positionChangedHandler = new LocationPositionChangedHandler(
             _writeRepository, 
             new TestLogger<LocationPositionChangedHandler>());
-            
+        
+        _displayChangedHandler = new LocationDisplayInformationChangedHandler(
+            _writeRepository,
+            new TestLogger<LocationDisplayInformationChangedHandler>());
+        
         _deletedHandler = new LocationDeletedHandler(
             _writeRepository, 
             new TestLogger<LocationDeletedHandler>());
@@ -57,6 +62,7 @@ public class LocationsControllerTests : IAsyncDisposable
         // Subscribe handlers to events
         _eventSubscriber.Subscribe<LocationCreated>(evt => _createdHandler.HandleAsync(evt, _cts.Token));
         _eventSubscriber.Subscribe<LocationPositionChanged>(evt => _positionChangedHandler.HandleAsync(evt, _cts.Token));
+        _eventSubscriber.Subscribe<LocationDisplayInformationChanged>(evt => _displayChangedHandler.HandleAsync(evt, _cts.Token));
         _eventSubscriber.Subscribe<LocationDeleted>(evt => _deletedHandler.HandleAsync(evt, _cts.Token));
         
         // Initialize command handlers
@@ -102,10 +108,13 @@ public class LocationsControllerTests : IAsyncDisposable
         // Arrange
         var owner = Guid.NewGuid();
         SetupControllerContext(owner.ToString());
-        
+
+        var location = new LocationData(13.404954, 52.520008);
+        var display = new DisplayInformationData("Location", null ,null);
+
         var request = new CreateLocationRequest(
-            13.404954,
-            52.520008
+            location,
+            display
         );
 
         // Act
@@ -126,8 +135,9 @@ public class LocationsControllerTests : IAsyncDisposable
         var readModel = await _readModel.GetById(locationId.Id);
         Assert.NotNull(readModel);
         Assert.Equal(owner.ToString(), readModel.OwnerId);
-        Assert.Equal(request.Longitude, readModel.Geometry.X);
-        Assert.Equal(request.Latitude, readModel.Geometry.Y);
+        Assert.Equal(request.display.Name, readModel.DisplayInformation.Name);
+        Assert.Equal(request.location.Longitude, readModel.Geometry.X);
+        Assert.Equal(request.location.Latitude, readModel.Geometry.Y);
     }
 
     [Fact]
@@ -138,18 +148,23 @@ public class LocationsControllerTests : IAsyncDisposable
         SetupControllerContext(owner.ToString());
 
         // Create initial location
-        var createRequest = new CreateLocationRequest(
-            13.404954,
-            52.520008
+        var location = new LocationData(13.404954, 52.520008);
+        var display = new DisplayInformationData("Location", null, null);
+
+        var request = new CreateLocationRequest(
+            location,
+            display
         );
-        var createResult = await _controller.Create(createRequest);
+        
+        var createResult = await _controller.Create(request);
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(createResult.Result);
         var locationId = Assert.IsType<CreateLocationResponse>(createdAtResult.Value);
 
-        var updateRequest = new UpdateLocationPositionRequest(
+        var updateRequest = new UpdateLocationRequest(
+            new LocationData(
             13.405,
-            52.520
-        );
+            52.520)
+            );
 
         // Act
         var result = await _controller.UpdatePosition(locationId.Id, updateRequest);
@@ -166,8 +181,59 @@ public class LocationsControllerTests : IAsyncDisposable
         // Verify read model was updated through event handler
         var readModel = await _readModel.GetById(locationId.Id);
         Assert.NotNull(readModel);
-        Assert.Equal(updateRequest.Longitude, readModel.Geometry.X);
-        Assert.Equal(updateRequest.Latitude, readModel.Geometry.Y);
+        Assert.Equal(updateRequest.Location?.Longitude, readModel.Geometry.X);
+        Assert.Equal(updateRequest.Location?.Latitude, readModel.Geometry.Y);
+        Assert.Equal("Location", readModel.DisplayInformation.Name);
+    }
+    
+    [Fact]
+    public async Task UpdatePosition_ShouldUpdateDisplayInfoAndReadModel()
+    {
+        // Arrange
+        var owner = Guid.NewGuid();
+        SetupControllerContext(owner.ToString());
+
+        // Create initial location
+        var location = new LocationData(13.404954, 52.520008);
+        var display = new DisplayInformationData("Location", null, null);
+
+        var request = new CreateLocationRequest(
+            location,
+            display
+        );
+        
+        var createResult = await _controller.Create(request);
+        var createdAtResult = Assert.IsType<CreatedAtActionResult>(createResult.Result);
+        var locationId = Assert.IsType<CreateLocationResponse>(createdAtResult.Value);
+
+        var newName = "New Name";
+        var newDescription = "New Description";
+        var newIcon = "New Icon";
+        var updateRequest = new UpdateLocationRequest(
+            null,
+            newName,
+            newDescription,
+            newIcon
+        );
+
+        // Act
+        var result = await _controller.UpdatePosition(locationId.Id, updateRequest);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+
+        // Verify events
+        var events = (await _eventReader.GetEventsForAggregate(locationId.Id)).ToList();
+        Assert.Equal(2, events.Count);
+        var updateEvent = Assert.IsType<LocationDisplayInformationChanged>(events[1]);
+        Assert.Equal(locationId.Id, updateEvent.LocationId);
+
+        // Verify read model was updated through event handler
+        var readModel = await _readModel.GetById(locationId.Id);
+        Assert.NotNull(readModel);
+        Assert.Equal(newName, readModel.DisplayInformation.Name);
+        Assert.Equal(newDescription, readModel.DisplayInformation.Description);
+        Assert.Equal(newIcon, readModel.DisplayInformation.Icon);
     }
 
     [Fact]
@@ -177,12 +243,15 @@ public class LocationsControllerTests : IAsyncDisposable
         var owner = Guid.NewGuid();
         SetupControllerContext(owner.ToString());
 
-        // Create initial location
-        var createRequest = new CreateLocationRequest(
-            13.404954,
-            52.520008
+        var location = new LocationData(13.404954, 52.520008);
+        var display = new DisplayInformationData("Location", null, null);
+
+        var request = new CreateLocationRequest(
+            location,
+            display
         );
-        var createResult = await _controller.Create(createRequest);
+        
+        var createResult = await _controller.Create(request);
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(createResult.Result);
         var locationId = Assert.IsType<CreateLocationResponse>(createdAtResult.Value);
         
@@ -210,16 +279,21 @@ public class LocationsControllerTests : IAsyncDisposable
         var owner = Guid.NewGuid().ToString();
         SetupControllerContext(owner);
 
-        // Create locations in Oslo and Berlin
+        var location = new LocationData(13.404954, 53.520008);
+        var display = new DisplayInformationData("Oslo", null, null);
+
         var oslo = new CreateLocationRequest(
-            10.757933,
-            59.911491
+            location,
+            display
         );
         await _controller.Create(oslo);
 
+        var berlinLoc = new LocationData(13.404954, 52.520008);
+        var berlinDisp = new DisplayInformationData("Berlin", null, null);
+
         var berlin = new CreateLocationRequest(
-            13.404954,
-            52.520008
+            berlinLoc,
+            berlinDisp
         );
         
         var createBerlin = await _controller.Create(berlin);
@@ -242,8 +316,8 @@ public class LocationsControllerTests : IAsyncDisposable
         var locationList = locations.ToList();
         Assert.Single(locationList);
         Assert.Equal(berlinId, locationList[0].Id);
-        Assert.Equal(berlin.Longitude, locationList[0].Longitude);
-        Assert.Equal(berlin.Latitude, locationList[0].Latitude);
+        Assert.Equal(berlin.location.Longitude, locationList[0].Longitude);
+        Assert.Equal(berlin.location.Latitude, locationList[0].Latitude);
     }
 
     public async ValueTask DisposeAsync()

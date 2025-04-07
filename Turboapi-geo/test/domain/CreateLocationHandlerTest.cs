@@ -4,6 +4,7 @@ using Medo;
 using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.handler;
+using Turboapi_geo.domain.value;
 using Xunit;
 
 
@@ -32,7 +33,7 @@ namespace Turboapi_geo.test.domain
         {
             var owner = Uuid7.NewUuid7();
             // Arrange
-            var command = new Commands.CreateLocationCommand(owner, 13.404954, 52.520008);
+            var command = new Commands.CreateLocationCommand(owner, 13.404954, 52.520008, DisplayInformation.CreateDefault());
 
             // Act
             var locationId = await _handler.Handle(command);

@@ -6,6 +6,7 @@ using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.query.model;
+using Turboapi_geo.domain.value;
 using Xunit;
 
 namespace Turboapi_geo.test.domain;
@@ -43,10 +44,15 @@ namespace Turboapi_geo.test.domain;
                 owner.ToString(),
                 _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
             );
-            var dto = new LocationReadEntity();
-            dto.Geometry = location.Geometry;
-            dto.Id = location.Id;
-            dto.OwnerId = location.OwnerId;
+            
+            var dto = new LocationReadEntity()
+            {
+                Id = location.Id,
+                Geometry = location.Geometry,
+                OwnerId = location.OwnerId,
+                Name = location.DisplayInformation.Name,
+            };
+
             _writeRepository.Add(dto);
             
             var command = new Commands.DeleteLocationCommand(location.Id, owner);
@@ -84,10 +90,14 @@ namespace Turboapi_geo.test.domain;
                 owner.ToString(),
                 _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
             );
-            var dto = new LocationReadEntity();
-            dto.Geometry = location.Geometry;
-            dto.Id = location.Id;
-            dto.OwnerId = location.OwnerId;
+            var dto = new LocationReadEntity()
+            {
+                Id = location.Id,
+                Geometry = location.Geometry,
+                OwnerId = location.OwnerId,
+                Name = location.DisplayInformation.Name,
+            };
+     
             _writeRepository.Add(dto);
             
             var command = new Commands.DeleteLocationCommand(location.Id, invalidOwner);

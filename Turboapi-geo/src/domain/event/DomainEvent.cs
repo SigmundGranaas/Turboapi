@@ -9,7 +9,7 @@ namespace Turboapi_geo.domain.events;
 [JsonDerivedType(typeof(LocationPositionChanged), typeDiscriminator: nameof(LocationPositionChanged))]
 [JsonDerivedType(typeof(LocationDeleted), typeDiscriminator: nameof(LocationDeleted))]
 [JsonDerivedType(typeof(CreatePositionEvent), typeDiscriminator: nameof(CreatePositionEvent))]
-
+[JsonDerivedType(typeof(LocationDisplayInformationChanged), typeDiscriminator: nameof(LocationDisplayInformationChanged))]
 public abstract record DomainEvent
 {
     public Guid Id { get; } = Uuid7.NewUuid7();
@@ -19,12 +19,20 @@ public abstract record DomainEvent
 public record LocationCreated(
     Guid LocationId,
     string OwnerId,
-    Point Geometry
+    Point Geometry,
+    DisplayInformation DisplayInformation
 ) : DomainEvent;
 
 public record LocationPositionChanged(
     Guid LocationId,
     Point Geometry
+) : DomainEvent;
+
+public record LocationDisplayInformationChanged(
+    Guid LocationId,
+    string Name,
+    string Description,
+    string Icon
 ) : DomainEvent;
 
 public record LocationDeleted(

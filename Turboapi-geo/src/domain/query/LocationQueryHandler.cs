@@ -18,10 +18,8 @@ public class GetLocationByIdHandler
         {
             return null;
         }
-        else
-        {
-            return  new LocationDto(locationRead.Id, Guid.Parse(locationRead.OwnerId), locationRead.Geometry);
-        }
+        
+        return  new LocationDto(locationRead.Id, Guid.Parse(locationRead.OwnerId), locationRead.Geometry, locationRead.DisplayInformation);
     }
 }
 
@@ -44,6 +42,6 @@ public class GetLocationsInExtentHandler
             query.MaxLatitude
         );
         
-        return locations.Select(loc => new LocationDto(loc.Id, Guid.Parse(loc.OwnerId), loc.Geometry));
+        return locations.Select(loc => new LocationDto(loc.Id, Guid.Parse(loc.OwnerId), loc.Geometry, loc.DisplayInformation));
     }
 }

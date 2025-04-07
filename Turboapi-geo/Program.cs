@@ -61,10 +61,9 @@ builder.Services.AddDbContext<LocationReadContext>((s, options) =>
     });
 });
 
-builder.Services.AddScoped<ILocationWriteRepository, EfLocationWriteRepository.EfLocationWriteModelRepository>();
-builder.Services.AddScoped<ILocationReadModelRepository, EfLocationWriteRepository.EfLocationReadModelRepository>();
+builder.Services.AddScoped<ILocationWriteRepository, EfLocationWriteRepository>();
+builder.Services.AddScoped<ILocationReadModelRepository, EfLocationReadModelRepository>();
 
-builder.Services.AddScoped<LocationEventHandler>();
 builder.Services.AddScoped<GetLocationByIdHandler>();
 builder.Services.AddScoped<GetLocationsInExtentHandler>();
 builder.Services.AddScoped<CreateLocationHandler>();

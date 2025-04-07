@@ -1,43 +1,118 @@
+using System.Diagnostics;
 using GeoSpatial.Domain.Events;
+using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
+using Turboapi_geo.domain.value;
 using Turboapi_geo.infrastructure;
+
 
 namespace GeoSpatial.Tests.Doubles
 {
     public class InMemoryLocationWriteRepository : ILocationWriteRepository
     {
-
         private readonly Dictionary<Guid, LocationReadEntity> _locations;
+        private readonly ILogger<InMemoryLocationWriteRepository>? _logger;
 
-        public InMemoryLocationWriteRepository(Dictionary<Guid, LocationReadEntity> locations)
+        public InMemoryLocationWriteRepository(
+            Dictionary<Guid, LocationReadEntity> locations, 
+            ILogger<InMemoryLocationWriteRepository>? logger = null)
         {
             _locations = locations;
+            _logger = logger;
+        }
+
+        public Task<LocationReadEntity?> GetById(Guid id)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            _locations.TryGetValue(id, out var location);
+            stopwatch.Stop();
+            
+            _logger?.LogDebug("GetById for {LocationId} completed in {ElapsedMs}ms", 
+                id, stopwatch.ElapsedMilliseconds);
+                
+            return Task.FromResult(location);
         }
 
         public Task Add(LocationReadEntity location)
         {
+            var stopwatch = Stopwatch.StartNew();
             _locations[location.Id] = location;
+            stopwatch.Stop();
+            
+            _logger?.LogInformation("Added location {LocationId} in {ElapsedMs}ms", 
+                location.Id, stopwatch.ElapsedMilliseconds);
+                
             return Task.CompletedTask;
         }
 
         public Task Update(LocationReadEntity location)
         {
+            var stopwatch = Stopwatch.StartNew();
             _locations[location.Id] = location;
+            stopwatch.Stop();
+            
+            _logger?.LogInformation("Updated location {LocationId} (full update) in {ElapsedMs}ms", 
+                location.Id, stopwatch.ElapsedMilliseconds);
+                
             return Task.CompletedTask;
         }
 
         public Task Delete(LocationReadEntity location)
         {
+            var stopwatch = Stopwatch.StartNew();
             _locations.Remove(location.Id);
+            stopwatch.Stop();
+            
+            _logger?.LogInformation("Deleted location {LocationId} in {ElapsedMs}ms", 
+                location.Id, stopwatch.ElapsedMilliseconds);
+                
             return Task.CompletedTask;
         }
-
-        public Task<LocationReadEntity?> GetById(Guid id)
+        
+        public Task UpdatePosition(Guid id, Point geometry)
         {
-            _locations.TryGetValue(id, out var location);
-            return Task.FromResult(location);
+            var stopwatch = Stopwatch.StartNew();
+            
+            if (_locations.TryGetValue(id, out var location))
+            {
+                location.Geometry = geometry;
+                stopwatch.Stop();
+                
+                _logger?.LogInformation("Updated position for location {LocationId} in {ElapsedMs}ms", 
+                    id, stopwatch.ElapsedMilliseconds);
+            }
+            else
+            {
+                stopwatch.Stop();
+                _logger?.LogWarning("Failed to update position for location {LocationId} - entity not found", id);
+            }
+            
+            return Task.CompletedTask;
+        }
+        
+        public Task UpdateDisplayInformation(Guid id, string name, string? description, string? icon)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            
+            if (_locations.TryGetValue(id, out var location))
+            {
+                location.Name = name;
+                location.Description = description;
+                location.Icon = icon;
+                stopwatch.Stop();
+                
+                _logger?.LogInformation("Updated display information for location {LocationId} in {ElapsedMs}ms", 
+                    id, stopwatch.ElapsedMilliseconds);
+            }
+            else
+            {
+                stopwatch.Stop();
+                _logger?.LogWarning("Failed to update display information for location {LocationId} - entity not found", id);
+            }
+            
+            return Task.CompletedTask;
         }
     }
     
@@ -57,8 +132,14 @@ namespace GeoSpatial.Tests.Doubles
             {
                 return Task.FromResult<Location?>(null);
             }
-        
-            return Task.FromResult<Location?>(Location.From(location.Id, location.OwnerId, location.Geometry));
+
+            var displayInformation = new DisplayInformation()
+            {
+                Name = location.Name,
+                Description = location.Description,
+                Icon = location.Icon
+            };
+            return Task.FromResult<Location?>(Location.From(location.Id, location.OwnerId, location.Geometry, displayInformation));
         }
 
         public Task<IEnumerable<Location>> GetLocationsInExtent(
@@ -139,6 +220,7 @@ namespace GeoSpatial.Tests.Doubles
             LocationCreated e => e.LocationId,
             LocationPositionChanged e => e.LocationId,
             LocationDeleted e => e.LocationId,
+            LocationDisplayInformationChanged e => e.LocationId,
             _ => throw new ArgumentException($"Unknown event type: {@event.GetType()}")
         };
     }

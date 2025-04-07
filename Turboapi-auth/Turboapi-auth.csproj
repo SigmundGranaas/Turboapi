@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <RootNamespace>Turboapi</RootNamespace>
+        <RootNamespace>Turboapi-auth</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
@@ -57,5 +57,4 @@
     <ItemGroup>
       <Folder Include="test\performance\" />
     </ItemGroup>
-
 </Project>
