@@ -1,4 +1,5 @@
 using Turboapi_geo.domain.events;
+using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.geo;
 
@@ -37,6 +38,7 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
             nameof(LocationCreated) => DeserializeLocationCreated(rootElement, options),
             nameof(LocationPositionChanged) => DeserializeLocationPositionChanged(rootElement, options),
             nameof(LocationDeleted) => DeserializeLocationDeleted(rootElement),
+            nameof(LocationDisplayInformationChanged) => DeserializeLocationInformationChanged(rootElement),
             _ => throw new JsonException($"Unknown event type: {typeDiscriminator}")
         };
     }
@@ -62,6 +64,9 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
             case LocationDeleted locationDeleted:
                 WriteLocationDeleted(writer, locationDeleted);
                 break;
+            case LocationDisplayInformationChanged locationDisplayInformationChanged:
+                WriteLocationDisplayChanged(writer, locationDisplayInformationChanged);
+                break;
         }
 
         writer.WriteEndObject();
@@ -72,9 +77,12 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
         var locationId = element.GetProperty("locationId").GetGuid();
         var ownerId = element.GetProperty("ownerId").GetString()!;
         var geometryElement = element.GetProperty("geometry");
+        var displayElement = element.GetProperty("displayInformation");
+
         var geometry = JsonSerializer.Deserialize<Point>(geometryElement, options);
-        
-        return new LocationCreated(locationId, ownerId, geometry);
+        var display = JsonSerializer.Deserialize<DisplayInformation>(displayElement, options);
+
+        return new LocationCreated(locationId, ownerId, geometry, display);
     }
 
     private LocationPositionChanged DeserializeLocationPositionChanged(JsonElement element,  JsonSerializerOptions options)
@@ -85,6 +93,16 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
         
         return new LocationPositionChanged(locationId, geometry);
     }
+    
+    private LocationDisplayInformationChanged DeserializeLocationInformationChanged(JsonElement element)
+    {
+        var locationId = element.GetProperty("locationId").GetGuid();
+        var name = element.GetProperty("name").GetString() ?? "";
+        var description = element.GetProperty("description").GetString() ?? "";
+        var icon = element.GetProperty("icon").GetString() ?? "";
+        
+        return new LocationDisplayInformationChanged(locationId, name, description, icon);
+    }
 
     private LocationDeleted DeserializeLocationDeleted(JsonElement element)
     {
@@ -93,6 +111,7 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
         
         return new LocationDeleted(locationId, ownerId);
     }
+
 
     private void WriteLocationCreated(Utf8JsonWriter writer, LocationCreated value)
     {
@@ -108,7 +127,15 @@ public class DomainEventJsonConverter : JsonConverter<DomainEvent>
         writer.WritePropertyName("geometry");
         _geometryConverter.Write(writer, value.Geometry, new JsonSerializerOptions());
     }
-
+    
+    private void WriteLocationDisplayChanged(Utf8JsonWriter writer, LocationDisplayInformationChanged value)
+    {
+        writer.WriteString("locationId", value.LocationId);
+        writer.WriteString("name", value.Name);
+        writer.WriteString("description", value.Description);
+        writer.WriteString("icon", value.Icon);
+    }
+    
     private void WriteLocationDeleted(Utf8JsonWriter writer, LocationDeleted value)
     {
         writer.WriteString("locationId", value.LocationId);

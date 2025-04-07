@@ -22,7 +22,7 @@ public class CreateLocationHandler
             new Coordinate(command.Longitude, command.Latitude)
         );
 
-        var location = Location.Create(command.OwnerId.ToString(), point);
+        var location = Location.Create(command.OwnerId.ToString(), point, command.DisplayInformation);
         await _eventStore.AppendEvents(location.Events);
 
         return location.Id;
@@ -34,7 +34,7 @@ public class CreateLocationHandler
             new Coordinate(command.Longitude, command.Latitude)
         );
 
-        var location = Location.Create(command.id ,command.OwnerId.ToString(), point);
+        var location = Location.Create(command.id,command.OwnerId.ToString(), point);
         await _eventStore.AppendEvents(location.Events);
 
         return location.Id;

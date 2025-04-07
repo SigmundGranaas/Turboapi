@@ -17,26 +17,28 @@ public class LocationReadContext : DbContext
         {
             entity.ToTable("locations_read");
                 
-            // Fix: Correctly map the Id property to the 'id' column
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id)
                 .HasColumnName("id");
                 
-            // Configure owner ID
             entity.Property(e => e.OwnerId)
                 .HasColumnName("owner_id")
                 .IsRequired();
+
+            entity.Property(e => e.Name)
+                .HasColumnName("name");
+            
+            entity.Property(e => e.Description)
+                .HasColumnName("description");
+            
+            entity.Property(e => e.Icon)
+                .HasColumnName("icon");
                 
             // Configure PostGIS geometry column
             entity.Property(e => e.Geometry)
                 .HasColumnName("geometry")
                 .HasColumnType("geometry(Point, 4326)")
                 .IsRequired();
-
-            // Configure soft delete
-            entity.Property(e => e.IsDeleted)
-                .HasColumnName("is_deleted")
-                .HasDefaultValue(false);
 
             // Configure timestamps - making them explicitly not mapped
             entity.Ignore(e => e.CreatedAt);
@@ -50,8 +52,6 @@ public class LocationReadContext : DbContext
                 .HasDatabaseName("idx_locations_read_geometry")
                 .HasMethod("GIST");
             
-            entity.HasIndex(e => e.IsDeleted)
-                .HasDatabaseName("idx_locations_read_is_deleted");
         });
     }
 }

@@ -30,12 +30,17 @@ public static class KafkaServiceCollectionExtensions
         
         services.AddKafkaConsumer<LocationPositionChanged, LocationPositionChangedHandler>(
             "location-events",
-            "location-group-update");
+            "location-group-update-position");
+        
+        services.AddKafkaConsumer<LocationDisplayInformationChanged, LocationDisplayInformationChangedHandler>(
+            "location-events",
+            "location-group-update-display");
         
         services.AddKafkaConsumer<LocationDeleted, LocationDeletedHandler>(
             "location-events",
             "location-group-delete");
         
+      
  
         return services;
     }

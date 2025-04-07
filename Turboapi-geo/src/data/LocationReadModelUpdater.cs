@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
+using Turboapi_geo.domain.value;
 
 public interface ILocationEventHandler<in TEvent> where TEvent : DomainEvent
 {
     Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
 }
-
 
 public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
 {
@@ -35,8 +35,10 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
                 Id = @event.LocationId,
                 OwnerId = @event.OwnerId,
                 Geometry = @event.Geometry,
-                IsDeleted = false,
-                CreatedAt = @event.OccurredAt
+                Name = @event.DisplayInformation.Name,
+                Description = @event.DisplayInformation.Description,
+                Icon = @event.DisplayInformation.Icon,
+                CreatedAt = @event.OccurredAt,
             };
 
             await _repo.Add(entity);
@@ -74,22 +76,50 @@ public class LocationPositionChangedHandler : ILocationEventHandler<LocationPosi
 
         try
         {
-            var location = await _repo.GetById(@event.LocationId);
-            if (location != null)
-            {
-                location.Geometry = @event.Geometry;
-                await _repo.Update(location);
-                _logger.LogInformation("Updated position for location {LocationId}", @event.LocationId);
-            }
-            else
-            {
-                _logger.LogWarning("Location {LocationId} not found for position update",
-                    @event.LocationId);
-            }
+            // Use partial update instead of read-modify-write pattern
+            await _repo.UpdatePosition(@event.LocationId, @event.Geometry);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to handle LocationPositionChanged event for {LocationId}",
+                @event.LocationId);
+            throw;
+        }
+    }
+}
+
+public class LocationDisplayInformationChangedHandler : ILocationEventHandler<LocationDisplayInformationChanged>
+{
+    private readonly ILocationWriteRepository _repo;
+    private readonly ILogger<LocationDisplayInformationChangedHandler> _logger;
+    private readonly ActivitySource _activitySource;
+
+    public LocationDisplayInformationChangedHandler(
+        ILocationWriteRepository repo,
+        ILogger<LocationDisplayInformationChangedHandler> logger)
+    {
+        _repo = repo;
+        _logger = logger;
+        _activitySource = new ActivitySource("LocationDisplayInformationChangedHandler");
+    }
+
+    public async Task HandleAsync(LocationDisplayInformationChanged @event, CancellationToken cancellationToken)
+    {
+        using var activity = _activitySource.StartActivity("Handle Display information changed event");
+        activity?.SetTag("location.id", @event.LocationId);
+
+        try
+        {
+            // Use partial update instead of read-modify-write pattern
+            await _repo.UpdateDisplayInformation(
+                @event.LocationId,
+                @event.Name,
+                @event.Description,
+                @event.Icon);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to handle LocationDisplayInformationChanged event for {LocationId}",
                 @event.LocationId);
             throw;
         }

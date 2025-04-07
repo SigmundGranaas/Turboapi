@@ -30,6 +30,6 @@ public class DeleteLocationHandler
         }
         
         location.Delete();
-        _eventStore.AppendEvents(location.Events);
+        await _eventStore.AppendEvents(location.Events);
     }
 }
