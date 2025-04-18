@@ -5,6 +5,9 @@ resources:
   - ../../base
   - ingress.yaml
 
+patches:
+  - path: env-patch.yaml
+
 labels:
   - pairs:
       environment: production
@@ -25,20 +28,20 @@ replicas:
 
 images:
   - name: turboapi-auth
-    newName: my-registry.example.com/turboapi-auth
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-auth
+    newTag: latest
   - name: turboapi-geo
-    newName: my-registry.example.com/turboapi-geo
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-geo
+    newTag: latest
   - name: turboapi-activity
-    newName: my-registry.example.com/turboapi-activity
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-activity
+    newTag: latest
   - name: turboapi-auth-migration
-    newName: my-registry.example.com/turboapi-auth-migration
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-auth-migration
+    newTag: latest
   - name: turboapi-geo-migration
-    newName: my-registry.example.com/turboapi-geo-migration
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-geo-migration
+    newTag: latest
   - name: turboapi-activity-migration
-    newName: my-registry.example.com/turboapi-activity-migration
-    newTag: v0.0.1
+    newName: ghcr.io/sigmundgranaas/turboapi-activity-migration
+    newTag: latest
