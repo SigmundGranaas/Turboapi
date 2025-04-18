@@ -1,0 +1,213 @@
+# Application Deployments with Migrations
+# Auth service with migration init container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: turboapi-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: turboapi-auth
+  template:
+    metadata:
+      labels:
+        app: turboapi-auth
+    spec:
+      initContainers:
+        - name: auth-db-migration
+          image: turboapi-auth-migration:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_HOST
+              value: "auth-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "auth"
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+      containers:
+        - name: turboapi-auth
+          image: turboapi-auth:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ASPNETCORE_ENVIRONMENT
+            - name: ConnectionStrings__DefaultConnection
+              value: "Host=auth-db;Port=5432;Database=auth;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+              # The values will be expanded from the following env variables
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_SERVICE_NAME_AUTH
+            - name: Kafka__BootstrapServers
+              value: "kafka:29092"
+---
+# Geo service with migration init container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: turboapi-geo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: turboapi-geo
+  template:
+    metadata:
+      labels:
+        app: turboapi-geo
+    spec:
+      initContainers:
+        - name: geo-db-migration
+          image: turboapi-geo-migration:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_HOST
+              value: "geo-db"
+            - name: DB_PORT
+              value: "5435"
+            - name: DB_NAME
+              value: "geo"
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+      containers:
+        - name: turboapi-geo
+          image: turboapi-geo:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ASPNETCORE_ENVIRONMENT
+            - name: ConnectionStrings__DefaultConnection
+              value: "Host=geo-db;Port=5435;Database=geo;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+              # The values will be expanded from the following env variables
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_SERVICE_NAME_GEO
+            - name: Kafka__BootstrapServers
+              value: "kafka:29092"
+---
+# Activity service with migration init container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: turboapi-activity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: turboapi-activity
+  template:
+    metadata:
+      labels:
+        app: turboapi-activity
+    spec:
+      initContainers:
+        - name: activity-db-migration
+          image: turboapi-activity-migration:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DB_HOST
+              value: "activity-db"
+            - name: DB_PORT
+              value: "5436"
+            - name: DB_NAME
+              value: "activity"
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+      containers:
+        - name: turboapi-activity
+          image: turboapi-activity:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ASPNETCORE_ENVIRONMENT
+            - name: ConnectionStrings__DefaultConnection
+              value: "Host=activity-db;Port=5436;Database=activity;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+              # The values will be expanded from the following env variables
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector:4317"
+            - name: OTEL_SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: OTEL_SERVICE_NAME_ACTIVITY
+            - name: Kafka__BootstrapServers
+              value: "kafka:29092"
