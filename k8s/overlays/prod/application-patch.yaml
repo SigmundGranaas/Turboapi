@@ -61,6 +61,17 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: Authentication__Google__TokenInfoEndpoint
+            # Add Cookie Configuration
+            - name: COOKIE_DOMAIN
+              value: ".sandring.no"
+            - name: COOKIE_SAME_SITE
+              value: "None"
+            - name: COOKIE_SECURE
+              value: "true"
+            - name: COOKIE_EXPIRY_DAYS
+              value: "7"
+            - name: COOKIE_PATH
+              value: "/"
 ---
 # geo-deployment-patch.yaml - Add to your overlays/prod folder
 apiVersion: apps/v1

@@ -62,6 +62,19 @@ builder.Services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationSer
 
 builder.Services.AddDataProtection();
 
+builder.Services.Configure<CookieSettings>(options => {
+    // Bind from appsettings.json first
+    builder.Configuration.GetSection("Cookie").Bind(options);
+    
+    // Override with environment variables
+    options.Domain = Environment.GetEnvironmentVariable("COOKIE_DOMAIN") ?? options.Domain;
+    options.SameSite = Environment.GetEnvironmentVariable("COOKIE_SAME_SITE") ?? options.SameSite;
+    options.Secure = CookieSettings.ParseBoolEnvVar("COOKIE_SECURE", options.Secure);
+    options.ExpiryDays = CookieSettings.ParseIntEnvVar("COOKIE_EXPIRY_DAYS", options.ExpiryDays);
+    options.Path = Environment.GetEnvironmentVariable("COOKIE_PATH") ?? options.Path;
+    options.UseAdditionalEncryption = CookieSettings.ParseBoolEnvVar("COOKIE_USE_ADDITIONAL_ENCRYPTION", options.UseAdditionalEncryption);
+});
+
 // 3.2 JWT Configuration
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));

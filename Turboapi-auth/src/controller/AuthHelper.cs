@@ -1,25 +1,28 @@
 using Turboapi.dto;
-
-namespace Turboapi.controller;
-
+using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.DataProtection;
+
+namespace Turboapi.controller;
 
 public class AuthHelper
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthHelper> _logger;
+    private readonly CookieSettings _cookieSettings;
     private const string PURPOSE = "AuthCookie.v1";
 
     public AuthHelper(
         IDataProtectionProvider dataProtectionProvider,
         IConfiguration configuration,
+        IOptions<CookieSettings> cookieSettings,
         ILogger<AuthHelper> logger)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _configuration = configuration;
+        _cookieSettings = cookieSettings.Value;
         _logger = logger;
     }
 
@@ -54,8 +57,13 @@ public class AuthHelper
 
     public void ClearAuthCookies(HttpResponse response)
     {
-        response.Cookies.Delete("AccessToken");
-        response.Cookies.Delete("RefreshToken");
+        // Use the same options as when setting cookies to ensure they're properly cleared
+        var cookieOptions = CookieHelper.CreateAuthCookieOptions(_configuration);
+        
+        response.Cookies.Delete("AccessToken", cookieOptions);
+        response.Cookies.Delete("RefreshToken", cookieOptions);
+        
+        _logger.LogInformation("Cleared authentication cookies");
     }
 
     public (string? accessToken, string? refreshToken) GetDecryptedTokens(HttpRequest request)
