@@ -16,7 +16,6 @@ public class GoogleAuthController : ControllerBase
         [Required] public string IdToken { get; set; } = string.Empty;
     }
 
-
     private readonly IAuthenticationService _authService;
     private readonly IGoogleAuthenticationService _googleAuthService;
     private readonly ILogger<GoogleAuthController> _logger;

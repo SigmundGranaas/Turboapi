@@ -1,6 +1,7 @@
 using System.Collections;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Turboapi.auth;
 using Turboapi.controller;
 using Turboapi.Controller;
@@ -30,11 +31,16 @@ public class AuthControllerTests
 
         // Setup HTTP context with Response.Cookies implementation
         _httpContext = new DefaultHttpContext();
+
+        var coookieOptions = new CookieSettings()
+        {
+
+        };
         
         _controller = new AuthController(
             _authService,
             loggerFactory.CreateLogger<AuthController>(),
-            new AuthHelper(_dataProtectionProvider, CreateConfiguration(), loggerFactory.CreateLogger<AuthHelper>()))
+            new AuthHelper(_dataProtectionProvider, CreateConfiguration() , Options.Create(coookieOptions) ,loggerFactory.CreateLogger<AuthHelper>()))
         {
             ControllerContext = new ControllerContext
             {
