@@ -51,7 +51,7 @@ spec:
         - name: auth-db-migration
           image: turboapi-auth-migration:latest
           env:
-            - name: DB_HOSTs
+            - name: DB_HOST
               value: "auth-db"
             - name: DB_PORT
               value: "5432"
