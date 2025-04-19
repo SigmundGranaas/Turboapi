@@ -5,6 +5,10 @@ resources:
   - ../../base
   - ingress.yaml
 
+patches:
+  - path: app-config-patch.yaml
+  - path: application-patch.yaml
+
 labels:
   - pairs:
       environment: production

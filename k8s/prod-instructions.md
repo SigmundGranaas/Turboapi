@@ -18,6 +18,24 @@ DB_PASSWORD=$(openssl rand -base64 16)
 kubectl create secret generic db-secrets \
   --from-literal=postgres-password=$DB_PASSWORD \
   --namespace default
+  
+# Generate a random JWT key
+JWT_KEY=$(openssl rand -base64 64)
+
+# Generate a secure password for Google OAuth (if needed)
+# Replace these with your actual Google OAuth credentials
+GOOGLE_CLIENT_ID="your-id"
+GOOGLE_CLIENT_SECRET="your-secret"
+
+# Create the auth secrets
+kubectl create secret generic auth-secrets \
+  --from-literal=jwt-key="$JWT_KEY" \
+  --from-literal=google-client-id="$GOOGLE_CLIENT_ID" \
+  --from-literal=google-client-secret="$GOOGLE_CLIENT_SECRET" \
+  --namespace default
+
+# Verify the secret was created
+kubectl get secret auth-secrets
 ```
 
 ## Step 2: Update Domain Name
