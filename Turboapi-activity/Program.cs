@@ -42,8 +42,8 @@ builder.Services.AddAuthentication(options =>
 var dbOptions = new DatabaseOptions
 {
     Host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost",
-    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432",
-    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "geo",
+    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5436",
+    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "activity",
     Username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres",
     Password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword"
 };

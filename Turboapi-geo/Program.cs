@@ -62,13 +62,22 @@ builder.Services.AddCors(options =>
 // #############################################
 // # 2. Database Configuration
 // #############################################
+var dbOptions = new DatabaseOptions
+{
+    Host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost",
+    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5435",
+    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "geo",
+    Username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres",
+    Password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword"
+};
+
+var connectionString = $"Host={dbOptions.Host};Port={dbOptions.Port};Database={dbOptions.Database};Username={dbOptions.Username};Password={dbOptions.Password}";
+
+// Register DbContext
 builder.Services.AddDbContext<LocationReadContext>((s, options) =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-    
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
-        npgsqlOptions.UseNetTopologySuite();
         npgsqlOptions.EnableRetryOnFailure();
     });
 });
@@ -153,3 +162,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+public class DatabaseOptions
+{
+    public string Host { get; set; }
+    public string Port { get; set; }
+    public string Database { get; set; }
+    public string Username { get; set; }
+    public string Password { get; set; }
+}
