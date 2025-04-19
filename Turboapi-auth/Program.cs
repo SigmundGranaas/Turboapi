@@ -80,7 +80,7 @@ builder.Services.AddCors(options =>
         policy  =>
         {
             policy
-                .WithOrigins("http://localhost:8080")
+                .WithOrigins("http://localhost:8080", "https://kartapi.sandring.no")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();

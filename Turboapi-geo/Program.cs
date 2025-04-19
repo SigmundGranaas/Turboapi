@@ -46,6 +46,18 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: "Default",
+        policy  =>
+        {
+            policy
+                .WithOrigins("http://localhost:8080", "https://kartapi.sandring.no")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials();
+        });
+});
 
 // #############################################
 // # 2. Database Configuration
