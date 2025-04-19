@@ -78,8 +78,12 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: ConnectionStrings__DefaultConnection
-              value: "Host=auth-db;Port=5432;Database=auth;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            - name: DB_HOST
+              value: "auth-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "auth"
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:
@@ -180,8 +184,12 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: ConnectionStrings__DefaultConnection
-              value: "Host=geo-db;Port=5432;Database=geo;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            - name: DB_HOST
+              value: "geo-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "geo"
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:
@@ -282,8 +290,12 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: ConnectionStrings__DefaultConnection
-              value: "Host=activity-db;Port=5432;Database=activity;Username=$(DB_USER);Password=$(DB_PASSWORD)"
+            - name: DB_HOST
+              value: "activity-db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: "activity"
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:

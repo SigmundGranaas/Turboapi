@@ -79,6 +79,7 @@ builder.Services.AddDbContext<LocationReadContext>((s, options) =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.EnableRetryOnFailure();
+        npgsqlOptions.UseNetTopologySuite();
     });
 });
 
