@@ -54,6 +54,10 @@ jobs:
     strategy:
       matrix:
         service: [auth, geo, activity]
+        include:
+          - service: auth
+          - service: geo
+          - service: activity
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -65,14 +69,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build migration Dockerfile
-        run: |
-          cat > Dockerfile.migration-${{ matrix.service }} << 'EOF'
-          FROM flyway/flyway:latest
-          COPY ./Turboapi-${{ matrix.service }}/db/migrations /flyway/sql
-          CMD ["-url=jdbc:postgresql://${{ matrix.service }}-db:${{ matrix.service == 'auth' && '5432' || matrix.service == 'geo' && '5435' || '5436' }}/${{ matrix.service }}", "-user=postgres", "-password=yourpassword", "-locations=filesystem:/flyway/sql", "-baselineOnMigrate=true", "migrate"]
-          EOF
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
@@ -85,9 +81,11 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.migration-${{ matrix.service }}
+          file: migrations/Dockerfile.migration
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            SERVICE_NAME=${{ matrix.service }}

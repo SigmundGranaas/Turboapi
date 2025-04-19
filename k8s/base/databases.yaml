@@ -75,9 +75,8 @@ spec:
       containers:
         - name: geo-db
           image: postgis/postgis:17-master
-          args: ["-p", "5435"]
           ports:
-            - containerPort: 5435
+            - containerPort: 5432
           env:
             - name: POSTGRES_DB
               value: "geo"
@@ -91,12 +90,14 @@ spec:
                 configMapKeyRef:
                   name: db-config
                   key: postgres-user
+            - name: PGPORT
+              value: "5432"
           volumeMounts:
             - name: geo-db-storage
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres", "-d", "geo", "-p", "5435"]
+              command: ["pg_isready", "-U", "postgres", "-d", "geo"]
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
@@ -114,8 +115,8 @@ spec:
   selector:
     app: geo-db
   ports:
-    - port: 5435
-      targetPort: 5435
+    - port: 5432
+      targetPort: 5432
   type: ClusterIP
 ---
 apiVersion: apps/v1
@@ -135,9 +136,8 @@ spec:
       containers:
         - name: activity-db
           image: postgres:17-alpine
-          args: ["-p", "5436"]
           ports:
-            - containerPort: 5436
+            - containerPort: 5432
           env:
             - name: POSTGRES_DB
               value: "activity"
@@ -151,12 +151,14 @@ spec:
                 configMapKeyRef:
                   name: db-config
                   key: postgres-user
+            - name: PGPORT
+              value: "5432"
           volumeMounts:
             - name: activity-db-storage
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres", "-d", "activity", "-p", "5436"]
+              command: ["pg_isready", "-U", "postgres", "-d", "activity"]
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
@@ -174,6 +176,6 @@ spec:
   selector:
     app: activity-db
   ports:
-    - port: 5436
-      targetPort: 5436
+    - port: 5432
+      targetPort: 5432
   type: ClusterIP

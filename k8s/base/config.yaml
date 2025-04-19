@@ -11,7 +11,7 @@ kind: ConfigMap
 metadata:
   name: app-config
 data:
-  ASPNETCORE_ENVIRONMENT: "Development"
+  ASPNETCORE_ENVIRONMENT: "Production"
   OTEL_SERVICE_NAME_AUTH: "turboapi-auth"
   OTEL_SERVICE_NAME_GEO: "turboapi-geo"
   OTEL_SERVICE_NAME_ACTIVITY: "turboapi-activity"

@@ -5,16 +5,11 @@ resources:
   - ../../base
   - ingress.yaml
 
-patches:
-  - path: env-patch.yaml
-
 labels:
   - pairs:
       environment: production
       managed-by: k3s
     includeSelectors: true
-
-namePrefix: prod-
 
 replicas:
   - name: turboapi-auth

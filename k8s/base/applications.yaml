@@ -1,5 +1,4 @@
-# Application Deployments with Migrations
-# Auth service with migration init container
+# Auth service with lightweight db check and migration init containers
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,9 +14,42 @@ spec:
         app: turboapi-auth
     spec:
       initContainers:
+        # First init container: check if database is up and create it if it doesn't exist
+        - name: auth-db-check
+          image: jbergknoff/postgresql-client
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - |
+              # Wait for the database to be ready
+              until psql "postgresql://$DB_USER:$DB_PASSWORD@auth-db:5432/postgres" -c '\q'; do
+                echo "Waiting for auth-db to be ready...";
+                sleep 2;
+              done;
+              
+              # Check if our database exists
+              echo "Checking if database exists...";
+              if ! psql "postgresql://$DB_USER:$DB_PASSWORD@auth-db:5432/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='auth'" | grep -q 1; then
+                echo "Database does not exist. Creating database auth...";
+                psql "postgresql://$DB_USER:$DB_PASSWORD@auth-db:5432/postgres" -c "CREATE DATABASE auth";
+                echo "Database auth created successfully.";
+              else
+                echo "Database auth already exists.";
+              fi
+          env:
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+        # Second init container: run migrations
         - name: auth-db-migration
           image: turboapi-auth-migration:latest
-          imagePullPolicy: IfNotPresent
           env:
             - name: DB_HOST
               value: "auth-db"
@@ -38,7 +70,6 @@ spec:
       containers:
         - name: turboapi-auth
           image: turboapi-auth:latest
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
@@ -49,7 +80,6 @@ spec:
                   key: ASPNETCORE_ENVIRONMENT
             - name: ConnectionStrings__DefaultConnection
               value: "Host=auth-db;Port=5432;Database=auth;Username=$(DB_USER);Password=$(DB_PASSWORD)"
-              # The values will be expanded from the following env variables
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:
@@ -70,7 +100,7 @@ spec:
             - name: Kafka__BootstrapServers
               value: "kafka:29092"
 ---
-# Geo service with migration init container
+# Geo service with lightweight db check and migration init containers
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -86,9 +116,42 @@ spec:
         app: turboapi-geo
     spec:
       initContainers:
+        # First init container: check if database is up and create it if it doesn't exist
+        - name: geo-db-check
+          image: jbergknoff/postgresql-client
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - |
+              # Wait for the database to be ready
+              until psql "postgresql://$DB_USER:$DB_PASSWORD@geo-db:5435/postgres" -c '\q'; do
+                echo "Waiting for geo-db to be ready...";
+                sleep 2;
+              done;
+              
+              # Check if our database exists
+              echo "Checking if database exists...";
+              if ! psql "postgresql://$DB_USER:$DB_PASSWORD@geo-db:5435/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='geo'" | grep -q 1; then
+                echo "Database does not exist. Creating database geo...";
+                psql "postgresql://$DB_USER:$DB_PASSWORD@geo-db:5435/postgres" -c "CREATE DATABASE geo";
+                echo "Database geo created successfully.";
+              else
+                echo "Database geo already exists.";
+              fi
+          env:
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+        # Second init container: run migrations
         - name: geo-db-migration
           image: turboapi-geo-migration:latest
-          imagePullPolicy: IfNotPresent
           env:
             - name: DB_HOST
               value: "geo-db"
@@ -109,7 +172,6 @@ spec:
       containers:
         - name: turboapi-geo
           image: turboapi-geo:latest
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
@@ -120,7 +182,6 @@ spec:
                   key: ASPNETCORE_ENVIRONMENT
             - name: ConnectionStrings__DefaultConnection
               value: "Host=geo-db;Port=5435;Database=geo;Username=$(DB_USER);Password=$(DB_PASSWORD)"
-              # The values will be expanded from the following env variables
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:
@@ -141,7 +202,7 @@ spec:
             - name: Kafka__BootstrapServers
               value: "kafka:29092"
 ---
-# Activity service with migration init container
+# Activity service with lightweight db check and migration init containers
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -157,9 +218,42 @@ spec:
         app: turboapi-activity
     spec:
       initContainers:
+        # First init container: check if database is up and create it if it doesn't exist
+        - name: activity-db-check
+          image: jbergknoff/postgresql-client
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - |
+              # Wait for the database to be ready
+              until psql "postgresql://$DB_USER:$DB_PASSWORD@activity-db:5436/postgres" -c '\q'; do
+                echo "Waiting for activity-db to be ready...";
+                sleep 2;
+              done;
+              
+              # Check if our database exists
+              echo "Checking if database exists...";
+              if ! psql "postgresql://$DB_USER:$DB_PASSWORD@activity-db:5436/postgres" -tAc "SELECT 1 FROM pg_database WHERE datname='activity'" | grep -q 1; then
+                echo "Database does not exist. Creating database activity...";
+                psql "postgresql://$DB_USER:$DB_PASSWORD@activity-db:5436/postgres" -c "CREATE DATABASE activity";
+                echo "Database activity created successfully.";
+              else
+                echo "Database activity already exists.";
+              fi
+          env:
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: postgres-user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-secrets
+                  key: postgres-password
+        # Second init container: run migrations
         - name: activity-db-migration
           image: turboapi-activity-migration:latest
-          imagePullPolicy: IfNotPresent
           env:
             - name: DB_HOST
               value: "activity-db"
@@ -180,7 +274,6 @@ spec:
       containers:
         - name: turboapi-activity
           image: turboapi-activity:latest
-          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:
@@ -191,7 +284,6 @@ spec:
                   key: ASPNETCORE_ENVIRONMENT
             - name: ConnectionStrings__DefaultConnection
               value: "Host=activity-db;Port=5436;Database=activity;Username=$(DB_USER);Password=$(DB_PASSWORD)"
-              # The values will be expanded from the following env variables
             - name: DB_USER
               valueFrom:
                 configMapKeyRef:

@@ -90,3 +90,8 @@ kubectl set image deployment/prod-turboapi-auth turboapi-auth=ghcr.io/sigmundgra
 # Or simply re-apply the kustomization to pull the 'latest' tag
 kubectl apply -k k8s/overlays/prod/
 ```
+
+## Dashboard
+```bash
+kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+```
