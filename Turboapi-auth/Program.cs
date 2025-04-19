@@ -29,8 +29,25 @@ builder.Configuration.AddEnvironmentVariables();
 // #############################################
 // # 2. Database Configuration
 // #############################################
-builder.Services.AddDbContext<AuthDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+var dbOptions = new DatabaseOptions
+{
+    Host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost",
+    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432",
+    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "auth",
+    Username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres",
+    Password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword"
+};
+
+var connectionString = $"Host={dbOptions.Host};Port={dbOptions.Port};Database={dbOptions.Database};Username={dbOptions.Username};Password={dbOptions.Password}";
+
+// Register DbContext
+builder.Services.AddDbContext<AuthDbContext>((s, options) =>
+{
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.EnableRetryOnFailure();
+    });
+});
 
 // #############################################
 // # 3. Authentication Configuration
@@ -190,4 +207,13 @@ public static class KafkaConfiguration
             ));        
         return services;
     }
+}
+
+public class DatabaseOptions
+{
+    public string Host { get; set; }
+    public string Port { get; set; }
+    public string Database { get; set; }
+    public string Username { get; set; }
+    public string Password { get; set; }
 }
