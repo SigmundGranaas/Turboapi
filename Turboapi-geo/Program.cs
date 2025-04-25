@@ -51,13 +51,12 @@ builder.Services.AddAuthentication("AuthScheme")
     {
         options.Cookie.HttpOnly = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
-        
+    
         // Prevent redirects for API calls
         options.Events = new CookieAuthenticationEvents
         {
             OnRedirectToLogin = context =>
             {
-                // Return 401 instead of redirect for API calls
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 return Task.CompletedTask;
             },
@@ -65,6 +64,42 @@ builder.Services.AddAuthentication("AuthScheme")
             {
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
+            },
+            OnValidatePrincipal = async context =>
+            {
+                // Get the access token from the cookie
+                var accessToken = context.Request.Cookies["accessToken"]; // Use your actual cookie name
+            
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+            
+                // Validate the JWT token using the same parameters
+                var tokenHandler = new JwtSecurityTokenHandler();
+                var tokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwtConfig.Key)),
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidIssuer = jwtConfig.Issuer,
+                    ValidAudience = jwtConfig.Audience,
+                    ClockSkew = TimeSpan.Zero
+                };
+            
+                try
+                {
+                    // Validate the token
+                    var principal = tokenHandler.ValidateToken(accessToken, tokenValidationParameters, out _);
+                    context.Principal = principal;
+                }
+                catch (Exception)
+                {
+                    context.RejectPrincipal();
+                }
             }
         };
     })
