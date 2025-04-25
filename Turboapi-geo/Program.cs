@@ -229,10 +229,10 @@ app.MapScalarApiReference();
 app.MapPrometheusScrapingEndpoint();
 app.UseMiddleware<ExceptionLoggingMiddleware>();
 app.UseHttpsRedirection();
-app.UseCors("Default");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseCors("Default");
 
 app.Run();
 
