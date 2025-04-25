@@ -102,6 +102,22 @@ builder.Services.AddAuthentication("AuthScheme")
     {
         options.Cookie.HttpOnly = true;
         options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        
+        // Prevent redirects for API calls
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnRedirectToLogin = context =>
+            {
+                // Return 401 instead of redirect for API calls
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            },
+            OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            }
+        };
     })
     .AddJwtBearer(options =>
     {
@@ -118,13 +134,14 @@ builder.Services.AddAuthentication("AuthScheme")
         };
     });
 
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: "Default",
         policy  =>
         {
             policy
-                .WithOrigins("http://localhost:8080", "https://kartapi.sandring.no")
+                .WithOrigins("http://localhost:8080", "https://kart-api.sandring.no",  "https://kart.sandring.no")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
