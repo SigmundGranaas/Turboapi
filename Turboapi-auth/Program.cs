@@ -84,10 +84,24 @@ builder.Services.Configure<CookieSettings>(options => {
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
 
-builder.Services.AddAuthentication(options =>
+builder.Services.AddAuthentication("AuthScheme")
+    .AddPolicyScheme("AuthScheme", "Authorization Bearer or Cookie", options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.ForwardDefaultSelector = context =>
+        {
+            // Check if the request contains the JWT bearer token
+            string authorization = context.Request.Headers["Authorization"];
+            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
+                return JwtBearerDefaults.AuthenticationScheme;
+            
+            // Otherwise use cookies
+            return CookieAuthenticationDefaults.AuthenticationScheme;
+        };
+    })
+    .AddCookie(options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
     })
     .AddJwtBearer(options =>
     {
@@ -101,53 +115,6 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = jwtConfig.Issuer,
             ValidAudience = jwtConfig.Audience,
             ClockSkew = TimeSpan.Zero
-        };
-    })
-    .AddCookie(options =>
-    {
-        options.Cookie.HttpOnly = true;
-        options.ExpireTimeSpan = TimeSpan.FromHours(1);
-        options.SlidingExpiration = true;
-        
-        // Configure cookie authentication to use the same JWT validation settings
-        options.Events = new CookieAuthenticationEvents
-        {
-            OnValidatePrincipal = async context =>
-            {
-                // You can access the token from the cookie and validate it using 
-                // the same TokenValidationParameters as the JWT Bearer
-                var token = context.Properties.GetTokenValue("access_token");
-                if (string.IsNullOrEmpty(token))
-                {
-                    context.RejectPrincipal();
-                    return;
-                }
-
-                var tokenHandler = new JwtSecurityTokenHandler();
-                try
-                {
-                    // Use the same validation parameters as JwtBearer
-                    var principal = tokenHandler.ValidateToken(token, 
-                        new TokenValidationParameters
-                        {
-                            ValidateIssuerSigningKey = true,
-                            IssuerSigningKey = new SymmetricSecurityKey(
-                                Encoding.UTF8.GetBytes(jwtConfig.Key)),
-                            ValidateIssuer = true,
-                            ValidateAudience = true,
-                            ValidIssuer = jwtConfig.Issuer,
-                            ValidAudience = jwtConfig.Audience,
-                            ClockSkew = TimeSpan.Zero
-                        }, 
-                        out _);
-                    
-                    context.Principal = principal;
-                }
-                catch
-                {
-                    context.RejectPrincipal();
-                }
-            }
         };
     });
 
