@@ -119,7 +119,7 @@ builder.Services.AddAuthentication("AuthScheme")
             OnValidatePrincipal = async context =>
             {
                 // Get the access token from the cookie
-                var accessToken = context.Request.Cookies["accessToken"]; // Use your actual cookie name
+                var accessToken = context.Request.Cookies["accessToken"];
             
                 if (string.IsNullOrEmpty(accessToken))
                 {

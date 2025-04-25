@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +67,7 @@ builder.Services.AddAuthentication("AuthScheme")
             OnValidatePrincipal = async context =>
             {
                 // Get the access token from the cookie
-                var accessToken = context.Request.Cookies["accessToken"]; // Use your actual cookie name
+                var accessToken = context.Request.Cookies["accessToken"];
             
                 if (string.IsNullOrEmpty(accessToken))
                 {
