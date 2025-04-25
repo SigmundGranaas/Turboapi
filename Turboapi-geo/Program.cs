@@ -1,4 +1,7 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,11 +11,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
-using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
-using Turboapi_geo.eventbus_adapter;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 
@@ -29,6 +30,9 @@ builder.Configuration.AddEnvironmentVariables();
 // #############################################
 // # 1.1 Security
 // #############################################
+var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -40,9 +44,59 @@ builder.Services.AddAuthentication(options =>
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"])),
-            ValidIssuer = "turbo-auth",
-            ValidateAudience = false,
+                Encoding.UTF8.GetBytes(jwtConfig.Key)),
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidIssuer = jwtConfig.Issuer,
+            ValidAudience = jwtConfig.Audience,
+            ClockSkew = TimeSpan.Zero
+        };
+    })
+    .AddCookie(options =>
+    {
+        options.Cookie.HttpOnly = true;
+        options.ExpireTimeSpan = TimeSpan.FromHours(1);
+        options.SlidingExpiration = true;
+        
+        // Configure cookie authentication to use the same JWT validation settings
+        options.Events = new CookieAuthenticationEvents
+        {
+            OnValidatePrincipal = async context =>
+            {
+                // You can access the token from the cookie and validate it using 
+                // the same TokenValidationParameters as the JWT Bearer
+                var token = context.Properties.GetTokenValue("access_token");
+                if (string.IsNullOrEmpty(token))
+                {
+                    context.RejectPrincipal();
+                    return;
+                }
+
+                var tokenHandler = new JwtSecurityTokenHandler();
+                try
+                {
+                    // Use the same validation parameters as JwtBearer
+                    var principal = tokenHandler.ValidateToken(token, 
+                        new TokenValidationParameters
+                        {
+                            ValidateIssuerSigningKey = true,
+                            IssuerSigningKey = new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(jwtConfig.Key)),
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidIssuer = jwtConfig.Issuer,
+                            ValidAudience = jwtConfig.Audience,
+                            ClockSkew = TimeSpan.Zero
+                        }, 
+                        out _);
+                    
+                    context.Principal = principal;
+                }
+                catch
+                {
+                    context.RejectPrincipal();
+                }
+            }
         };
     });
 
@@ -171,4 +225,13 @@ public class DatabaseOptions
     public string Database { get; set; }
     public string Username { get; set; }
     public string Password { get; set; }
+}
+
+public class JwtConfig
+{
+    public string Key { get; set; }
+    public string Issuer { get; set; }
+    public string Audience { get; set; }
+    public int TokenExpirationMinutes { get; set; }
+    public int RefreshTokenExpirationDays { get; set; }
 }
