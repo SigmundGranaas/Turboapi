@@ -228,11 +228,11 @@ app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapPrometheusScrapingEndpoint();
 app.UseMiddleware<ExceptionLoggingMiddleware>();
+app.UseCors("Default");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.UseCors("Default");
 
 app.Run();
 
