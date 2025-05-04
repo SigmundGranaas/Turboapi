@@ -1,9 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using NetTopologySuite.Geometries;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -15,6 +10,7 @@ using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
+using TurboAuthentication.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,94 +25,8 @@ builder.Configuration.AddEnvironmentVariables();
 // #############################################
 // # 1.1 Security
 // #############################################
-var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
-builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
 
-builder.Services.AddAuthentication("AuthScheme")
-    .AddPolicyScheme("AuthScheme", "Authorization Bearer or Cookie", options =>
-    {
-        options.ForwardDefaultSelector = context =>
-        {
-            // Check if the request contains the JWT bearer token
-            string authorization = context.Request.Headers["Authorization"];
-            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                return JwtBearerDefaults.AuthenticationScheme;
-            
-            // Otherwise use cookies
-            return CookieAuthenticationDefaults.AuthenticationScheme;
-        };
-    })
-    .AddCookie(options =>
-    {
-        options.Cookie.HttpOnly = true;
-        options.ExpireTimeSpan = TimeSpan.FromHours(1);
-    
-        // Prevent redirects for API calls
-        options.Events = new CookieAuthenticationEvents
-        {
-            OnRedirectToLogin = context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return Task.CompletedTask;
-            },
-            OnRedirectToAccessDenied = context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                return Task.CompletedTask;
-            },
-            OnValidatePrincipal = async context =>
-            {
-                // Get the access token from the cookie
-                var accessToken = context.Request.Cookies["AccessToken"];
-            
-                if (string.IsNullOrEmpty(accessToken))
-                {
-                    context.RejectPrincipal();
-                    return;
-                }
-            
-                // Validate the JWT token using the same parameters
-                var tokenHandler = new JwtSecurityTokenHandler();
-                var tokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtConfig.Key)),
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidIssuer = jwtConfig.Issuer,
-                    ValidAudience = jwtConfig.Audience,
-                    ClockSkew = TimeSpan.Zero
-                };
-            
-                try
-                {
-                    // Validate the token
-                    var principal = tokenHandler.ValidateToken(accessToken, tokenValidationParameters, out _);
-                    context.Principal = principal;
-                }
-                catch (Exception)
-                {
-                    context.RejectPrincipal();
-                }
-            }
-        };
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtConfig.Key)),
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidIssuer = jwtConfig.Issuer,
-            ValidAudience = jwtConfig.Audience,
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
+builder.Services.AddTurboAuth(builder.Configuration);
 
 builder.Services.AddCors(options =>
 {
@@ -243,13 +153,4 @@ public class DatabaseOptions
     public string Database { get; set; }
     public string Username { get; set; }
     public string Password { get; set; }
-}
-
-public class JwtConfig
-{
-    public string Key { get; set; }
-    public string Issuer { get; set; }
-    public string Audience { get; set; }
-    public int TokenExpirationMinutes { get; set; }
-    public int RefreshTokenExpirationDays { get; set; }
 }

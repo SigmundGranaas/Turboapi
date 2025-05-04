@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,14 +19,15 @@ namespace Turboapi_geo.controller;
         private readonly DeleteLocationHandler _deleteHandler;
         private readonly GetLocationByIdHandler _locationQueryHandler;
         private readonly GetLocationsInExtentHandler _locationsQueryHandler;
-
+        private readonly ILogger<LocationsController> _logger;
 
         public LocationsController(
             CreateLocationHandler createHandler,
             UpdateLocationPositionHandler updateHandler,
             DeleteLocationHandler deleteHandler,
             GetLocationByIdHandler idQuery,
-            GetLocationsInExtentHandler locationsQuery
+            GetLocationsInExtentHandler locationsQuery,
+            ILogger<LocationsController> logger
             )
         {
             _createHandler = createHandler;
@@ -33,6 +35,7 @@ namespace Turboapi_geo.controller;
             _locationsQueryHandler = locationsQuery;
             _updateHandler = updateHandler;
             _deleteHandler = deleteHandler;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -148,8 +151,8 @@ namespace Turboapi_geo.controller;
             return Ok(LocationResponse.FromDto(location));
         }
 
-        [Authorize]
         [HttpGet]
+        [Authorize]
         [ProducesResponseType(typeof(IEnumerable<LocationResponse>), StatusCodes.Status200OK)]
         public async Task<ActionResult<IEnumerable<LocationResponse>>> GetInExtent(
             [FromQuery] double minLon,
@@ -157,6 +160,24 @@ namespace Turboapi_geo.controller;
             [FromQuery] double maxLon,
             [FromQuery] double maxLat)
         {
+            
+            var accessToken = Request.Cookies["AccessToken"];
+        
+            if (string.IsNullOrEmpty(accessToken))
+            {
+                _logger.LogWarning("AccessToken cookie is missing");
+            }
+            
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtToken = tokenHandler.ReadJwtToken(accessToken);
+        
+            _logger.LogInformation("Token details - Issuer: {Issuer}, Expires: {Expiry}", 
+                jwtToken.Issuer, jwtToken.ValidTo);
+        
+            var claims = jwtToken.Claims.Select(c => new { c.Type, c.Value }).ToList();
+            _logger.LogInformation("Token contains {ClaimCount} claims", claims.Count);
+            _logger.LogInformation("Token contains {ClaimCount} claims", claims);
+
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null)
             {

@@ -78,7 +78,8 @@ public class LocationsControllerTests : IAsyncDisposable
             updateHandler,
             deleteHandler,
             getByIdHandler,
-            getInExtentHandler
+            getInExtentHandler,
+            null
         );
         
         _cts = new CancellationTokenSource();

@@ -46,11 +46,9 @@ public class AuthHelper
     public void SetAuthCookies(HttpResponse response, string accessToken, string refreshToken)
     {
         var cookieOptions = CookieHelper.CreateAuthCookieOptions(_configuration);
-        var encryptedAccessToken = EncryptToken(accessToken);
-        var encryptedRefreshToken = EncryptToken(refreshToken);
 
-        response.Cookies.Append("AccessToken", encryptedAccessToken, cookieOptions);
-        response.Cookies.Append("RefreshToken", encryptedRefreshToken, cookieOptions);
+        response.Cookies.Append("AccessToken", accessToken, cookieOptions);
+        response.Cookies.Append("RefreshToken", refreshToken, cookieOptions);
         
         _logger.LogInformation("Setting authentication cookies");
     }
@@ -68,23 +66,15 @@ public class AuthHelper
 
     public (string? accessToken, string? refreshToken) GetDecryptedTokens(HttpRequest request)
     {
-        var encryptedRefreshToken = request.Cookies["RefreshToken"];
-        if (string.IsNullOrEmpty(encryptedRefreshToken))
+        var refreshToken = request.Cookies["RefreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
         {
             return (null, null);
         }
 
         try
         {
-            var refreshToken = DecryptToken(encryptedRefreshToken);
-            
-            var encryptedAccessToken = request.Cookies["AccessToken"];
-            string? accessToken = null;
-            if (!string.IsNullOrEmpty(encryptedAccessToken))
-            {
-                accessToken = DecryptToken(encryptedAccessToken);
-            }
-
+            var accessToken = request.Cookies["AccessToken"];
             return (accessToken, refreshToken);
         }
         catch (CryptographicException ex)
