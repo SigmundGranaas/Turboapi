@@ -48,3 +48,6 @@ jobs:
     - name: Test data
       working-directory: ./Turbo-pg-data
       run: dotnet test --no-build --verbosity normal
+    - name: Test auth client
+      working-directory: ./TurboAuthentication
+      run: dotnet test --no-build --verbosity normal
