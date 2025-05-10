@@ -1,126 +1,94 @@
 using System.Diagnostics;
 using GeoSpatial.Domain.Events;
 using NetTopologySuite.Geometries;
+using Turboapi_geo.data;
+using Turboapi_geo.data.model;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.domain.value;
 using Turboapi_geo.infrastructure;
+using Coordinates = Turboapi_geo.domain.value.Coordinates;
+using Location = Turboapi_geo.domain.model.Location;
 
 
 namespace GeoSpatial.Tests.Doubles
 {
     public class InMemoryLocationWriteRepository : ILocationWriteRepository
     {
-        private readonly Dictionary<Guid, LocationReadEntity> _locations;
+        private readonly Dictionary<Guid, LocationEntity> _locations;
         private readonly ILogger<InMemoryLocationWriteRepository>? _logger;
 
         public InMemoryLocationWriteRepository(
-            Dictionary<Guid, LocationReadEntity> locations, 
+            Dictionary<Guid, LocationEntity> locations, 
             ILogger<InMemoryLocationWriteRepository>? logger = null)
         {
             _locations = locations;
             _logger = logger;
         }
 
-        public Task<LocationReadEntity?> GetById(Guid id)
+        public Task<LocationEntity?> GetById(Guid id)
         {
-            var stopwatch = Stopwatch.StartNew();
             _locations.TryGetValue(id, out var location);
-            stopwatch.Stop();
-            
-            _logger?.LogDebug("GetById for {LocationId} completed in {ElapsedMs}ms", 
-                id, stopwatch.ElapsedMilliseconds);
-                
             return Task.FromResult(location);
         }
 
-        public Task Add(LocationReadEntity location)
+        public Task Add(LocationEntity location)
         {
-            var stopwatch = Stopwatch.StartNew();
             _locations[location.Id] = location;
-            stopwatch.Stop();
-            
-            _logger?.LogInformation("Added location {LocationId} in {ElapsedMs}ms", 
-                location.Id, stopwatch.ElapsedMilliseconds);
-                
             return Task.CompletedTask;
         }
 
-        public Task Update(LocationReadEntity location)
+        public Task Update(LocationEntity location)
         {
-            var stopwatch = Stopwatch.StartNew();
             _locations[location.Id] = location;
-            stopwatch.Stop();
-            
-            _logger?.LogInformation("Updated location {LocationId} (full update) in {ElapsedMs}ms", 
-                location.Id, stopwatch.ElapsedMilliseconds);
-                
             return Task.CompletedTask;
         }
 
-        public Task Delete(LocationReadEntity location)
+        public Task Delete(LocationEntity location)
         {
-            var stopwatch = Stopwatch.StartNew();
             _locations.Remove(location.Id);
-            stopwatch.Stop();
-            
-            _logger?.LogInformation("Deleted location {LocationId} in {ElapsedMs}ms", 
-                location.Id, stopwatch.ElapsedMilliseconds);
-                
             return Task.CompletedTask;
         }
         
-        public Task UpdatePosition(Guid id, Point geometry)
+        public Task UpdatePartial(Guid id, Coordinates? coordinates, DisplayUpdate? display)
         {
-            var stopwatch = Stopwatch.StartNew();
-            
             if (_locations.TryGetValue(id, out var location))
             {
-                location.Geometry = geometry;
-                stopwatch.Stop();
-                
-                _logger?.LogInformation("Updated position for location {LocationId} in {ElapsedMs}ms", 
-                    id, stopwatch.ElapsedMilliseconds);
+                if (coordinates != null)
+                {
+                    location.Geometry = coordinates.ToPoint(new GeometryFactory());
+                }
+                if (display != null)
+                {
+                    if (display.Name != null)
+                    {
+                        location.Name = display.Name;
+                    }
+                    if (display.Description != null)
+                    {
+                        location.Description = display.Description;
+                    }
+                    if (display.Icon != null)
+                    {
+                        location.Icon = display.Icon;
+                    }
+                }
             }
             else
             {
-                stopwatch.Stop();
                 _logger?.LogWarning("Failed to update position for location {LocationId} - entity not found", id);
-            }
-            
-            return Task.CompletedTask;
-        }
-        
-        public Task UpdateDisplayInformation(Guid id, string name, string? description, string? icon)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            
-            if (_locations.TryGetValue(id, out var location))
-            {
-                location.Name = name;
-                location.Description = description;
-                location.Icon = icon;
-                stopwatch.Stop();
-                
-                _logger?.LogInformation("Updated display information for location {LocationId} in {ElapsedMs}ms", 
-                    id, stopwatch.ElapsedMilliseconds);
-            }
-            else
-            {
-                stopwatch.Stop();
-                _logger?.LogWarning("Failed to update display information for location {LocationId} - entity not found", id);
             }
             
             return Task.CompletedTask;
         }
     }
     
-    public class InMemoryLocationReadModel : ILocationReadModelRepository
+    public class InMemoryLocationRead : ILocationReadRepository
     {
-        private readonly Dictionary<Guid, LocationReadEntity> _locations;
+        private readonly Dictionary<Guid, LocationEntity> _locations;
 
-        public InMemoryLocationReadModel(Dictionary<Guid, LocationReadEntity> locations)
+        public InMemoryLocationRead(Dictionary<Guid, LocationEntity> locations)
         {
             _locations = locations;
         }
@@ -133,17 +101,13 @@ namespace GeoSpatial.Tests.Doubles
                 return Task.FromResult<Location?>(null);
             }
 
-            var displayInformation = new DisplayInformation()
-            {
-                Name = location.Name,
-                Description = location.Description,
-                Icon = location.Icon
-            };
-            return Task.FromResult<Location?>(Location.From(location.Id, location.OwnerId, location.Geometry, displayInformation));
+            var displayInformation = new DisplayInformation(location.Name, location.Description, location.Icon);
+           
+            return Task.FromResult<Location?>(Location.Reconstitute(location.Id, location.OwnerId, Coordinates.FromPoint(location.Geometry), displayInformation));
         }
 
         public Task<IEnumerable<Location>> GetLocationsInExtent(
-            string ownerId,
+            Guid ownerId,
             double minLongitude,
             double minLatitude,
             double maxLongitude,
@@ -156,7 +120,7 @@ namespace GeoSpatial.Tests.Doubles
                 .Where(l => l.Geometry.Y >= minLatitude)
                 .Where(l => l.Geometry.Y <= maxLatitude);
         
-            return Task.FromResult(locations.Select(loc => Location.From(loc.Id, loc.OwnerId, loc.Geometry)));
+            return Task.FromResult(locations.Select(loc => Location.Reconstitute(loc.Id, loc.OwnerId, Coordinates.FromPoint(loc.Geometry), new DisplayInformation(loc.Name, loc.Description, loc.Icon))));
         }
     }
 
@@ -218,9 +182,8 @@ namespace GeoSpatial.Tests.Doubles
         private static Guid GetAggregateId(DomainEvent @event) => @event switch
         {
             LocationCreated e => e.LocationId,
-            LocationPositionChanged e => e.LocationId,
+            LocationUpdated e => e.LocationId,
             LocationDeleted e => e.LocationId,
-            LocationDisplayInformationChanged e => e.LocationId,
             _ => throw new ArgumentException($"Unknown event type: {@event.GetType()}")
         };
     }
@@ -293,6 +256,15 @@ namespace GeoSpatial.Tests.Doubles
                     await handler(@event);
                 }
             }
+        }
+    }
+
+    public class DummyProjector : IDirectReadModelProjector
+    {
+        public Task ProjectEventsAsync(IReadOnlyList<DomainEvent> events,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
         }
     }
 }

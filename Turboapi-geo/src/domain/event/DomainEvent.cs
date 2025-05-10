@@ -1,49 +1,98 @@
 using System.Text.Json.Serialization;
 using Medo;
-using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.value;
 
-namespace Turboapi_geo.domain.events;
-
-[JsonDerivedType(typeof(LocationCreated), typeDiscriminator: nameof(LocationCreated))]
-[JsonDerivedType(typeof(LocationPositionChanged), typeDiscriminator: nameof(LocationPositionChanged))]
-[JsonDerivedType(typeof(LocationDeleted), typeDiscriminator: nameof(LocationDeleted))]
-[JsonDerivedType(typeof(CreatePositionEvent), typeDiscriminator: nameof(CreatePositionEvent))]
-[JsonDerivedType(typeof(LocationDisplayInformationChanged), typeDiscriminator: nameof(LocationDisplayInformationChanged))]
-public abstract record DomainEvent
+namespace Turboapi_geo.domain.events
 {
-    public Guid Id { get; } = Uuid7.NewUuid7();
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
+    /// <summary>
+    /// Base event properties
+    /// </summary>
+    public abstract record DomainEvent
+    {
+        [JsonPropertyName("id")]
+        public Guid Id { get; init; } = Uuid7.NewUuid7();
+
+        [JsonPropertyName("occurredAt")]
+        public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+
+        // EventType is derived. If you want to ensure its serialized name and presence:
+        [JsonPropertyName("eventType")]
+        public string EventType => GetType().Name;
+    }
+
+    /// <summary>
+    /// Location created event
+    /// </summary>
+    public record LocationCreated : DomainEvent
+    {
+        [JsonPropertyName("locationId")]
+        public Guid LocationId { get; init; }
+
+        [JsonPropertyName("ownerId")]
+        public Guid OwnerId { get; init; }
+
+        [JsonPropertyName("coordinates")]
+        public Coordinates Coordinates { get; init; }
+
+        [JsonPropertyName("display")]
+        public DisplayInformation Display { get; init; }
+
+        [JsonConstructor]
+        public LocationCreated(
+            Guid locationId,
+            Guid ownerId,
+            Coordinates coordinates,
+            DisplayInformation display)
+        {
+            LocationId = locationId;
+            OwnerId = ownerId;
+            Coordinates = coordinates;
+            Display = display;
+        }
+    }
+
+    /// <summary>
+    /// Location updated event with changes
+    /// </summary>
+    public record LocationUpdated : DomainEvent
+    {
+        [JsonPropertyName("locationId")]
+        public Guid LocationId { get; init; }
+
+        [JsonPropertyName("ownerId")]
+        public Guid OwnerId { get; init; }
+
+        [JsonPropertyName("updates")]
+        public LocationUpdateParameters Updates { get; init; }
+
+        [JsonConstructor]
+        public LocationUpdated(
+            Guid locationId,
+            Guid ownerId,
+            LocationUpdateParameters updates)
+        {
+            LocationId = locationId;
+            OwnerId = ownerId;
+            Updates = updates;
+        }
+    }
+
+    /// <summary>
+    /// Location deleted event
+    /// </summary>
+    public record LocationDeleted : DomainEvent
+    {
+        [JsonPropertyName("locationId")]
+        public Guid LocationId { get; init; }
+
+        [JsonPropertyName("ownerId")]
+        public Guid OwnerId { get; init; }
+
+        [JsonConstructor]
+        public LocationDeleted(Guid locationId, Guid ownerId)
+        {
+            LocationId = locationId;
+            OwnerId = ownerId;
+        }
+    }
 }
-
-public record LocationCreated(
-    Guid LocationId,
-    string OwnerId,
-    Point Geometry,
-    DisplayInformation DisplayInformation
-) : DomainEvent;
-
-public record LocationPositionChanged(
-    Guid LocationId,
-    Point Geometry
-) : DomainEvent;
-
-public record LocationDisplayInformationChanged(
-    Guid LocationId,
-    string Name,
-    string Description,
-    string Icon
-) : DomainEvent;
-
-public record LocationDeleted(
-    Guid LocationId,
-    string OwnerId
-) : DomainEvent;
-
-
-public record CreatePositionEvent(
-    Guid positionId,
-    LatLng position,
-    Guid activityId,
-    Guid ownerId
-) : DomainEvent;

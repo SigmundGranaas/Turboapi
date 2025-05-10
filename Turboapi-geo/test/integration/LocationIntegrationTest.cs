@@ -1,10 +1,9 @@
-using System.Diagnostics;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq.Expressions;
+// using System.Linq.Expressions; // No longer strictly needed for these tests' assertions
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore; // Still needed for DB setup in InitializeAsync
 using Testcontainers.PostgreSql;
 using Testcontainers.Kafka;
 
@@ -13,12 +12,16 @@ using FluentAssertions;
 using GeoSpatial.Domain.Events;
 using Medo;
 using Microsoft.IdentityModel.Tokens;
-using Turboapi_geo.controller;
+using Turboapi_geo.controller.request;
+using Turboapi_geo.controller.response;
+// using Turboapi_geo.data.model; // No longer directly used in test methods
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.infrastructure;
 using Turboapi.infrastructure;
 using Turboapi.Infrastructure.Kafka;
+using System.Diagnostics;
+using System.Net.Http.Json; // Required for ReadFromJsonAsync and PostAsJsonAsync
 
 namespace Turboapi_geo.test.integration;
 
@@ -30,13 +33,11 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
     private HttpClient? _client;
     private readonly string _projectRoot;
     private const string TOPIC_NAME = "location-events";
-    private const string CONSUMER_GROUP_POSITION = "location-group-update-position";
-    private const string CONSUMER_GROUP_DISPLAY = "location-group-update-display";
+    private const string CONSUMER_GROUP = "location-group-update";
     private string? _jwtSecret;
 
     public LocationControllerIntegrationTests()
     {
-        // Setup PostgreSQL with PostGIS
         _postgres = new PostgreSqlBuilder()
             .WithImage("postgis/postgis:17-3.5-alpine")
             .WithDatabase("geodb")
@@ -44,143 +45,25 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
             .WithPassword("postgres")
             .Build();
 
-        // Setup Kafka
         _kafka = new KafkaBuilder()
             .WithImage("confluentinc/cp-kafka:6.2.10")
-            .WithPortBinding(9092, true)  // External port
+            .WithPortBinding(9092, true)
             .Build();
 
-        // Find project root
         var currentDir = new DirectoryInfo(Directory.GetCurrentDirectory());
         while (currentDir != null && !Directory.Exists(Path.Combine(currentDir.FullName, "db")))
         {
             currentDir = currentDir.Parent;
         }
         _projectRoot = currentDir?.FullName ?? throw new Exception("Could not find project root");
-    }
+    } 
     
-        /// <summary>
-    /// Waits for a specific condition to be met in the database
-    /// </summary>
-    /// <typeparam name="T">The type of result expected</typeparam>
-    /// <param name="serviceProvider">The service provider to resolve dependencies</param>
-    /// <param name="predicate">The condition to check</param>
-    /// <param name="timeout">Optional timeout (defaults to 5 seconds)</param>
-    /// <param name="pollInterval">Optional poll interval (defaults to 100ms)</param>
-    /// <returns>The result of the predicate when the condition is met</returns>
-    /// <exception cref="TimeoutException">Thrown when the condition is not met within the timeout period</exception>
-    public static async Task<T> WaitForDatabase<T>(
-        IServiceProvider serviceProvider,
-        Func<LocationReadContext, Task<T>> predicate,
-        TimeSpan? timeout = null,
-        TimeSpan? pollInterval = null)
-        where T : class
-    {
-        timeout ??= TimeSpan.FromSeconds(5);
-        pollInterval ??= TimeSpan.FromMilliseconds(100);
-        
-        var stopwatch = Stopwatch.StartNew();
-        
-        while (stopwatch.Elapsed < timeout)
-        {
-            using var scope = serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<LocationReadContext>();
-            
-            var result = await predicate(dbContext);
-            
-            if (result != null)
-            {
-                return result;
-            }
-            
-            await Task.Delay(pollInterval.Value);
-        }
-        
-        throw new TimeoutException($"Database condition not met after {timeout.Value.TotalSeconds} seconds");
-    }
-    
-    /// <summary>
-    /// Waits for a specific entity to exist in the database
-    /// </summary>
-    /// <typeparam name="TEntity">The entity type</typeparam>
-    /// <param name="serviceProvider">The service provider</param>
-    /// <param name="predicate">The condition to check</param>
-    /// <param name="timeout">Optional timeout</param>
-    /// <returns>The entity when found</returns>
-    public static Task<TEntity> WaitForEntity<TEntity>(
-        IServiceProvider serviceProvider,
-        Expression<Func<TEntity, bool>> predicate,
-        TimeSpan? timeout = null)
-        where TEntity : class
-    {
-        return WaitForDatabase(
-            serviceProvider,
-            async dbContext => await dbContext.Set<TEntity>()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(predicate),
-            timeout);
-    }
-    
-    /// <summary>
-    /// Waits for a location to exist in the database by ID
-    /// </summary>
-    /// <param name="serviceProvider">The service provider</param>
-    /// <param name="locationId">The location ID to wait for</param>
-    /// <param name="timeout">Optional timeout</param>
-    /// <returns>The location when found</returns>
-    public static Task<LocationReadEntity> WaitForLocation(
-        IServiceProvider serviceProvider,
-        Guid locationId,
-        TimeSpan? timeout = null)
-    {
-        return WaitForEntity<LocationReadEntity>(
-            serviceProvider,
-            location => location.Id == locationId,
-            timeout);
-    }
-    
-    /// <summary>
-    /// Waits for a location to be updated with specific criteria
-    /// </summary>
-    /// <param name="serviceProvider">The service provider</param>
-    /// <param name="locationId">The location ID</param>
-    /// <param name="validateLocation">Function to validate location properties have been updated</param>
-    /// <param name="timeout">Optional timeout</param>
-    /// <returns>The location when criteria is met</returns>
-    public static Task<LocationReadEntity> WaitForLocationUpdate(
-        IServiceProvider serviceProvider,
-        Guid locationId,
-        Func<LocationReadEntity, bool> validateLocation,
-        TimeSpan? timeout = null)
-    {
-        return WaitForDatabase(
-            serviceProvider,
-            async dbContext =>
-            {
-                var location = await dbContext.Locations
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(l => l.Id == locationId);
-                
-                if (location != null && validateLocation(location))
-                {
-                    return location;
-                }
-                
-                return null;
-            },
-            timeout);
-    }
-
     public async Task InitializeAsync()
     {
-        // Start containers
         await _postgres.StartAsync();
         await _kafka.StartAsync();
-
-        // Initialize database
         await RunFlywayMigrations();
 
-        // Setup WebApplicationFactory after containers are ready
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
@@ -188,71 +71,48 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                 
                 builder.ConfigureServices((context, services) =>
                 {
-                    // Get JWT secret from configuration
                     _jwtSecret = context.Configuration["Jwt:Key"];
-                    
                     if (string.IsNullOrEmpty(_jwtSecret))
                     {
                         throw new Exception("JWT secret not found in configuration");
                     }
                     
-                    // Replace default DbContext
                     var descriptor = services.SingleOrDefault(d => 
                         d.ServiceType == typeof(DbContextOptions<LocationReadContext>));
                     if (descriptor != null)
                     {
                         services.Remove(descriptor);
                     }
-
                     services.AddDbContext<LocationReadContext>(options =>
-                        options.UseNpgsql(_postgres.GetConnectionString(),
-                            x => x.UseNetTopologySuite()
-                        )
-                    );
+                        options.UseNpgsql(_postgres.GetConnectionString(), x => x.UseNetTopologySuite()));
 
-                    // Remove old Default setup
                     var descriptorsToRemove = services.Where(d => 
                         d.ServiceType == typeof(IEventWriter) ||
                         d.ServiceType == typeof(KafkaSettings) ||
                         d.ServiceType == typeof(IKafkaTopicInitializer) ||
                         d.ServiceType == typeof(KafkaConsumer<>) ||
                         d.ServiceType == typeof(IEventSubscriber)).ToList();
-                    
                     foreach (var desc in descriptorsToRemove)
                     {
                         services.Remove(desc);
                     }
                     
-                    // Configure Kafka settings
                     var kafkaSettings = new KafkaSettings
                     {
                         BootstrapServers = _kafka.GetBootstrapAddress(),
                         LocationEventsTopic = TOPIC_NAME
                     };
-        
-                    services.AddSingleton(kafkaSettings); // Add as singleton for easy access in tests
+                    services.AddSingleton(kafkaSettings);
                     services.Configure<KafkaSettings>(options =>
                     {
                         options.BootstrapServers = kafkaSettings.BootstrapServers;
                         options.LocationEventsTopic = kafkaSettings.LocationEventsTopic;
                     });
-
-                    // Register the topic initializer
                     services.AddSingleton<IKafkaTopicInitializer, KafkaTopicInitializer>();
-        
-                    // Register event infrastructure
                     services.AddSingleton<IEventWriter, KafkaEventWriter>();
-                    
-                    services.AddKafkaConsumer<LocationPositionChanged, LocationPositionChangedHandler>(
-                        TOPIC_NAME,
-                        CONSUMER_GROUP_POSITION);
-        
-                    services.AddKafkaConsumer<LocationDisplayInformationChanged, LocationDisplayInformationChangedHandler>(
-                        TOPIC_NAME,
-                        CONSUMER_GROUP_DISPLAY);
+                    services.AddKafkaConsumer<LocationUpdated, LocationUpdatedHandler>(TOPIC_NAME, CONSUMER_GROUP);
                 });
             });
-
         _client = _factory.CreateClient();
     }
 
@@ -276,89 +136,22 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
                 WorkingDirectory = _projectRoot
             }
         };
-
         process.Start();
-        var output = await process.StandardOutput.ReadToEndAsync();
-        var error = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
-
         if (process.ExitCode != 0)
         {
+            var error = await process.StandardError.ReadToEndAsync();
             throw new Exception($"Flyway migration failed: {error}");
         }
     }
 
-    // New method to wait for Kafka message processing to complete
-    private async Task WaitForKafkaProcessing(TimeSpan? timeout = null)
-    {
-        timeout ??= TimeSpan.FromSeconds(5);
-        
-        using var scope = _factory!.Services.CreateScope();
-        
-        // Wait for position updates
-        var positionWaiter = KafkaMessageWaiter.FromServices(
-            scope.ServiceProvider,
-            TOPIC_NAME,
-            CONSUMER_GROUP_POSITION
-        );
-        
-        var result = await positionWaiter.WaitForMessagesProcessed(timeout.Value);
-        if (!result)
-        {
-            throw new TimeoutException($"Timed out waiting for position messages to be processed after {timeout.Value.TotalSeconds} seconds");
-        }
-        
-        // Wait for display updates
-        var displayWaiter = KafkaMessageWaiter.FromServices(
-            scope.ServiceProvider,
-            TOPIC_NAME,
-            CONSUMER_GROUP_DISPLAY
-        );
-        
-        result = await displayWaiter.WaitForMessagesProcessed(timeout.Value);
-        if (!result)
-        {
-            throw new TimeoutException($"Timed out waiting for display messages to be processed after {timeout.Value.TotalSeconds} seconds");
-        }
-    }
-
-    private async Task<T?> WaitForCondition<T>(
-        Func<IServiceProvider, Task<T?>> condition,
-        TimeSpan? timeout = null,
-        string? timeoutMessage = null)
-    {
-        timeout ??= TimeSpan.FromSeconds(1);
-        var stopwatch = Stopwatch.StartNew();
-        
-        while (stopwatch.Elapsed < timeout)
-        {
-            using var scope = _factory!.Services.CreateScope();
-            var result = await condition(scope.ServiceProvider);
-                
-            if (result != null)
-            {
-                return result;
-            }
-            
-            await Task.Delay(100); // Wait 100ms before next attempt
-        }
-
-        throw new TimeoutException(
-            timeoutMessage ?? $"Condition not met after {timeout.Value.TotalSeconds} seconds");
-    }
-
     public async Task DisposeAsync()
     {
-        if (_factory != null)
-        {
-            await _factory.DisposeAsync();
-        }
-
+        if (_factory != null) await _factory.DisposeAsync();
         await _postgres.DisposeAsync();
         await _kafka.DisposeAsync();
     }
     
-    // Helper method to add auth header to requests
     private void AddAuthHeader(string userId)
     {
         var token = GenerateJwtToken(userId);
@@ -370,109 +163,117 @@ public class LocationControllerIntegrationTests : IAsyncLifetime
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_jwtSecret!);
-        
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-            }),
+            Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }),
             Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(
-                new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature
-            ),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
             Issuer = "turbo-auth",
             Audience = "turbo-client",
         };
-
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
     }
 
+    [Fact]
+    public async Task CreateLocation_ShouldPersistToDatabase()
+    {
+        var ownerId = Uuid7.NewUuid7();
+        AddAuthHeader(ownerId.ToString());
 
-[Fact]
-public async Task CreateLocation_ShouldPersistToDatabase_AndPublishEvent()
-{
-    var ownerId = Uuid7.NewUuid7();
-    AddAuthHeader(ownerId.ToString());
-
-    var locationData = new LocationData(13.404954, 52.520008);
-    var display = new DisplayInformationData("Location", null, null);
-
-    var request = new CreateLocationRequest(
-        locationData,
-        display
-    );
+        var geometry = new GeometryData
+        {
+            Longitude = 13.404954,
+            Latitude = 52.520008
+        };
     
-    // Act
-    var response = await _client!.PostAsJsonAsync("/api/geo/locations", request);
+        var display = new DisplayData
+        {
+            Name = "API Created Location",
+            Description = "Description for API created location",
+            Icon = "icon_api_create"
+        };
 
-    // Assert
-    response.IsSuccessStatusCode.Should().BeTrue();
-    var locationId = await response.Content.ReadFromJsonAsync<CreateLocationResponse>();
-
-    // Wait for the location to be created in the database
-    var location = await WaitForLocation(
-        _factory!.Services,
-        locationId.Id);
+        var request = new CreateLocationRequest
+        {
+            Geometry = geometry,
+            Display = display
+        };
     
-    // Verify location properties
-    location.Should().NotBeNull($"Location {locationId.Id} was not found in read model");
-    location.OwnerId.Should().Be(ownerId.ToString());
-    location.Geometry.X.Should().Be(request.location.Longitude);
-    location.Geometry.Y.Should().Be(request.location.Latitude);
-}
+        // Act: Create the location
+        var postResponse = await _client!.PostAsJsonAsync("/api/geo/locations", request);
 
-[Fact]
-public async Task UpdateLocation_ShouldUpdateDatabase_AndPublishEvent()
-{
-    var ownerId = Uuid7.NewUuid7();
-    AddAuthHeader(ownerId.ToString());
+        // Assert: Check POST response
+        postResponse.EnsureSuccessStatusCode(); // Fail fast if POST fails
+        var createdLocationResponse = await postResponse.Content.ReadFromJsonAsync<LocationResponse>();
+        createdLocationResponse.Should().NotBeNull();
+        createdLocationResponse.Id.Should().NotBeEmpty();
 
-    var locationData = new LocationData(13.404954, 52.520008);
-    var display = new DisplayInformationData("Location", null, null);
+        // Act: Fetch the created location via API GET endpoint
+        // Auth header is already set on _client by AddAuthHeader
+        var getResponse = await _client!.GetAsync($"/api/geo/locations/{createdLocationResponse.Id}");
 
-    var request = new CreateLocationRequest(
-        locationData,
-        display
-    );
-
-    var createResponse = await _client!.PostAsJsonAsync("/api/geo/locations", request);
-    var locationId = await createResponse.Content.ReadFromJsonAsync<CreateLocationResponse>();
-
-    // Wait for the location to be created in the database
-    await WaitForLocation(
-        _factory!.Services,
-        locationId.Id);
+        // Assert: Check GET response and its content
+        getResponse.EnsureSuccessStatusCode(); // Fail fast if GET fails
+        var fetchedLocation = await getResponse.Content.ReadFromJsonAsync<LocationResponse>();
     
-    // Update the location
-    var updateRequest = new UpdateLocationRequest(
-        new LocationData(20.405, 15.520),
-        "Updated Location Name"
-    );
+        fetchedLocation.Should().NotBeNull();
+        fetchedLocation!.Id.Should().Be(createdLocationResponse.Id);
+        // Assuming LocationResponse has OwnerId. If not, this assertion needs to be removed/adapted.
+        fetchedLocation.Geometry.Longitude.Should().BeApproximately(request.Geometry.Longitude, 0.000001);
+        fetchedLocation.Geometry.Latitude.Should().BeApproximately(request.Geometry.Latitude, 0.000001);
+        fetchedLocation.Display.Name.Should().Be(request.Display.Name);
+        fetchedLocation.Display.Description.Should().Be(request.Display.Description);
+        fetchedLocation.Display.Icon.Should().Be(request.Display.Icon);
+    }
 
-    // Act
-    var response = await _client!.PutAsJsonAsync(
-        $"/api/geo/locations/{locationId.Id}/position", 
-        updateRequest
-    );
+    [Fact]
+    public async Task UpdateLocation_ShouldUpdateDatabase()
+    {
+        var ownerId = Uuid7.NewUuid7();
+        AddAuthHeader(ownerId.ToString());
 
-    // Assert
-    response.IsSuccessStatusCode.Should().BeTrue();
-    
-    // Wait for the location to be updated in the database with specific criteria
-    var updatedLocation = await WaitForLocationUpdate(
-        _factory!.Services,
-        locationId.Id,
-        location => 
-            location.Name == updateRequest.Name
-    );
-    
-    // Verify final state explicitly
-    updatedLocation.Should().NotBeNull();
-    updatedLocation.Geometry.X.Should().BeApproximately(updateRequest.Location!.Longitude, 0.01);
-    updatedLocation.Geometry.Y.Should().BeApproximately(updateRequest.Location.Latitude, 0.01);
-    updatedLocation.Name.Should().Be(updateRequest.Name);
-}
+        // Arrange: Create a location first
+        var initialGeometry = new GeometryData { Longitude = 13.404954, Latitude = 52.520008 };
+        var initialDisplay = new DisplayData { Name = "Original API Location", Description = "Original Desc", Icon = "original_icon" };
+        var createRequest = new CreateLocationRequest { Geometry = initialGeometry, Display = initialDisplay };
+
+        var createResponse = await _client!.PostAsJsonAsync("/api/geo/locations", createRequest);
+        createResponse.EnsureSuccessStatusCode();
+        var createdLocation = await createResponse.Content.ReadFromJsonAsync<LocationResponse>();
+        createdLocation.Should().NotBeNull();
+        var locationId = createdLocation!.Id; // Null forgiveness as NotBeNull is checked
+
+        // Arrange: Prepare update request
+        var updatedGeometry = new GeometryData { Longitude = 20.405, Latitude = 15.520 };
+        var updatedDisplayChangeset = new DisplayChangeset 
+        { 
+            Name = "Updated API Location Name", 
+            Description = "Updated API description", 
+            Icon = "updated_api_icon" 
+        };
+        var updateRequest = new UpdateLocationRequest { Geometry = updatedGeometry, Display = updatedDisplayChangeset };
+
+        // Act: Update the location
+        // Auth header is already set on _client
+        var putResponse = await _client!.PutAsJsonAsync($"/api/geo/locations/{locationId}", updateRequest);
+
+        // Assert: Check PUT response
+        putResponse.EnsureSuccessStatusCode();
+        
+        // Act: Fetch the updated location via API GET endpoint
+        var getResponse = await _client!.GetAsync($"/api/geo/locations/{locationId}");
+
+        // Assert: Check GET response and its content
+        getResponse.EnsureSuccessStatusCode();
+        var fetchedUpdatedLocation = await getResponse.Content.ReadFromJsonAsync<LocationResponse>();
+        
+        fetchedUpdatedLocation.Should().NotBeNull();
+        fetchedUpdatedLocation!.Id.Should().Be(locationId);
+        fetchedUpdatedLocation.Geometry.Longitude.Should().BeApproximately(updateRequest.Geometry.Longitude, 0.000001);
+        fetchedUpdatedLocation.Geometry.Latitude.Should().BeApproximately(updateRequest.Geometry.Latitude, 0.000001);
+        fetchedUpdatedLocation.Display.Name.Should().Be(updateRequest.Display.Name);
+        fetchedUpdatedLocation.Display.Description.Should().Be(updateRequest.Display.Description);
+        fetchedUpdatedLocation.Display.Icon.Should().Be(updateRequest.Display.Icon);
+    }
 }

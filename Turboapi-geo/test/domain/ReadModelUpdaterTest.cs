@@ -1,17 +1,18 @@
 using GeoSpatial.Tests.Doubles;
-
 using NetTopologySuite.Geometries;
+using Turboapi_geo.data.model;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.domain.value;
 using Xunit;
+using Coordinates = Turboapi_geo.domain.value.Coordinates;
 
 public class LocationEventHandlerTests : IAsyncDisposable
 {
     private readonly IServiceScope _scope;
     private readonly ILocationWriteRepository _writer;
     private readonly LocationCreatedHandler _createdHandler;
-    private readonly LocationPositionChangedHandler _positionChangedHandler;
+    private readonly LocationUpdatedHandler _positionChangedHandler;
     private readonly LocationDeletedHandler _deletedHandler;
     private readonly CancellationTokenSource _cts;
 
@@ -21,14 +22,14 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var services = new ServiceCollection();
         
         // Register dependencies
-        var writer = new InMemoryLocationWriteRepository(new Dictionary<Guid, LocationReadEntity>());
+        var writer = new InMemoryLocationWriteRepository(new Dictionary<Guid, LocationEntity>());
         services.AddSingleton<ILocationWriteRepository>(writer);
         services.AddSingleton<ILogger<LocationCreatedHandler>>(new TestLogger<LocationCreatedHandler>());
-        services.AddSingleton<ILogger<LocationPositionChangedHandler>>(new TestLogger<LocationPositionChangedHandler>());
+        services.AddSingleton<ILogger<LocationUpdatedHandler>>(new TestLogger<LocationUpdatedHandler>());
         services.AddSingleton<ILogger<LocationDeletedHandler>>(new TestLogger<LocationDeletedHandler>());
         
         services.AddScoped<LocationCreatedHandler>();
-        services.AddScoped<LocationPositionChangedHandler>();
+        services.AddScoped<LocationUpdatedHandler>();
         services.AddScoped<LocationDeletedHandler>();
 
         var provider = services.BuildServiceProvider();
@@ -37,7 +38,7 @@ public class LocationEventHandlerTests : IAsyncDisposable
         // Get instances
         _writer = _scope.ServiceProvider.GetRequiredService<ILocationWriteRepository>();
         _createdHandler = _scope.ServiceProvider.GetRequiredService<LocationCreatedHandler>();
-        _positionChangedHandler = _scope.ServiceProvider.GetRequiredService<LocationPositionChangedHandler>();
+        _positionChangedHandler = _scope.ServiceProvider.GetRequiredService<LocationUpdatedHandler>();
         _deletedHandler = _scope.ServiceProvider.GetRequiredService<LocationDeletedHandler>();
         
         _cts = new CancellationTokenSource();
@@ -47,12 +48,11 @@ public class LocationEventHandlerTests : IAsyncDisposable
     public async Task WhenLocationCreated_ShouldAddToReadModel()
     {
         // Arrange
-        var geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         var @event = new LocationCreated(
             Guid.NewGuid(),
-            "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
-            DisplayInformation.CreateDefault()
+            Guid.NewGuid(),
+            new Coordinates(13.404954, 52.520008),
+            new DisplayInformation("default")
         );
 
         // Act
@@ -62,7 +62,7 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var location = await _writer.GetById(@event.LocationId);
         Assert.NotNull(location);
         Assert.Equal(@event.LocationId, location.Id);
-        Assert.Equal(@event.Geometry, location.Geometry);
+        Assert.Equal(@event.Coordinates, Coordinates.FromPoint(location.Geometry));
         Assert.Equal(@event.OwnerId, location.OwnerId);
         Assert.Equal(@event.OccurredAt, location.CreatedAt);
     }
@@ -74,17 +74,24 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         var locationId = Guid.NewGuid();
         
-        var createEvent = new LocationCreated(
+        var @event = new LocationCreated(
             locationId,
-            "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
-            DisplayInformation.CreateDefault()
+            Guid.NewGuid(),
+            new Coordinates(13.404954, 52.520008),
+            new DisplayInformation("default")
         );
-        await _createdHandler.HandleAsync(createEvent, _cts.Token);
+        await _createdHandler.HandleAsync(@event, _cts.Token);
 
-        var updateEvent = new LocationPositionChanged(
+        var updates = new LocationUpdateParameters()
+        {
+           Coordinates = new Coordinates(13.405, 52.520),
+           Display = new DisplayUpdate("default")
+        };
+        
+        var updateEvent = new LocationUpdated(
             locationId,
-            geometryFactory.CreatePoint(new Coordinate(13.405, 52.520))
+            @event.OwnerId,
+            updates
         );
 
         // Act
@@ -93,7 +100,7 @@ public class LocationEventHandlerTests : IAsyncDisposable
         // Assert
         var location = await _writer.GetById(locationId);
         Assert.NotNull(location);
-        Assert.Equal(updateEvent.Geometry, location.Geometry);
+        Assert.Equal(updateEvent.Updates.Coordinates.ToPoint(geometryFactory), location.Geometry);
     }
 
     [Fact]
@@ -103,15 +110,16 @@ public class LocationEventHandlerTests : IAsyncDisposable
         var geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         var locationId = Guid.NewGuid();
         
-        var createEvent = new LocationCreated(
+        var @event = new LocationCreated(
             locationId,
-            "owner123",
-            geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008)),
-            DisplayInformation.CreateDefault()
+            Guid.NewGuid(),
+            new Coordinates(13.404954, 52.520008),
+            new DisplayInformation("default")
         );
-        await _createdHandler.HandleAsync(createEvent, _cts.Token);
+        
+        await _createdHandler.HandleAsync(@event, _cts.Token);
 
-        var deleteEvent = new LocationDeleted(locationId, "owner123");
+        var deleteEvent = new LocationDeleted(locationId, @event.OwnerId);
 
         // Act
         await _deletedHandler.HandleAsync(deleteEvent, _cts.Token);
@@ -122,28 +130,11 @@ public class LocationEventHandlerTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task WhenUpdatingNonExistentLocation_ShouldNotThrowException()
-    {
-        // Arrange
-        var geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
-        var locationId = Guid.NewGuid();
-        
-        var updateEvent = new LocationPositionChanged(
-            locationId,
-            geometryFactory.CreatePoint(new Coordinate(13.405, 52.520))
-        );
-
-        // Act & Assert
-        await _positionChangedHandler.HandleAsync(updateEvent, _cts.Token);
-        // Should not throw
-    }
-
-    [Fact]
     public async Task WhenDeletingNonExistentLocation_ShouldNotThrowException()
     {
         // Arrange
         var locationId = Guid.NewGuid();
-        var deleteEvent = new LocationDeleted(locationId, "owner123");
+        var deleteEvent = new LocationDeleted(locationId, Guid.NewGuid());
 
         // Act & Assert
         await _deletedHandler.HandleAsync(deleteEvent, _cts.Token);

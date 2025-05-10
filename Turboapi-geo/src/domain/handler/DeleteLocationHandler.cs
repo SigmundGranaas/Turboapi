@@ -1,35 +1,34 @@
 using GeoSpatial.Domain.Events;
+using Turboapi_geo.data;
+using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.query;
 
 namespace Turboapi_geo.domain.handler;
 
-public class DeleteLocationHandler
-{
-    private readonly ILocationReadModelRepository _repository;
-    private readonly IEventWriter _eventStore;
-
-    public DeleteLocationHandler(
-        IEventWriter eventStore,
-        ILocationReadModelRepository repository
-        )
+    public class DeleteLocationHandler
     {
-        _repository = repository;
-        _eventStore = eventStore;
-    }
+        private readonly IEventWriter _eventWriter;
+        private readonly ILocationReadRepository _locationReadRepository;
+        private readonly IDirectReadModelProjector _readModelHandler;
 
-    public async Task Handle(Commands.DeleteLocationCommand command)
-    {
-        var location = await _repository.GetById(command.LocationId);
-        if (location == null)
-            throw new LocationNotFoundException(command.LocationId.ToString());
-
-        if (location.OwnerId != command.OwnerId.ToString())
+        public DeleteLocationHandler(
+            IEventWriter eventWriter, ILocationReadRepository locationReadRepository, IDirectReadModelProjector readModelHandler)
         {
-            throw new UnauthorizedException("Only the owner is allowed to delete the location");
+            _eventWriter = eventWriter;
+            _locationReadRepository = locationReadRepository;
+            _readModelHandler = readModelHandler;
         }
-        
-        location.Delete();
-        await _eventStore.AppendEvents(location.Events);
-    }
+
+        public async Task Handle(DeleteLocationCommand command)
+        {
+            var location = await _locationReadRepository.GetById(command.LocationId);
+            if (location == null)
+                throw new LocationNotFoundException($"Location with ID {command.LocationId} not found");
+            
+            location.Delete(command.UserId);
+            
+            await _readModelHandler.ProjectEventsAsync(location.Events);
+            await _eventWriter.AppendEvents(location.Events);
+        }
 }

@@ -4,44 +4,44 @@ namespace Turboapi_geo.domain.query;
 
 public class GetLocationByIdHandler
 {
-    private readonly ILocationReadModelRepository _readModel;
+    private readonly ILocationReadRepository _read;
 
-    public GetLocationByIdHandler(ILocationReadModelRepository readModel)
+    public GetLocationByIdHandler(ILocationReadRepository read)
     {
-        _readModel = readModel;
+        _read = read;
     }
 
-    public async Task<LocationDto?> Handle(GetLocationByIdQuery query)
+    public async Task<LocationData?> Handle(GetLocationByIdQuery query)
     {
-        var locationRead = await _readModel.GetById(query.LocationId);
+        var locationRead = await _read.GetById(query.LocationId);
         if (locationRead == null)
         {
             return null;
         }
         
-        return  new LocationDto(locationRead.Id, Guid.Parse(locationRead.OwnerId), locationRead.Geometry, locationRead.DisplayInformation);
+        return  new LocationData(locationRead.Id, locationRead.OwnerId, locationRead.Coordinates, locationRead.Display);
     }
 }
 
 public class GetLocationsInExtentHandler
 {
-    private readonly ILocationReadModelRepository _readModel;
+    private readonly ILocationReadRepository _read;
 
-    public GetLocationsInExtentHandler(ILocationReadModelRepository readModel)
+    public GetLocationsInExtentHandler(ILocationReadRepository read)
     {
-        _readModel = readModel;
+        _read = read;
     }
 
-    public async Task<IEnumerable<LocationDto>> Handle(GetLocationsInExtentQuery query)
+    public async Task<IEnumerable<LocationData>> Handle(GetLocationsInExtentQuery query)
     {
-        var locations = await _readModel.GetLocationsInExtent(
-            query.Owner.ToString(),
+        var locations = await _read.GetLocationsInExtent(
+            query.Owner,
             query.MinLongitude,
             query.MinLatitude,
             query.MaxLongitude,
             query.MaxLatitude
         );
         
-        return locations.Select(loc => new LocationDto(loc.Id, Guid.Parse(loc.OwnerId), loc.Geometry, loc.DisplayInformation));
+        return locations.Select(loc => new LocationData(loc.Id, loc.OwnerId, loc.Coordinates, loc.Display));
     }
 }

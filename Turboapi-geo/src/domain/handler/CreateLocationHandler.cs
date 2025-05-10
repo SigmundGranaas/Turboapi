@@ -1,42 +1,31 @@
 using GeoSpatial.Domain.Events;
-using NetTopologySuite.Geometries;
+using Turboapi_geo.data;
+using Turboapi_geo.domain.commands;
+using Turboapi_geo.domain.model;
 
 namespace Turboapi_geo.domain.handler;
 
 public class CreateLocationHandler
 {
-    private readonly IEventWriter _eventStore;
-    private readonly GeometryFactory _geometryFactory;
+    private readonly IEventWriter _eventWriter;
+    private readonly IDirectReadModelProjector _readModelHandler;
 
-    public CreateLocationHandler(
-        IEventWriter eventStore,
-        GeometryFactory geometryFactory)
+    public CreateLocationHandler(IEventWriter eventWriter, IDirectReadModelProjector readModelHandler)
     {
-        _eventStore = eventStore;
-        _geometryFactory = geometryFactory;
+        _eventWriter = eventWriter;
+        _readModelHandler = readModelHandler;
     }
 
-    public async Task<Guid> Handle(Commands.CreateLocationCommand command)
+    public async Task<Guid> Handle(CreateLocationCommand command)
     {
-        var point = _geometryFactory.CreatePoint(
-            new Coordinate(command.Longitude, command.Latitude)
-        );
-
-        var location = Location.Create(command.OwnerId.ToString(), point, command.DisplayInformation);
-        await _eventStore.AppendEvents(location.Events);
-
-        return location.Id;
-    }
-    
-    public async Task<Guid> Handle(Commands.CreatePredefinedLocationCommand command)
-    {
-        var point = _geometryFactory.CreatePoint(
-            new Coordinate(command.Longitude, command.Latitude)
-        );
-
-        var location = Location.Create(command.id,command.OwnerId.ToString(), point);
-        await _eventStore.AppendEvents(location.Events);
-
+        var location = Location.Create(
+            command.UserId, 
+            command.Coordinates, 
+            command.Display);
+                
+        
+        await _readModelHandler.ProjectEventsAsync(location.Events);
+        await _eventWriter.AppendEvents(location.Events);
         return location.Id;
     }
 }

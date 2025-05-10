@@ -5,6 +5,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+using Turboapi_geo.data;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.query;
 using Turboapi_geo.domain.query.model;
@@ -66,13 +67,19 @@ builder.Services.AddDbContext<LocationReadContext>((s, options) =>
 });
 
 builder.Services.AddScoped<ILocationWriteRepository, EfLocationWriteRepository>();
-builder.Services.AddScoped<ILocationReadModelRepository, EfLocationReadModelRepository>();
+builder.Services.AddScoped<ILocationReadRepository, EfLocationWriteRepository.EfLocationReadRepository>();
+
+builder.Services.AddScoped<IDirectReadModelProjector, DirectReadModelProjector>();
+
+builder.Services.AddScoped<LocationCreatedHandler>();
+builder.Services.AddScoped<LocationUpdatedHandler>();
+builder.Services.AddScoped<LocationDeletedHandler>();
 
 builder.Services.AddScoped<GetLocationByIdHandler>();
 builder.Services.AddScoped<GetLocationsInExtentHandler>();
 builder.Services.AddScoped<CreateLocationHandler>();
 builder.Services.AddScoped<DeleteLocationHandler>();
-builder.Services.AddScoped<UpdateLocationPositionHandler>();
+builder.Services.AddScoped<UpdateLocationHandler>();
 builder.Services.AddScoped<GeometryFactory>();
 
 // #############################################
