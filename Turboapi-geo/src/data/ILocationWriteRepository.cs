@@ -1,17 +1,13 @@
-
-using NetTopologySuite.Geometries;
+using Turboapi_geo.data.model;
+using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.domain.query.model;
 
 public interface ILocationWriteRepository
 {
-    Task<LocationReadEntity?> GetById(Guid id);
-    Task Add(LocationReadEntity entity);
-    Task Update(LocationReadEntity entity);
-    Task Delete(LocationReadEntity entity);
-    
-    // Partial updates can help in situations where we're considering performing reads to increment fields
-    // This avoids race conditions in cases where we're reading the entire entity and updating some fields.
-    Task UpdatePosition(Guid id, Point geometry);
-    Task UpdateDisplayInformation(Guid id, string name, string? description, string? icon);
+    Task<LocationEntity?> GetById(Guid id);
+    Task Add(LocationEntity entity);
+    Task Update(LocationEntity entity);
+    Task Delete(LocationEntity entity);
+    Task UpdatePartial(Guid id, Coordinates? coordinates, DisplayUpdate? display);
 }

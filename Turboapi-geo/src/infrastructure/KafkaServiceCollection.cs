@@ -1,6 +1,5 @@
 using GeoSpatial.Domain.Events;
 using Turboapi_geo.domain.events;
-using Turboapi_geo.eventbus_adapter;
 using Turboapi.infrastructure;
 
 namespace Turboapi_geo.infrastructure;
@@ -20,28 +19,6 @@ public static class KafkaServiceCollectionExtensions
         // Register event infrastructure
         services.AddSingleton<IEventWriter, KafkaEventWriter>();
         
-        services.AddKafkaConsumer<CreatePositionEvent, CreatePositionCommandEventAdapter>(
-            "location.create_command",
-            "location-consumers");
-        
-        services.AddKafkaConsumer<LocationCreated, LocationCreatedHandler>(
-            "location-events",
-            "location-group-create");
-        
-        services.AddKafkaConsumer<LocationPositionChanged, LocationPositionChangedHandler>(
-            "location-events",
-            "location-group-update-position");
-        
-        services.AddKafkaConsumer<LocationDisplayInformationChanged, LocationDisplayInformationChangedHandler>(
-            "location-events",
-            "location-group-update-display");
-        
-        services.AddKafkaConsumer<LocationDeleted, LocationDeletedHandler>(
-            "location-events",
-            "location-group-delete");
-        
-      
- 
         return services;
     }
 }

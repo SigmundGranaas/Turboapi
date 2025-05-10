@@ -1,7 +1,8 @@
 using System.Diagnostics;
+using NetTopologySuite.Geometries;
+using Turboapi_geo.data.model;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
-using Turboapi_geo.domain.value;
 
 public interface ILocationEventHandler<in TEvent> where TEvent : DomainEvent
 {
@@ -30,14 +31,15 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
 
         try
         {
-            var entity = new LocationReadEntity
+            var factory = new GeometryFactory();
+            var entity = new LocationEntity
             {
                 Id = @event.LocationId,
                 OwnerId = @event.OwnerId,
-                Geometry = @event.Geometry,
-                Name = @event.DisplayInformation.Name,
-                Description = @event.DisplayInformation.Description,
-                Icon = @event.DisplayInformation.Icon,
+                Geometry = @event.Coordinates.ToPoint(factory),
+                Name = @event.Display.Name,
+                Description = @event.Display.Description,
+                Icon = @event.Display.Icon,
                 CreatedAt = @event.OccurredAt,
             };
 
@@ -54,68 +56,35 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
     }
 }
 
-public class LocationPositionChangedHandler : ILocationEventHandler<LocationPositionChanged>
+public class LocationUpdatedHandler : ILocationEventHandler<LocationUpdated>
 {
     private readonly ILocationWriteRepository _repo;
-    private readonly ILogger<LocationPositionChangedHandler> _logger;
+    private readonly ILogger<LocationUpdatedHandler> _logger;
     private readonly ActivitySource _activitySource;
 
-    public LocationPositionChangedHandler(
+    public LocationUpdatedHandler(
         ILocationWriteRepository repo,
-        ILogger<LocationPositionChangedHandler> logger)
+        ILogger<LocationUpdatedHandler> logger)
     {
         _repo = repo;
         _logger = logger;
-        _activitySource = new ActivitySource("LocationPositionChangedHandler");
+        _activitySource = new ActivitySource("LocationUpdatedHandler");
     }
 
-    public async Task HandleAsync(LocationPositionChanged @event, CancellationToken cancellationToken)
+    public async Task HandleAsync(LocationUpdated @event, CancellationToken cancellationToken)
     {
-        using var activity = _activitySource.StartActivity("Handle Location Position Changed");
+        using var activity = _activitySource.StartActivity("Handle location updated");
         activity?.SetTag("location.id", @event.LocationId);
 
         try
         {
-            // Use partial update instead of read-modify-write pattern
-            await _repo.UpdatePosition(@event.LocationId, @event.Geometry);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to handle LocationPositionChanged event for {LocationId}",
-                @event.LocationId);
-            throw;
-        }
-    }
-}
-
-public class LocationDisplayInformationChangedHandler : ILocationEventHandler<LocationDisplayInformationChanged>
-{
-    private readonly ILocationWriteRepository _repo;
-    private readonly ILogger<LocationDisplayInformationChangedHandler> _logger;
-    private readonly ActivitySource _activitySource;
-
-    public LocationDisplayInformationChangedHandler(
-        ILocationWriteRepository repo,
-        ILogger<LocationDisplayInformationChangedHandler> logger)
-    {
-        _repo = repo;
-        _logger = logger;
-        _activitySource = new ActivitySource("LocationDisplayInformationChangedHandler");
-    }
-
-    public async Task HandleAsync(LocationDisplayInformationChanged @event, CancellationToken cancellationToken)
-    {
-        using var activity = _activitySource.StartActivity("Handle Display information changed event");
-        activity?.SetTag("location.id", @event.LocationId);
-
-        try
-        {
-            // Use partial update instead of read-modify-write pattern
-            await _repo.UpdateDisplayInformation(
-                @event.LocationId,
-                @event.Name,
-                @event.Description,
-                @event.Icon);
+            if (@event.Updates.HasAnyChange)
+            {
+                await _repo.UpdatePartial(
+                    @event.LocationId,
+                    @event.Updates.Coordinates,
+                    @event.Updates.Display);
+            }
         }
         catch (Exception ex)
         {

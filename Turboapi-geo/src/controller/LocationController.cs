@@ -1,7 +1,9 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Turboapi_geo.controller.request;
+using Turboapi_geo.controller.response;
+using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.queries;
@@ -10,225 +12,237 @@ using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.controller;
 
-    [ApiController]
-    [Route("api/geo/[controller]")]
-    public class LocationsController : ControllerBase
+[ApiController]
+[Route("api/geo/[controller]")]
+[Authorize]
+public class LocationsController : ControllerBase
+{
+    private readonly CreateLocationHandler _createHandler;
+    private readonly UpdateLocationHandler _updateHandler;
+    private readonly DeleteLocationHandler _deleteHandler;
+    private readonly GetLocationByIdHandler _locationQueryHandler;
+    private readonly GetLocationsInExtentHandler _locationsQueryHandler;
+    private readonly ILogger<LocationsController> _logger;
+
+    public LocationsController(
+        CreateLocationHandler createHandler,
+        UpdateLocationHandler updateHandler,
+        DeleteLocationHandler deleteHandler,
+        GetLocationByIdHandler idQuery,
+        GetLocationsInExtentHandler locationsQuery,
+        ILogger<LocationsController> logger)
     {
-        private readonly CreateLocationHandler _createHandler;
-        private readonly UpdateLocationPositionHandler _updateHandler;
-        private readonly DeleteLocationHandler _deleteHandler;
-        private readonly GetLocationByIdHandler _locationQueryHandler;
-        private readonly GetLocationsInExtentHandler _locationsQueryHandler;
-        private readonly ILogger<LocationsController> _logger;
+        _createHandler = createHandler;
+        _locationQueryHandler = idQuery;
+        _locationsQueryHandler = locationsQuery;
+        _updateHandler = updateHandler;
+        _deleteHandler = deleteHandler;
+        _logger = logger;
+    }
 
-        public LocationsController(
-            CreateLocationHandler createHandler,
-            UpdateLocationPositionHandler updateHandler,
-            DeleteLocationHandler deleteHandler,
-            GetLocationByIdHandler idQuery,
-            GetLocationsInExtentHandler locationsQuery,
-            ILogger<LocationsController> logger
-            )
+    private Guid GetAuthenticatedUserId()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null)
         {
-            _createHandler = createHandler;
-            _locationQueryHandler = idQuery;
-            _locationsQueryHandler = locationsQuery;
-            _updateHandler = updateHandler;
-            _deleteHandler = deleteHandler;
-            _logger = logger;
+            throw new UnauthorizedAccessException("User ID not found in token");
         }
+        return Guid.Parse(userId);
+    }
 
-        [HttpPost]
-        [Authorize]
-        [ProducesResponseType(typeof(CreateLocationResponse), StatusCodes.Status201Created)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<ActionResult<CreateLocationResponse>> Create([FromBody] CreateLocationRequest request)
+    [HttpPost]
+    [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<LocationResponse>> Create([FromBody] CreateLocationRequest request)
+    {
+        try
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Forbid();
-            }
+            var userId = GetAuthenticatedUserId();
 
-            var displayInformation = new DisplayInformation()
-            {
-                Name = request.display.Name,
-                Description = request.display.Description ?? "",
-                Icon = request.display.Icon ?? ""
-            };
+            var displayInformation = new DisplayInformation(request.Display.Name, request.Display.Description ?? "",
+                request.Display.Icon ?? "");
             
-            var command = new Commands.CreateLocationCommand(
-                Guid.Parse(userId),
-                request.location.Longitude,
-                request.location.Latitude,
+            var command = new CreateLocationCommand(
+                userId,
+                new Coordinates(request.Geometry.Longitude, request.Geometry.Latitude),
                 displayInformation
             );
 
             var locationId = await _createHandler.Handle(command);
-
+            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(locationId, userId));
+            
             return CreatedAtAction(
                 nameof(GetById), 
                 new { id = locationId }, 
-                new CreateLocationResponse(locationId)
+                LocationResponse.FromDto(location)
             );
         }
-
-        [Authorize]
-        [HttpPut("{id}/position")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdatePosition(
-            Guid id, 
-            [FromBody] UpdateLocationRequest request)
+        catch (UnauthorizedAccessException)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating location");
+            return BadRequest(new ErrorResponse("Failed to create location", ex.Message));
+        }
+    }
+
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<LocationResponse>> Update(
+        Guid id,
+        [FromBody] UpdateLocationRequest request)
+    {
+        try
+        {
+            var userId = GetAuthenticatedUserId();
+
+            Coordinates? newCoordinates = null;
+            if (request.Geometry?.Longitude != null && request.Geometry?.Latitude != null)
             {
-                return Forbid();
+                newCoordinates = new Coordinates(request.Geometry.Longitude, request.Geometry.Latitude);
             }
-            
-            var command = new Commands.UpdateLocationPositionCommand(
-                Guid.Parse(userId),
+
+            DisplayUpdate? domainDisplayChanges = null;
+            if (request.Display != null) // request.Display is controller.request.DisplayChangeset
+            {
+                // Map from controller's DisplayChangeset to domain's DisplayUpdate
+                domainDisplayChanges = new DisplayUpdate(
+                    request.Display.Name,
+                    request.Display.Description,
+                    request.Display.Icon
+                );
+            }
+
+            // Create the unified domain update parameters object
+            var locationUpdateParams = new LocationUpdateParameters(newCoordinates, domainDisplayChanges);
+
+            var command = new UpdateLocationCommand(
+                userId,
                 id,
-                request.Location,
-                request.Name,
-                request.Description,
-                request.Icon
+                locationUpdateParams // Pass the unified parameters
             );
 
-            try
-            {
-                await _updateHandler.Handle(command);
-                return NoContent();
-            }
-            catch (LocationNotFoundException)
-            {
-                return NotFound();
-            }
-        }
-
-        [HttpDelete("{id}")]
-        [Authorize]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Forbid();
-            }
-            
-            var command = new Commands.DeleteLocationCommand(id, Guid.Parse(userId));
-
-            try
-            {
-                await _deleteHandler.Handle(command);
-                return NoContent();
-            }
-            catch (LocationNotFoundException)
-            {
-                return NotFound();
-            }
-        }
-
-        [HttpGet("{id}")]
-        [Authorize]
-        [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<ActionResult<LocationResponse>> GetById(Guid id)
-        {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Forbid();
-            }
-            
-            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, Guid.Parse(userId)));
-            if (location == null)
-                return NotFound();
+            await _updateHandler.Handle(command);
+            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, userId));
 
             return Ok(LocationResponse.FromDto(location));
         }
-
-        [HttpGet]
-        [Authorize]
-        [ProducesResponseType(typeof(IEnumerable<LocationResponse>), StatusCodes.Status200OK)]
-        public async Task<ActionResult<IEnumerable<LocationResponse>>> GetInExtent(
-            [FromQuery] double minLon,
-            [FromQuery] double minLat,
-            [FromQuery] double maxLon,
-            [FromQuery] double maxLat)
+        catch (UnauthorizedAccessException)
         {
-            
-            var accessToken = Request.Cookies["AccessToken"];
-        
-            if (string.IsNullOrEmpty(accessToken))
-            {
-                _logger.LogWarning("AccessToken cookie is missing");
-            }
-            
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadJwtToken(accessToken);
-        
-            _logger.LogInformation("Token details - Issuer: {Issuer}, Expires: {Expiry}", 
-                jwtToken.Issuer, jwtToken.ValidTo);
-        
-            var claims = jwtToken.Claims.Select(c => new { c.Type, c.Value }).ToList();
-            _logger.LogInformation("Token contains {ClaimCount} claims", claims.Count);
-            _logger.LogInformation("Token contains {ClaimCount} claims", claims);
-
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null)
-            {
-                return Forbid();
-            }
-            
-            var locations = await _locationsQueryHandler.Handle(new GetLocationsInExtentQuery(
-                Guid.Parse(userId),
-                minLon,
-                minLat,
-                maxLon,
-                maxLat
-            ));
-
-            return Ok(locations.Select(LocationResponse.FromDto));
+            return Forbid();
+        }
+        catch (LocationNotFoundException)
+        {
+            return NotFound(new ErrorResponse("Location not found", $"Location with ID {id} was not found"));
+        }
+        catch (ArgumentException ex) // Catch validation errors from command constructor
+        {
+            _logger.LogWarning(ex, "Invalid update request for location {LocationId}: {ErrorMessage}", id, ex.Message);
+            return BadRequest(new ErrorResponse("Invalid update request", ex.Message));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating location {LocationId}", id);
+            return BadRequest(new ErrorResponse("Failed to update location", ex.Message));
         }
     }
 
-    public record CreateLocationRequest(
-        LocationData location,
-        DisplayInformationData display
-    );
-
-    public record LocationData(
-        double Longitude,
-        double Latitude);
-
-    public record DisplayInformationData(string Name, string? Description, string? Icon);
-
-    public record UpdateLocationRequest(
-        LocationData? Location,
-        string? Name = null,
-        string? Description = null,
-        string? Icon = null
-    );
-
-    public record CreateLocationResponse(
-        Guid Id
-    );
-
-    public record LocationResponse(
-        Guid Id,
-        double Longitude,
-        double Latitude,
-        DisplayInformationData DisplayData
-        )
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Delete(Guid id)
     {
-        public static LocationResponse FromDto(LocationDto dto) => new(
-            dto.id,
-            dto.geometry.X,
-            dto.geometry.Y,
-            new DisplayInformationData(dto.displayInformation.Name, dto.displayInformation.Description, dto.displayInformation.Icon)
-        );
+        try
+        {
+            var userId = GetAuthenticatedUserId();
+            var command = new DeleteLocationCommand(userId, id);
+
+            await _deleteHandler.Handle(command);
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (LocationNotFoundException)
+        {
+            return NotFound(new ErrorResponse("Location not found", $"Location with ID {id} was not found"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting location");
+            return BadRequest(new ErrorResponse("Failed to delete location", ex.Message));
+        }
     }
+
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(LocationResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<LocationResponse>> GetById(Guid id)
+    {
+        try
+        {
+            var userId = GetAuthenticatedUserId();
+            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, userId));
+            
+            if (location == null)
+                return NotFound(new ErrorResponse("Location not found", $"Location with ID {id} was not found"));
+
+            return Ok(LocationResponse.FromDto(location));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving location");
+            return BadRequest(new ErrorResponse("Failed to retrieve location", ex.Message));
+        }
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(LocationsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<LocationsResponse>> GetInExtent([FromQuery] ExtentQuery query)
+    {
+        try
+        {
+            var userId = GetAuthenticatedUserId();
+            
+            var locations = await _locationsQueryHandler.Handle(new GetLocationsInExtentQuery(
+                userId,
+                query.Extent.MinLongitude,
+                query.Extent.MinLatitude,
+                query.Extent.MaxLongitude,
+                query.Extent.MaxLatitude
+            ));
+
+            return Ok(new LocationsResponse
+            {
+                Items = locations.Select(LocationResponse.FromDto).ToList(),
+                Count = locations.Count()
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving locations in extent");
+            return BadRequest(new ErrorResponse("Failed to retrieve locations", ex.Message));
+        }
+    }
+}

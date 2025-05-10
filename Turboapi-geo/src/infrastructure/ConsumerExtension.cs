@@ -1,5 +1,4 @@
 using Turboapi_geo.domain.events;
-using Turboapi_geo.eventbus_adapter;
 
 namespace Turboapi_geo.infrastructure;
 

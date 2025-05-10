@@ -2,12 +2,16 @@ using GeoSpatial.Domain.Events;
 using GeoSpatial.Tests.Doubles;
 using Medo;
 using NetTopologySuite.Geometries;
+using Turboapi_geo.data.model;
+using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.query.model;
 using Turboapi_geo.domain.value;
 using Xunit;
+using Coordinates = Turboapi_geo.domain.value.Coordinates;
+using Location = Turboapi_geo.domain.model.Location;
 
 namespace Turboapi_geo.test.domain;
 
@@ -17,21 +21,21 @@ namespace Turboapi_geo.test.domain;
         private readonly IEventReader _reader;
 
         private readonly InMemoryLocationWriteRepository _writeRepository;
-        private readonly InMemoryLocationReadModel _readRepository;
+        private readonly InMemoryLocationRead _readRepository;
 
         private readonly DeleteLocationHandler _handler;
         private readonly GeometryFactory _geometryFactory;
 
         public DeleteLocationHandlerTests()
         {
-            var dict = new Dictionary<Guid, LocationReadEntity>();
+            var dict = new Dictionary<Guid, LocationEntity>();
             var bus = new GeoSpatial.Tests.Doubles.TestMessageBus();
             _reader = new TestEventReader(bus);
             _eventStore = new TestEventWriter(bus);
             
-            _readRepository = new InMemoryLocationReadModel(dict);
+            _readRepository = new InMemoryLocationRead(dict);
             _writeRepository = new InMemoryLocationWriteRepository(dict);
-            _handler = new DeleteLocationHandler( _eventStore, _readRepository);
+            _handler = new DeleteLocationHandler( _eventStore, _readRepository, new DummyProjector());
             _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
         }
 
@@ -41,21 +45,22 @@ namespace Turboapi_geo.test.domain;
             var owner = Uuid7.NewUuid7();
             // Arrange
             var location = Location.Create(
-                owner.ToString(),
-                _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+                owner,
+                Coordinates.FromPoint(_geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))),
+                new DisplayInformation("name")
             );
             
-            var dto = new LocationReadEntity()
+            var dto = new LocationEntity()
             {
                 Id = location.Id,
-                Geometry = location.Geometry,
+                Geometry = location.Coordinates.ToPoint(_geometryFactory),
                 OwnerId = location.OwnerId,
-                Name = location.DisplayInformation.Name,
+                Name = location.Display.Name,
             };
 
-            _writeRepository.Add(dto);
+            await _writeRepository.Add(dto);
             
-            var command = new Commands.DeleteLocationCommand(location.Id, owner);
+            var command = new DeleteLocationCommand(owner, location.Id);
 
             // Act
             await _handler.Handle(command);
@@ -72,7 +77,7 @@ namespace Turboapi_geo.test.domain;
         public async Task Handle_WithNonExistentLocation_ShouldThrowNotFoundException()
         {
             // Arrange
-            var command = new Commands.DeleteLocationCommand(Guid.NewGuid(), Guid.NewGuid());
+            var command = new DeleteLocationCommand(Guid.NewGuid(), Guid.NewGuid());
 
             // Act & Assert
             await Assert.ThrowsAsync<LocationNotFoundException>(
@@ -87,23 +92,24 @@ namespace Turboapi_geo.test.domain;
             var owner = Uuid7.NewUuid7();
             // Arrange
             var location = Location.Create(
-                owner.ToString(),
-                _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+                owner,
+                Coordinates.FromPoint(_geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))),
+                new DisplayInformation("name")
             );
-            var dto = new LocationReadEntity()
+            var dto = new LocationEntity()
             {
                 Id = location.Id,
-                Geometry = location.Geometry,
+                Geometry = location.Coordinates.ToPoint(_geometryFactory),
                 OwnerId = location.OwnerId,
-                Name = location.DisplayInformation.Name,
+                Name = location.Display.Name,
             };
      
             _writeRepository.Add(dto);
             
-            var command = new Commands.DeleteLocationCommand(location.Id, invalidOwner);
+            var command = new DeleteLocationCommand(location.Id, invalidOwner);
             
             // Act & Assert
-            await Assert.ThrowsAsync<UnauthorizedException>(
+            await Assert.ThrowsAsync<LocationNotFoundException>(
                 () => _handler.Handle(command)
             );
             
@@ -113,7 +119,7 @@ namespace Turboapi_geo.test.domain;
 
             // Verify location was not modified
             var unchangedLocation = await _readRepository.GetById(location.Id);
-            Assert.Equal(13.404954, unchangedLocation.Geometry.X, 2);
-            Assert.Equal(52.520008, unchangedLocation.Geometry.Y, 2);
+            Assert.Equal(13.404954, unchangedLocation.Coordinates.Longitude, 2);
+            Assert.Equal(52.520008, unchangedLocation.Coordinates.Latitude, 2);
         }
     }

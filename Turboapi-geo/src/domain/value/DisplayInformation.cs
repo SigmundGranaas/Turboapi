@@ -1,29 +1,35 @@
+using System.Text.Json.Serialization;
+
 namespace Turboapi_geo.domain.value;
 
+/// <summary>
+/// Immutable display information record
+/// </summary>
 public record DisplayInformation
 {
-    
-    public static DisplayInformation CreateDefault()
+    [JsonPropertyName("name")]
+    public string Name { get; init; }
+
+    [JsonPropertyName("description")]
+    public string Description { get; init; }
+
+    [JsonPropertyName("icon")]
+    public string Icon { get; init; }
+
+    [JsonConstructor]
+    public DisplayInformation(string name, string description = "", string icon = "")
     {
-        return new DisplayInformation()
-        {
-            Name = "",
-            Description = "",
-            Icon = ""
-        };
+        Name = name;
+        Description = description;
+        Icon = icon;
     }
-    
-    public static DisplayInformation of(string name, string? description, string? icon)
+    // Parameterless constructor if needed by other frameworks or as a fallback.
+    public DisplayInformation()
     {
-        return new DisplayInformation()
-        {
-            Name = name,
-            Description = description ?? "",
-            Icon = icon ?? ""
-        };
+        Name = "";       // Initialize to default/empty values
+        Description = "";
+        Icon = "";
     }
 
-    public required string Name { get; set; }
-    public required string Icon { get; set; }
-    public required string Description { get; set; }
+    public static DisplayInformation Empty => new DisplayInformation("", "", "");
 }
