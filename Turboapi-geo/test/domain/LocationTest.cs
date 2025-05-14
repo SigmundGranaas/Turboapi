@@ -2,6 +2,8 @@ using NetTopologySuite.Geometries;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.value;
 using Xunit;
+using Coordinates = Turboapi_geo.domain.value.Coordinates;
+using Location = Turboapi_geo.domain.model.Location;
 
 namespace Turboapi_geo.test.domain;
 
@@ -18,7 +20,7 @@ public class LocationTests
     public void Create_WithValidData_ShouldCreateLocationWithEvents()
     {
         // Arrange
-        var ownerId = "owner123";
+        var ownerId = Guid.NewGuid();
         var point = _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008));
 
         var name = "Location";
@@ -33,21 +35,21 @@ public class LocationTests
         };
         
         // Act
-        var location = Location.Create(ownerId, point, displayInformation);
+        var location = Location.Create(ownerId, Coordinates.FromPoint(point), displayInformation);
 
         // Assert
         Assert.NotEqual(Guid.Empty, location.Id);
         Assert.Equal(ownerId, location.OwnerId);
-        Assert.Equal(point, location.Geometry);
-        Assert.Equal(name, location.DisplayInformation.Name);
-        Assert.Equal(desciption, location.DisplayInformation.Description);
-        Assert.Equal(icon, location.DisplayInformation.Icon);
+        Assert.Equal(point, location.Coordinates.ToPoint(_geometryFactory));
+        Assert.Equal(name, location.Display.Name);
+        Assert.Equal(desciption, location.Display.Description);
+        Assert.Equal(icon, location.Display.Icon);
 
         var createdEvent = Assert.Single(location.Events);
         var locationCreated = Assert.IsType<LocationCreated>(createdEvent);
         Assert.Equal(location.Id, locationCreated.LocationId);
-        Assert.Equal(point, locationCreated.Geometry);
-        Assert.Equal(name, locationCreated.DisplayInformation.Name);
+        Assert.Equal(point, locationCreated.Coordinates.ToPoint(_geometryFactory));
+        Assert.Equal(name, locationCreated.Display.Name);
     }
 
     [Fact]
@@ -55,17 +57,19 @@ public class LocationTests
     {
         // Arrange
         var location = Location.Create(
-            "owner123", 
-            _geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))
+            Guid.NewGuid(), 
+            Coordinates.FromPoint(_geometryFactory.CreatePoint(new Coordinate(13.404954, 52.520008))),
+                new DisplayInformation("name")
         );
         var newPoint = _geometryFactory.CreatePoint(new Coordinate(13.405, 52.520));
 
+        var parameters = new LocationUpdateParameters(Coordinates.FromPoint(newPoint));
         // Act
-        location.UpdatePosition(newPoint);
+        location.Update(location.OwnerId, parameters);
 
         // Assert
-        Assert.Equal(newPoint, location.Geometry);
+        Assert.Equal(newPoint, location.Coordinates.ToPoint(_geometryFactory));
         Assert.Equal(2, location.Events.Count);
-        Assert.IsType<LocationPositionChanged>(location.Events.Last());
+        Assert.IsType<LocationUpdated>(location.Events.Last());
     }
 }

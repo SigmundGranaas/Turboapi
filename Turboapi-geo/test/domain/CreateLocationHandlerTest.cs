@@ -2,10 +2,13 @@ using GeoSpatial.Domain.Events;
 using GeoSpatial.Tests.Doubles;
 using Medo;
 using NetTopologySuite.Geometries;
+using Turboapi_geo.data;
+using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.handler;
 using Turboapi_geo.domain.value;
 using Xunit;
+using Coordinates = Turboapi_geo.domain.value.Coordinates;
 
 
 namespace Turboapi_geo.test.domain
@@ -15,8 +18,7 @@ namespace Turboapi_geo.test.domain
         private readonly IEventWriter _eventStore;
         private readonly IEventReader _eventReader;
 
-        private readonly InMemoryLocationReadModel _writeRepository;
-        private readonly GeometryFactory _geometryFactory;
+        private readonly InMemoryLocationRead _writeRepository;
         private readonly CreateLocationHandler _handler;
 
         public CreateLocationHandlerTests()
@@ -24,8 +26,7 @@ namespace Turboapi_geo.test.domain
             var bus = new GeoSpatial.Tests.Doubles.TestMessageBus();
             _eventStore = new TestEventWriter(bus);
             _eventReader = new TestEventReader(bus);
-            _geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
-            _handler = new CreateLocationHandler( _eventStore, _geometryFactory);
+            _handler = new CreateLocationHandler(_eventStore, new DummyProjector());
         }
 
         [Fact]
@@ -33,7 +34,17 @@ namespace Turboapi_geo.test.domain
         {
             var owner = Uuid7.NewUuid7();
             // Arrange
-            var command = new Commands.CreateLocationCommand(owner, 13.404954, 52.520008, DisplayInformation.CreateDefault());
+            var coordinates = new Coordinates()
+            {
+                Latitude = 123,
+                Longitude = 321
+            };
+
+            var display = new DisplayInformation()
+            {
+                Name = "Test",
+            };
+            var command = new CreateLocationCommand(owner, coordinates, display);
 
             // Act
             var locationId = await _handler.Handle(command);

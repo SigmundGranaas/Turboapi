@@ -1,10 +1,12 @@
+using Turboapi_geo.domain.model;
+
 namespace Turboapi_geo.domain.query;
 
-public interface ILocationReadModelRepository
+public interface ILocationReadRepository
 {
     Task<Location?> GetById(Guid id);
     Task<IEnumerable<Location>> GetLocationsInExtent(
-        string ownerId,
+        Guid ownerId,
         double minLongitude,
         double minLatitude,
         double maxLongitude,

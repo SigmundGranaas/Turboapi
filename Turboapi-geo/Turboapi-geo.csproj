@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Turboapi_geo</RootNamespace>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <PackageVersion>0.0.1</PackageVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -41,7 +41,7 @@
         <PackageReference Include="Testcontainers.Kafka" Version="4.1.0" />
         <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
         <ProjectReference Include="../Turbo-event/Turbo-event.csproj" />
-        <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" />
+        <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" Version="0.0.1" />
         <PackageReference Include="xunit" Version="2.9.3" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
