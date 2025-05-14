@@ -293,16 +293,11 @@ public class LocationsControllerTests : IAsyncDisposable
         
         // Act - Query for Berlin area
         var result = await _controller.GetInExtent(
-            new ExtentQuery()
-            {
-              Extent  = new ExtentData()
-                {
-                    MinLongitude = 13.404,  // minLon
-                    MinLatitude = 52.519,  // minLat
-                    MaxLongitude = 13.405,  // maxLon
-                    MaxLatitude = 52.521   // maxLat
-                }
-            }
+           
+                    13.404,  
+                   52.519, 
+                    13.405, 
+                    52.521 
         );
 
         // Assert

@@ -1,4 +1,11 @@
 using Turboapi_geo.domain.queries;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
+using Turboapi_geo.data.model;
+using Turboapi_geo.domain.model;
+using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.domain.query;
 
@@ -19,13 +26,15 @@ public class GetLocationByIdHandler
             return null;
         }
         
-        return  new LocationData(locationRead.Id, locationRead.OwnerId, locationRead.Coordinates, locationRead.Display);
+        return new LocationData(locationRead.Id, locationRead.OwnerId, locationRead.Coordinates, locationRead.Display);
     }
 }
 
 public class GetLocationsInExtentHandler
 {
     private readonly ILocationReadRepository _read;
+    private const int MaxLocationsToReturn = 50;
+    private const double MinDistanceThreshold = 0.001;
 
     public GetLocationsInExtentHandler(ILocationReadRepository read)
     {
@@ -42,6 +51,64 @@ public class GetLocationsInExtentHandler
             query.MaxLatitude
         );
         
-        return locations.Select(loc => new LocationData(loc.Id, loc.OwnerId, loc.Coordinates, loc.Display));
+        // Apply spatial filtering to spread out locations
+        var filteredLocations = FilterOverlappingLocations(locations);
+        
+        return filteredLocations.Select(loc => 
+            new LocationData(loc.Id, loc.OwnerId, loc.Coordinates, loc.Display));
+    }
+    
+    private IEnumerable<Location> FilterOverlappingLocations(IEnumerable<Location> locations)
+    {
+        // If fewer than max, no need to filter
+        var locationsList = locations.ToList();
+        if (locationsList.Count <= MaxLocationsToReturn)
+        {
+            return locationsList;
+        }
+        
+        // Calculate the extent dimensions for adaptive spacing
+        var extentWidth = locationsList.Max(l => l.Coordinates.Longitude) - 
+                          locationsList.Min(l => l.Coordinates.Longitude);
+        var extentHeight = locationsList.Max(l => l.Coordinates.Latitude) - 
+                           locationsList.Min(l => l.Coordinates.Latitude);
+        
+        // Adaptive threshold based on extent size and number of locations
+        var adaptiveThreshold = Math.Max(
+            MinDistanceThreshold,
+            Math.Sqrt((extentWidth * extentHeight) / MaxLocationsToReturn) * 0.2);
+        
+        var result = new List<Location>();
+        var added = new HashSet<Guid>(); 
+        
+        var sortedLocations = locationsList
+            .OrderByDescending(l => l.Display.Name)
+            .ThenBy(l => Guid.NewGuid()); // Add randomness as tie-breaker
+        
+        foreach (var location in sortedLocations)
+        {
+            // Skip if we've reached the maximum
+            if (result.Count >= MaxLocationsToReturn)
+                break;
+                
+            // Skip if this location is too close to any already selected location
+            bool isTooClose = result.Any(selected => 
+                CalculateDistance(selected.Coordinates, location.Coordinates) < adaptiveThreshold);
+                
+            if (!isTooClose && !added.Contains(location.Id))
+            {
+                result.Add(location);
+                added.Add(location.Id);
+            }
+        }
+        
+        return result;
+    }
+    
+    private double CalculateDistance(Coordinates a, Coordinates b)
+    {
+        return Math.Sqrt(
+            Math.Pow(a.Longitude - b.Longitude, 2) + 
+            Math.Pow(a.Latitude - b.Latitude, 2));
     }
 }

@@ -215,18 +215,22 @@ public class LocationsController : ControllerBase
     [ProducesResponseType(typeof(LocationsResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<LocationsResponse>> GetInExtent([FromQuery] ExtentQuery query)
+    public async Task<ActionResult<LocationsResponse>> GetInExtent(
+        [FromQuery] double minLon,
+        [FromQuery] double minLat,
+        [FromQuery] double maxLon, 
+        [FromQuery] double maxLat)
     {
         try
         {
             var userId = GetAuthenticatedUserId();
-            
+        
             var locations = await _locationsQueryHandler.Handle(new GetLocationsInExtentQuery(
                 userId,
-                query.Extent.MinLongitude,
-                query.Extent.MinLatitude,
-                query.Extent.MaxLongitude,
-                query.Extent.MaxLatitude
+                minLon,
+                minLat,
+                maxLon,
+                maxLat
             ));
 
             return Ok(new LocationsResponse
