@@ -91,6 +91,12 @@
       &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.KafkaConsumerRestartTest&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.WebApiStyleKafkaTests&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Tests.AuthControllerTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.JwtConfigTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.CookieConfigTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.AuthSchemeTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.NullConfigTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Handlers.CookieJwtHandlerTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Handlers.CookieJwtHandlerIntegrationTests&lt;/TestId&gt;
     &lt;/TestAncestor&gt;
   &lt;/Or&gt;
 &lt;/SessionState&gt;</s:String>
