@@ -1,31 +1,14 @@
--- Second migration: Add description and icon columns (name already exists)
--- Add only the columns that don't exist yet
-DO $$
-    BEGIN
-        -- Add description column if it doesn't exist
-        IF NOT EXISTS (SELECT FROM information_schema.columns
-                       WHERE table_name = 'locations_read' AND column_name = 'description') THEN
-            ALTER TABLE locations_read ADD COLUMN description TEXT;
-        END IF;
+-- Second migration: Add name, description, and icon columns
+ALTER TABLE locations_read
+    ADD COLUMN name VARCHAR(255),
+    ADD COLUMN description TEXT,
+    ADD COLUMN icon VARCHAR(100);
 
-        -- Add icon column if it doesn't exist
-        IF NOT EXISTS (SELECT FROM information_schema.columns
-                       WHERE table_name = 'locations_read' AND column_name = 'icon') THEN
-            ALTER TABLE locations_read ADD COLUMN icon VARCHAR(100);
-        END IF;
-    END
-$$;
+-- Add indexes for potential filtering/searching
+CREATE INDEX idx_locations_read_name
+    ON locations_read(name);
 
--- Create index on name column if it doesn't exist
-DO $$
-    BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_locations_read_name') THEN
-            CREATE INDEX idx_locations_read_name ON locations_read(name);
-        END IF;
-    END
-$$;
-
--- Update table comments (these will overwrite any existing comments)
+-- Update table comments
 COMMENT ON COLUMN locations_read.name IS 'Display name for the location';
 COMMENT ON COLUMN locations_read.description IS 'Detailed description of the location';
 COMMENT ON COLUMN locations_read.icon IS 'Icon identifier for the location';
