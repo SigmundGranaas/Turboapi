@@ -17,9 +17,9 @@
 
 After installation, you can access the dashboard using port-forwarding:
   
-  ```bash
-  # Forward the Kong proxy service to your local machine
-  kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
+```bash
+# Forward the Kong proxy service to your local machine
+kubectl -n kubernetes-dashboard port-forward svc/kubernetes-dashboard-kong-proxy 8443:443
   ```
 
 Then access the dashboard at: https://localhost:8443
