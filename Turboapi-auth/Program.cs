@@ -1,8 +1,17 @@
+// Program.cs
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
+using Turboapi.Application.Interfaces; // For IEventPublisher
+using Turboapi.Domain.Interfaces;
+using Turboapi.Infrastructure.Auth;      // For PasswordHasher
+using Turboapi.Infrastructure.Messaging; // For KafkaEventPublisher, KafkaSettings
+using Turboapi.Infrastructure.Persistence;
+using Turboapi.Infrastructure.Persistence.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,79 +22,94 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Configuration.AddEnvironmentVariables();
+
 // #############################################
 // # 2. Database Configuration
 // #############################################
-var dbOptions = new DatabaseOptions
-{
-    Host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost",
-    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432",
-    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "auth",
-    Username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres",
-    Password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword"
-};
+var dbOptionsConfig = new DatabaseOptions();
+builder.Configuration.GetSection("Database").Bind(dbOptionsConfig); // Allow config from appsettings
 
-var connectionString = $"Host={dbOptions.Host};Port={dbOptions.Port};Database={dbOptions.Database};Username={dbOptions.Username};Password={dbOptions.Password}";
+var connectionString = $"Host={Environment.GetEnvironmentVariable("DB_HOST") ?? dbOptionsConfig.Host};" +
+                       $"Port={Environment.GetEnvironmentVariable("DB_PORT") ?? dbOptionsConfig.Port};" +
+                       $"Database={Environment.GetEnvironmentVariable("DB_NAME") ?? dbOptionsConfig.Database};" +
+                       $"Username={Environment.GetEnvironmentVariable("DB_USER") ?? dbOptionsConfig.Username};" +
+                       $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD") ?? dbOptionsConfig.Password}";
+
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure()));
+
+// Register Repositories
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
 // #############################################
 // # 3. Authentication Configuration
 // #############################################
-// 3.1 Password and Token Services
-builder.Services.AddHttpClient();
-
-
-
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+// Other auth services will be added in later phases (IAuthTokenService, etc.)
 
 // #############################################
 // # 4. Integration Services
 // #############################################
 // 4.1 Kafka Configuration
+builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
+builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
+
 
 // #############################################
 // # 5. Observability Configuration
 // #############################################
 var otel = builder.Services.AddOpenTelemetry();
 
-// 5.1 Configure OpenTelemetry Resources
 otel.ConfigureResource(resource => resource
-    .AddService(serviceName: builder.Environment.ApplicationName));
+    .AddService(serviceName: builder.Environment.ApplicationName ?? "Turboapi-Auth"));
 
-// 5.2 Logging Configuration
 builder.Logging.AddOpenTelemetry(options =>
 {
-    options
-        .SetResourceBuilder(
-            ResourceBuilder.CreateDefault()
-                .AddService("TurboApi-auth"))
-        .AddOtlpExporter(opt =>
+    options.SetResourceBuilder(
+            ResourceBuilder.CreateDefault().AddService("Turboapi-Auth"))
+        .AddOtlpExporter(otlpOptions =>
         {
-            opt.Endpoint = new Uri("http://localhost:4317");
+            otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
         });
 });
 
-// 5.3 Metrics Configuration
 otel.WithMetrics(metrics => metrics
     .AddAspNetCoreInstrumentation()
     .AddHttpClientInstrumentation()
+    .AddRuntimeInstrumentation() // .NET runtime metrics
     .AddMeter("Microsoft.AspNetCore.Hosting")
     .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
     .AddOtlpExporter(otlpOptions =>
     {
-        otlpOptions.Endpoint = new Uri("http://localhost:4317");
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
         otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     })
     .AddPrometheusExporter());
 
-// 5.4 Tracing Configuration
 otel.WithTracing(tracing =>
 {
-    tracing.AddAspNetCoreInstrumentation();
-    tracing.AddHttpClientInstrumentation();
-    tracing.AddEntityFrameworkCoreInstrumentation();
-    tracing.SetSampler(new AlwaysOnSampler());
+    tracing.AddAspNetCoreInstrumentation(options =>
+    {
+        options.RecordException = true;
+    });
+    tracing.AddHttpClientInstrumentation(options =>
+    {
+        options.RecordException = true;
+    });
+    tracing.AddEntityFrameworkCoreInstrumentation(options =>
+    {
+        options.SetDbStatementForText = true;
+    });
+    // Add more instrumentations as needed, e.g., for Kafka when official support is better
+    // For now, KafkaEventPublisher has manual ActivitySource instrumentation.
+    tracing.AddSource("Turboapi.Infrastructure.Messaging.KafkaEventPublisher"); // ActivitySource name
+    
+    tracing.SetSampler(new AlwaysOnSampler()); // Consider ParentBasedSampler with TraceIdRatioBasedSampler for prod
     tracing.AddOtlpExporter(otlpOptions =>
     {
-        otlpOptions.Endpoint = new Uri("http://localhost:4317");
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
         otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     });
 });
@@ -95,24 +119,36 @@ otel.WithTracing(tracing =>
 // #############################################
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference();
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi(); // Or app.UseSwagger(); app.UseSwaggerUI();
+    app.MapScalarApiReference(); // Or other API exploration tool
+}
+
 app.MapPrometheusScrapingEndpoint();
-app.UseCors("Default");
+
+// app.UseMiddleware<GlobalExceptionMiddleware>(); // To be added in Presentation Layer phase
+
+app.UseCors(policy => policy // More specific CORS policy recommended for prod
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader());
+
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthentication(); // To be configured in later phases
+app.UseAuthorization();  // To be configured in later phases
 app.MapControllers();
+
 app.Run();
 
 // For testing
 public partial class Program { }
 
-public class DatabaseOptions
+public class DatabaseOptions // Moved from being nested in Program.cs for better accessibility if needed
 {
-    public string Host { get; set; }
-    public string Port { get; set; }
-    public string Database { get; set; }
-    public string Username { get; set; }
-    public string Password { get; set; }
+    public string Host { get; set; } = "localhost";
+    public string Port { get; set; } = "5432";
+    public string Database { get; set; } = "auth";
+    public string Username { get; set; } = "postgres";
+    public string Password { get; set; } = "yourpassword";
 }

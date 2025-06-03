@@ -1,57 +1,60 @@
+using System.Text.Json.Serialization; 
+using Turboapi.Infrastructure.Messaging;
+
 namespace Turboapi.Domain.Events
 {
     public record AccountCreatedEvent(
-        Guid AccountId,
-        string Email,
-        DateTime CreatedAt,
-        IEnumerable<string> InitialRoles
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("email")] string Email,
+        [property: JsonPropertyName("createdAt")] DateTime CreatedAt,
+        [property: JsonPropertyName("initialRoles")] IEnumerable<string> InitialRoles
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record AccountLastLoginUpdatedEvent(
-        Guid AccountId,
-        DateTime LastLoginAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("lastLoginAt")] DateTime LastLoginAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record RoleAddedToAccountEvent(
-        Guid AccountId,
-        string RoleName,
-        DateTime AddedAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("roleName")] string RoleName,
+        [property: JsonPropertyName("addedAt")] DateTime AddedAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record PasswordAuthMethodAddedEvent(
-        Guid AccountId,
-        Guid AuthMethodId,
-        DateTime AddedAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("authMethodId")] Guid AuthMethodId,
+        [property: JsonPropertyName("addedAt")] DateTime AddedAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record OAuthAuthMethodAddedEvent(
-        Guid AccountId,
-        Guid AuthMethodId,
-        string ProviderName,
-        string ExternalUserId,
-        DateTime AddedAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("authMethodId")] Guid AuthMethodId,
+        [property: JsonPropertyName("providerName")] string ProviderName,
+        [property: JsonPropertyName("externalUserId")] string ExternalUserId,
+        [property: JsonPropertyName("addedAt")] DateTime AddedAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
   
     public record AccountLoggedInEvent(
-        Guid AccountId,
-        Guid AuthMethodId,    // The specific authentication method used
-        string ProviderName,  // e.g., "Password", "Google"
-        DateTime LoggedInAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("authMethodId")] Guid AuthMethodId,
+        [property: JsonPropertyName("providerName")] string ProviderName,
+        [property: JsonPropertyName("loggedInAt")] DateTime LoggedInAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record RefreshTokenGeneratedEvent(
-        Guid AccountId,
-        Guid RefreshTokenId,
-        string TokenIdentifier,
-        DateTime ExpiresAt,
-        DateTime GeneratedAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("refreshTokenId")] Guid RefreshTokenId,
+        [property: JsonPropertyName("tokenIdentifier")] string TokenIdentifier, 
+        [property: JsonPropertyName("expiresAt")] DateTime ExpiresAt,
+        [property: JsonPropertyName("generatedAt")] DateTime GeneratedAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 
     public record RefreshTokenRevokedEvent(
-        Guid AccountId,
-        Guid RefreshTokenId,
-        string? RevocationReason,
-        DateTime RevokedAt
-    ) : IDomainEvent;
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("refreshTokenId")] Guid RefreshTokenId,
+        [property: JsonPropertyName("revocationReason")] string? RevocationReason,
+        [property: JsonPropertyName("revokedAt")] DateTime RevokedAt
+    ) : IDomainEvent, IAccountAssociatedEvent;
 }
