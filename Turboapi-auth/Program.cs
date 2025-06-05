@@ -1,17 +1,16 @@
-// Program.cs
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
-using Turboapi.Application.Interfaces; // For IEventPublisher
+using Turboapi.Application.Interfaces; 
 using Turboapi.Domain.Interfaces;
-using Turboapi.Infrastructure.Auth;      // For PasswordHasher
-using Turboapi.Infrastructure.Messaging; // For KafkaEventPublisher, KafkaSettings
+using Turboapi.Infrastructure.Auth;      
+using Turboapi.Infrastructure.Messaging; 
 using Turboapi.Infrastructure.Persistence;
 using Turboapi.Infrastructure.Persistence.Repositories;
+using Turboapi.Infrastructure.Auth.OAuthProviders; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,7 +26,7 @@ builder.Configuration.AddEnvironmentVariables();
 // # 2. Database Configuration
 // #############################################
 var dbOptionsConfig = new DatabaseOptions();
-builder.Configuration.GetSection("Database").Bind(dbOptionsConfig); // Allow config from appsettings
+builder.Configuration.GetSection("Database").Bind(dbOptionsConfig); 
 
 var connectionString = $"Host={Environment.GetEnvironmentVariable("DB_HOST") ?? dbOptionsConfig.Host};" +
                        $"Port={Environment.GetEnvironmentVariable("DB_PORT") ?? dbOptionsConfig.Port};" +
@@ -47,11 +46,22 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 // # 3. Authentication Configuration
 // #############################################
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
-// Other auth services will be added in later phases (IAuthTokenService, etc.)
+builder.Services.AddScoped<IAuthTokenService, JwtService>();
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+
+// OAuth Provider Configuration
+builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
+// Register HttpClient for GoogleOAuthAdapter. 
+// You can configure primary message handlers, policies (retry, Polly) here if needed.
+builder.Services.AddHttpClient(nameof(GoogleOAuthAdapter)); // Named client based on class name
+// Register the adapter. If you have multiple OAuth providers, you might use a factory or named registrations.
+builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>(); // Example for Google
+
 
 // #############################################
 // # 4. Integration Services
 // #############################################
+builder.Services.AddHttpClient(); // Add default IHttpClientFactory
 // 4.1 Kafka Configuration
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
 builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
@@ -78,7 +88,7 @@ builder.Logging.AddOpenTelemetry(options =>
 otel.WithMetrics(metrics => metrics
     .AddAspNetCoreInstrumentation()
     .AddHttpClientInstrumentation()
-    .AddRuntimeInstrumentation() // .NET runtime metrics
+    .AddRuntimeInstrumentation() 
     .AddMeter("Microsoft.AspNetCore.Hosting")
     .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
     .AddOtlpExporter(otlpOptions =>
@@ -94,7 +104,7 @@ otel.WithTracing(tracing =>
     {
         options.RecordException = true;
     });
-    tracing.AddHttpClientInstrumentation(options =>
+    tracing.AddHttpClientInstrumentation(options => // This will instrument HttpClient calls made by GoogleOAuthAdapter
     {
         options.RecordException = true;
     });
@@ -102,11 +112,9 @@ otel.WithTracing(tracing =>
     {
         options.SetDbStatementForText = true;
     });
-    // Add more instrumentations as needed, e.g., for Kafka when official support is better
-    // For now, KafkaEventPublisher has manual ActivitySource instrumentation.
-    tracing.AddSource("Turboapi.Infrastructure.Messaging.KafkaEventPublisher"); // ActivitySource name
+    tracing.AddSource("Turboapi.Infrastructure.Messaging.KafkaEventPublisher"); 
     
-    tracing.SetSampler(new AlwaysOnSampler()); // Consider ParentBasedSampler with TraceIdRatioBasedSampler for prod
+    tracing.SetSampler(new AlwaysOnSampler()); 
     tracing.AddOtlpExporter(otlpOptions =>
     {
         otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
@@ -121,22 +129,21 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); // Or app.UseSwagger(); app.UseSwaggerUI();
-    app.MapScalarApiReference(); // Or other API exploration tool
+    app.MapOpenApi(); 
+    app.MapScalarApiReference(); 
 }
 
 app.MapPrometheusScrapingEndpoint();
 
-// app.UseMiddleware<GlobalExceptionMiddleware>(); // To be added in Presentation Layer phase
 
-app.UseCors(policy => policy // More specific CORS policy recommended for prod
+app.UseCors(policy => policy 
     .AllowAnyOrigin()
     .AllowAnyMethod()
     .AllowAnyHeader());
 
 app.UseHttpsRedirection();
-app.UseAuthentication(); // To be configured in later phases
-app.UseAuthorization();  // To be configured in later phases
+app.UseAuthentication(); 
+app.UseAuthorization();  
 app.MapControllers();
 
 app.Run();
@@ -144,7 +151,7 @@ app.Run();
 // For testing
 public partial class Program { }
 
-public class DatabaseOptions // Moved from being nested in Program.cs for better accessibility if needed
+public class DatabaseOptions 
 {
     public string Host { get; set; } = "localhost";
     public string Port { get; set; } = "5432";

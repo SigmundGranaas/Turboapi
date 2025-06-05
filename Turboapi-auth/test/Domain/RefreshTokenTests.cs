@@ -19,7 +19,7 @@ namespace Turboapi.Domain.Tests
             var expiresAt = DateTime.UtcNow.AddDays(7);
 
             // Act
-            var refreshToken = new RefreshToken(_tokenId, _accountId, ValidTokenString, expiresAt);
+            var refreshToken = RefreshToken.Create(_tokenId, _accountId, ValidTokenString, expiresAt);
 
             // Assert
             Assert.NotNull(refreshToken);
@@ -37,7 +37,7 @@ namespace Turboapi.Domain.Tests
         public void Creation_ShouldFail_WithEmptyId()
         {
             // Act & Assert
-            var ex = Assert.Throws<DomainException>(() => new RefreshToken(Guid.Empty, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(1)));
+            var ex = Assert.Throws<DomainException>(() => RefreshToken.Create(Guid.Empty, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(1)));
             Assert.Equal("RefreshToken ID cannot be empty.", ex.Message);
         }
 
@@ -45,7 +45,7 @@ namespace Turboapi.Domain.Tests
         public void Creation_ShouldFail_WithEmptyAccountId()
         {
             // Act & Assert
-            var ex = Assert.Throws<DomainException>(() => new RefreshToken(_tokenId, Guid.Empty, ValidTokenString, DateTime.UtcNow.AddDays(1)));
+            var ex = Assert.Throws<DomainException>(() => RefreshToken.Create(_tokenId, Guid.Empty, ValidTokenString, DateTime.UtcNow.AddDays(1)));
             Assert.Equal("Account ID for RefreshToken cannot be empty.", ex.Message);
         }
 
@@ -56,7 +56,7 @@ namespace Turboapi.Domain.Tests
         public void Creation_ShouldFail_WithInvalidTokenString(string invalidToken)
         {
             // Act & Assert
-            var ex = Assert.Throws<DomainException>(() => new RefreshToken(_tokenId, _accountId, invalidToken, DateTime.UtcNow.AddDays(1)));
+            var ex = Assert.Throws<DomainException>(() => RefreshToken.Create(_tokenId, _accountId, invalidToken, DateTime.UtcNow.AddDays(1)));
             Assert.Equal("Token string for RefreshToken cannot be empty.", ex.Message);
         }
 
@@ -64,10 +64,10 @@ namespace Turboapi.Domain.Tests
         public void Creation_ShouldFail_WithPastOrCurrentExpiry()
         {
             // Act & Assert
-            var ex = Assert.Throws<DomainException>(() => new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddSeconds(-1)));
+            var ex = Assert.Throws<DomainException>(() => RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddSeconds(-1)));
             Assert.Equal("RefreshToken expiration must be in the future.", ex.Message);
 
-            var ex2 = Assert.Throws<DomainException>(() => new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow));
+            var ex2 = Assert.Throws<DomainException>(() => RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow));
             Assert.Equal("RefreshToken expiration must be in the future.", ex2.Message);
         }
 
@@ -75,7 +75,7 @@ namespace Turboapi.Domain.Tests
         public void Revoke_ShouldMarkTokenAsRevoked_AndSetRevokedAtAndReason()
         {
             // Arrange
-            var refreshToken = new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(7));
+            var refreshToken = RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(7));
             const string reason = "User logged out";
 
             // Act
@@ -92,7 +92,7 @@ namespace Turboapi.Domain.Tests
         public void Revoke_ShouldBeIdempotent()
         {
             // Arrange
-            var refreshToken = new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(7));
+            var refreshToken = RefreshToken.Create(_accountId, _tokenId, ValidTokenString, DateTime.UtcNow.AddDays(7));
             refreshToken.Revoke("Initial revocation");
             var firstRevokedAt = refreshToken.RevokedAt;
             var firstReason = refreshToken.RevokedReason;
@@ -110,7 +110,7 @@ namespace Turboapi.Domain.Tests
         public void IsExpired_ShouldReturnFalse_ForFutureExpiry()
         {
             // Arrange
-            var refreshToken = new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddMinutes(10));
+            var refreshToken = RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddMinutes(10));
 
             // Act & Assert
             Assert.False(refreshToken.IsExpired);
@@ -122,7 +122,7 @@ namespace Turboapi.Domain.Tests
             // Arrange
             // Create a token that is already expired by manipulating internal state for testing (not possible with current constructor)
             // So, we test by checking a token that will expire very soon.
-            var refreshToken = new RefreshToken(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddMilliseconds(100));
+            var refreshToken = RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddMilliseconds(100));
             
             // Wait for it to expire
             System.Threading.Thread.Sleep(200);

@@ -37,7 +37,7 @@ namespace Turboapi.Infrastructure.Tests.Persistence
         {
             var actualExpiresAt = expiresAt ?? DateTime.UtcNow.AddDays(7);
             
-            var refreshToken = new RefreshToken(
+            var refreshToken = RefreshToken.Create(
                 Guid.NewGuid(),
                 accountId,
                 token,

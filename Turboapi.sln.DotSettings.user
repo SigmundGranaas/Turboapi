@@ -109,6 +109,10 @@
       &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Domain.Tests.PasswordAuthMethodTests&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.PasswordHasherTests&lt;/TestId&gt;
       &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Integration.Tests.Messaging.KafkaEventPublisherIntegrationTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.JwtServiceTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.OAuthProviders.GoogleOAuthAdapterTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.LoginUserWithPassword.LoginUserWithPasswordCommandHandlerTests&lt;/TestId&gt;
+      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandlerTests&lt;/TestId&gt;
     &lt;/TestAncestor&gt;
     &lt;ProjectFolder&gt;3AA6D570-6A96-4E9B-8B9F-5690F23F5B40/d:test/d:Infrastructure/d:Persistence&lt;/ProjectFolder&gt;
   &lt;/Or&gt;

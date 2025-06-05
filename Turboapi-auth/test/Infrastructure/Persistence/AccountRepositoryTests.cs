@@ -53,7 +53,7 @@ namespace Turboapi.Infrastructure.Tests.Persistence
             account.AddOAuthAuthMethod("Google", "google-id-123");
             // Add a refresh token to the account (assuming Account entity has a method like AddRefreshToken)
             // For now, we'll create it separately and link via AccountId for test purposes
-            var refreshToken = new RefreshToken(Guid.NewGuid(), account.Id, "test-refresh-token-string", DateTime.UtcNow.AddDays(7));
+            var refreshToken = RefreshToken.Create(Guid.NewGuid(), account.Id, "test-refresh-token-string", DateTime.UtcNow.AddDays(7));
             // account.AddRefreshToken(refreshToken); // If Account aggregate manages this internally
 
             // Act
