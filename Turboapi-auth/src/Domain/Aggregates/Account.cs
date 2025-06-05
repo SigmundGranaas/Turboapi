@@ -1,6 +1,9 @@
+using Turboapi.Application.Results;
+using Turboapi.Application.Results.Errors;
 using Turboapi.Domain.Events;
 using Turboapi.Domain.Exceptions;
 using Turboapi.Domain.Interfaces;
+using Turboapi.Infrastructure.Messaging;
 
 namespace Turboapi.Domain.Aggregates
 {
@@ -8,6 +11,7 @@ namespace Turboapi.Domain.Aggregates
     {
         public Guid Id { get; private set; }
         public string Email { get; private set; }
+        public bool IsActive { get; private set; } // New property
         public DateTime CreatedAt { get; private set; }
         public DateTime? LastLoginAt { get; private set; }
 
@@ -35,7 +39,8 @@ namespace Turboapi.Domain.Aggregates
 
             Id = id;
             Email = email.ToLowerInvariant();
-            CreatedAt = DateTime.UtcNow; // Already UTC
+            IsActive = true; // Accounts are active by default
+            CreatedAt = DateTime.UtcNow;
         }
 
         public static Account Create(Guid id, string email, IEnumerable<string> initialRoleNames)
@@ -58,9 +63,17 @@ namespace Turboapi.Domain.Aggregates
             return account;
         }
 
+        public void Deactivate()
+        {
+            if (!IsActive) return;
+            IsActive = false;
+            // Optionally, add a domain event for deactivation
+            // AddDomainEvent(new AccountDeactivatedEvent(Id, DateTime.UtcNow));
+        }
+
         public void UpdateLastLogin()
         {
-            LastLoginAt = DateTime.UtcNow; // Ensure UTC
+            LastLoginAt = DateTime.UtcNow;
             AddDomainEvent(new AccountLastLoginUpdatedEvent(Id, LastLoginAt.Value));
         }
 
@@ -90,6 +103,40 @@ namespace Turboapi.Domain.Aggregates
                  AddDomainEvent(new RoleAddedToAccountEvent(Id, roleName, newRole.CreatedAt));
             }
         }
+        
+        public Result<RefreshToken, RefreshTokenError> RotateRefreshToken(
+            string oldTokenString,
+            string newRefreshTokenValue,
+            DateTime newRefreshTokenExpiry)
+        {
+            var oldToken = _refreshTokens.FirstOrDefault(rt => rt.Token == oldTokenString && !rt.IsRevoked);
+
+            if (oldToken == null)
+            {
+                AddDomainEvent(new SuspiciousRefreshTokenAttemptEvent(Id, oldTokenString, "Token not found or already revoked for this account."));
+                return RefreshTokenError.InvalidToken;
+            }
+
+            if (oldToken.IsExpired)
+            {
+                oldToken.Revoke("Expired during refresh attempt");
+                AddDomainEvent(new RefreshTokenRevokedEvent(Id, oldToken.Id, oldToken.RevokedReason, oldToken.RevokedAt!.Value));
+                return RefreshTokenError.Expired;
+            }
+            
+            oldToken.Revoke("Rotated: New token pair issued");
+            AddDomainEvent(new RefreshTokenRevokedEvent(Id, oldToken.Id, oldToken.RevokedReason, oldToken.RevokedAt!.Value));
+
+            var newDomainRefreshToken = RefreshToken.Create(Id, newRefreshTokenValue, newRefreshTokenExpiry);
+            _refreshTokens.Add(newDomainRefreshToken);
+            
+            AddDomainEvent(new RefreshTokenGeneratedEvent(Id, newDomainRefreshToken.Id, newDomainRefreshToken.Token, newDomainRefreshToken.ExpiresAt, newDomainRefreshToken.CreatedAt));
+            
+            UpdateLastLogin();
+
+            return newDomainRefreshToken;
+        }
+        
         
         public void AddPasswordAuthMethod(string password, IPasswordHasher passwordHasher)
         {
@@ -163,4 +210,10 @@ namespace Turboapi.Domain.Aggregates
             }
         }
     }
+
+    public record SuspiciousRefreshTokenAttemptEvent(
+        Guid AccountId,
+        string TokenAttempted,
+        string Reason
+    ) : IDomainEvent, IAccountAssociatedEvent;
 }

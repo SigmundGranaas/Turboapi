@@ -22,6 +22,11 @@ namespace Turboapi.Infrastructure.Persistence.Configuration
 
             builder.HasIndex(a => a.Email).IsUnique();
 
+            builder.Property(a => a.IsActive)
+                .HasColumnName("is_active")
+                .IsRequired()
+                .HasDefaultValue(true); // New mapping
+
             builder.Property(a => a.CreatedAt)
                 .HasColumnName("created_at")
                 .IsRequired();

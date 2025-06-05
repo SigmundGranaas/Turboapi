@@ -32,17 +32,22 @@ namespace Turboapi.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(a => a.Email == lowerEmail);
         }
 
+        public async Task<Account?> GetByOAuthAsync(string providerName, string externalUserId)
+        {
+            return await _context.Accounts
+                .Include(a => a.Roles)
+                .Include(a => a.AuthenticationMethods.OfType<OAuthAuthMethod>()) // Eager load OAuth methods
+                .Include(a => a.RefreshTokens)
+                .FirstOrDefaultAsync(a =>
+                    a.AuthenticationMethods.OfType<OAuthAuthMethod>()
+                     .Any(oam => oam.ProviderName == providerName && oam.ExternalUserId == externalUserId));
+        }
+
         public async Task AddAsync(Account account)
         {
             if (account == null) throw new ArgumentNullException(nameof(account));
             
             await _context.Accounts.AddAsync(account);
-            // Note: SaveChangesAsync is typically called by a Unit of Work or at the end of an application service/use case
-            // For this example, we'll assume it's handled outside this repository method or called if this is the only operation.
-            // If a Unit of Work pattern is implemented later, SaveChangesAsync would be removed from here.
-            // For now, let's include it for standalone repository functionality in early stages.
-            // await _context.SaveChangesAsync(); 
-            // --> Decision: SaveChangesAsync will be handled by the Application Layer (Use Case handlers) or a UnitOfWork.
         }
 
         public async Task UpdateAsync(Account account)
@@ -50,10 +55,7 @@ namespace Turboapi.Infrastructure.Persistence.Repositories
             if (account == null) throw new ArgumentNullException(nameof(account));
 
             _context.Accounts.Update(account);
-            // As with AddAsync, SaveChangesAsync is typically handled by a higher layer or Unit of Work.
-            // await _context.SaveChangesAsync();
-            // --> Decision: SaveChangesAsync will be handled by the Application Layer (Use Case handlers) or a UnitOfWork.
-            await Task.CompletedTask; // To satisfy async method signature if not calling SaveChangesAsync
+            await Task.CompletedTask; 
         }
     }
 }

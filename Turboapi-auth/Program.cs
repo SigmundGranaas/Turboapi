@@ -1,32 +1,45 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
-using Turboapi.Application.Interfaces; 
+using Turboapi.Application.Behaviors;
+using Turboapi.Application.Contracts.V1.Auth;
+using Turboapi.Application.Interfaces;
+using Turboapi.Application.Results;
+using Turboapi.Application.Results.Errors;
+using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
+using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RefreshToken;
+using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Application.UseCases.Queries.ValidateSession;
 using Turboapi.Domain.Interfaces;
-using Turboapi.Infrastructure.Auth;      
-using Turboapi.Infrastructure.Messaging; 
+using Turboapi.Infrastructure.Auth;
+using Turboapi.Infrastructure.Auth.OAuthProviders;
+using Turboapi.Infrastructure.Messaging;
 using Turboapi.Infrastructure.Persistence;
 using Turboapi.Infrastructure.Persistence.Repositories;
-using Turboapi.Infrastructure.Auth.OAuthProviders; 
+using Turboapi.Presentation.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // #############################################
-// # 1. Core API Configuration
+// # 1. Core Services Configuration
 // #############################################
-builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Configuration.AddEnvironmentVariables();
+builder.Services.AddOpenApi();
+builder.Services.AddHttpContextAccessor(); // Useful for services that need HTTP context
 
 // #############################################
-// # 2. Database Configuration
+// # 2. Database & Persistence Configuration
 // #############################################
 var dbOptionsConfig = new DatabaseOptions();
-builder.Configuration.GetSection("Database").Bind(dbOptionsConfig); 
+builder.Configuration.GetSection("Database").Bind(dbOptionsConfig);
 
 var connectionString = $"Host={Environment.GetEnvironmentVariable("DB_HOST") ?? dbOptionsConfig.Host};" +
                        $"Port={Environment.GetEnvironmentVariable("DB_PORT") ?? dbOptionsConfig.Port};" +
@@ -38,124 +51,166 @@ builder.Services.AddDbContext<AuthDbContext>(options =>
     options.UseNpgsql(connectionString, npgsqlOptions =>
         npgsqlOptions.EnableRetryOnFailure()));
 
-// Register Repositories
+// Register Repositories and Unit of Work
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // #############################################
-// # 3. Authentication Configuration
+// # 3. Application Use Case Handlers
 // #############################################
+
+// Command Handlers (with Unit of Work Decorator)
+builder.Services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();
+builder.Services.AddCommandHandler<LoginUserWithPasswordCommand, Result<AuthTokenResponse, LoginError>, LoginUserWithPasswordCommandHandler>();
+builder.Services.AddCommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>, RefreshTokenCommandHandler>();
+builder.Services.AddCommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>, AuthenticateWithOAuthCommandHandler>();
+
+// Query Handlers (no decorator needed)
+builder.Services.AddScoped<ValidateSessionQueryHandler>();
+
+// #############################################
+// # 3.5 Authentication & Authorization
+// #############################################
+var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>()!;
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Key)),
+            ValidateIssuer = true,
+            ValidIssuer = jwtConfig.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtConfig.Audience,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+// #############################################
+// # 4. Infrastructure & Integration Services
+// #############################################
+builder.Services.AddHttpClient();
+
+// Auth Services
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IAuthTokenService, JwtService>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
 
-// OAuth Provider Configuration
+// OAuth Provider Services
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
-// Register HttpClient for GoogleOAuthAdapter. 
-// You can configure primary message handlers, policies (retry, Polly) here if needed.
-builder.Services.AddHttpClient(nameof(GoogleOAuthAdapter)); // Named client based on class name
-// Register the adapter. If you have multiple OAuth providers, you might use a factory or named registrations.
-builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>(); // Example for Google
+builder.Services.AddHttpClient<GoogleOAuthAdapter>();
+builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
 
-
-// #############################################
-// # 4. Integration Services
-// #############################################
-builder.Services.AddHttpClient(); // Add default IHttpClientFactory
-// 4.1 Kafka Configuration
+// Messaging Services
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
 builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
 
-
 // #############################################
-// # 5. Observability Configuration
+// # 5. Observability (OpenTelemetry)
 // #############################################
 var otel = builder.Services.AddOpenTelemetry();
 
 otel.ConfigureResource(resource => resource
-    .AddService(serviceName: builder.Environment.ApplicationName ?? "Turboapi-Auth"));
-
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options.SetResourceBuilder(
-            ResourceBuilder.CreateDefault().AddService("Turboapi-Auth"))
-        .AddOtlpExporter(otlpOptions =>
-        {
-            otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
-        });
-});
-
-otel.WithMetrics(metrics => metrics
-    .AddAspNetCoreInstrumentation()
-    .AddHttpClientInstrumentation()
-    .AddRuntimeInstrumentation() 
-    .AddMeter("Microsoft.AspNetCore.Hosting")
-    .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
-    .AddOtlpExporter(otlpOptions =>
-    {
-        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
-        otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-    })
-    .AddPrometheusExporter());
+    .AddService(serviceName: builder.Environment.ApplicationName ?? "Turboapi-Auth", serviceVersion: "1.0.0"));
 
 otel.WithTracing(tracing =>
 {
-    tracing.AddAspNetCoreInstrumentation(options =>
-    {
-        options.RecordException = true;
-    });
-    tracing.AddHttpClientInstrumentation(options => // This will instrument HttpClient calls made by GoogleOAuthAdapter
-    {
-        options.RecordException = true;
-    });
-    tracing.AddEntityFrameworkCoreInstrumentation(options =>
-    {
-        options.SetDbStatementForText = true;
-    });
-    tracing.AddSource("Turboapi.Infrastructure.Messaging.KafkaEventPublisher"); 
-    
-    tracing.SetSampler(new AlwaysOnSampler()); 
+    tracing.AddAspNetCoreInstrumentation(options => { options.RecordException = true; });
+    tracing.AddHttpClientInstrumentation(options => { options.RecordException = true; });
+    tracing.AddEntityFrameworkCoreInstrumentation(options => { options.SetDbStatementForText = true; });
+    tracing.AddSource(new System.Diagnostics.ActivitySource("Turboapi.Infrastructure.Messaging.*").Name); // For Kafka
     tracing.AddOtlpExporter(otlpOptions =>
     {
         otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
-        otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
     });
 });
 
+otel.WithMetrics(metrics =>
+{
+    metrics.AddAspNetCoreInstrumentation();
+    metrics.AddHttpClientInstrumentation();
+    metrics.AddRuntimeInstrumentation();
+    metrics.AddPrometheusExporter();
+    metrics.AddOtlpExporter(otlpOptions =>
+    {
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
+    });
+});
+
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+    logging.AddOtlpExporter(otlpOptions =>
+    {
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
+    });
+});
+
+
 // #############################################
-// # 6. App Configuration and Middleware
+// # 6. Middleware Pipeline Configuration
 // #############################################
 var app = builder.Build();
 
+
+
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi(); 
-    app.MapScalarApiReference(); 
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 }
 
 app.MapPrometheusScrapingEndpoint();
 
-
-app.UseCors(policy => policy 
-    .AllowAnyOrigin()
-    .AllowAnyMethod()
-    .AllowAnyHeader());
+app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
 app.UseHttpsRedirection();
-app.UseAuthentication(); 
-app.UseAuthorization();  
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();
 
-// For testing
+
+// #############################################
+// # 7. Local Classes and Extension Methods
+// #############################################
 public partial class Program { }
 
-public class DatabaseOptions 
+public class DatabaseOptions
 {
     public string Host { get; set; } = "localhost";
     public string Port { get; set; } = "5432";
     public string Database { get; set; } = "auth";
     public string Username { get; set; } = "postgres";
     public string Password { get; set; } = "yourpassword";
+}
+
+public static class CommandHandlerServiceCollectionExtensions
+{
+    public static IServiceCollection AddCommandHandler<TCommand, TResponse, THandler>(this IServiceCollection services)
+        where THandler : class, ICommandHandler<TCommand, TResponse>
+    {
+        services.AddScoped<THandler>();
+        services.AddScoped<ICommandHandler<TCommand, TResponse>>(provider =>
+            new UnitOfWorkCommandHandlerDecorator<TCommand, TResponse>(
+                provider.GetRequiredService<THandler>(),
+                provider.GetRequiredService<IUnitOfWork>())
+        );
+        return services;
+    }
 }

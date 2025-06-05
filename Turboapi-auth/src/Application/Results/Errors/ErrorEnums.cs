@@ -15,10 +15,11 @@ namespace Turboapi.Application.Results.Errors
         Expired = 2,
         Revoked = 3,
         AccountNotFound = 4,
-        StorageFailure = 5
+        StorageFailure = 5,
+        TokenGenerationFailed // Added based on IAuthTokenService
     }
 
-    public enum OAuthError
+    public enum OAuthError // Errors from IOAuthProviderAdapter
     {
         None = 0,
         ConfigurationError,
@@ -27,10 +28,10 @@ namespace Turboapi.Application.Results.Errors
         UserInfoFailed,
         InvalidCode,
         ProviderDeniedAccess,
-        EmailNotVerified,
+        EmailNotVerified, // This might be more of a policy, but adapter can detect
         InvalidState,
         MissingRequiredToken,
-        TokenValidationError
+        TokenValidationError // e.g. ID token validation failed
     }
 
     public enum RegistrationError
@@ -51,10 +52,32 @@ namespace Turboapi.Application.Results.Errors
         InvalidCredentials,         
         AccountNotFound,            
         PasswordMethodNotFound,     
-        AccountLocked,              
+        AccountLocked, // Placeholder, not fully implemented yet
         AuthMethodVerificationFailed,
         TokenGenerationFailed,
         EventPublishFailed,
         InvalidInput
+    }
+
+    public enum OAuthLoginError // Errors from AuthenticateWithOAuthCommandHandler
+    {
+        None = 0,
+        ProviderError,          // Generic error from the OAuth provider interaction (adapter)
+        AccountLinkageFailed,   // Failed to link OAuth to an existing account
+        AccountCreationFailed,  // Failed to create a new account for the OAuth user
+        TokenGenerationFailed,  // Failed to generate internal system tokens
+        EmailNotVerified,       // Policy: Email from provider was not verified
+        EventPublishFailed,     // Failed to publish domain events post-login/registration
+        UnsupportedProvider,    // The requested OAuth provider is not configured/supported
+        InvalidState // If state validation fails (though not explicitly in current command)
+    }
+    
+    public enum SessionValidationError 
+    {
+        None = 0,
+        TokenInvalid,
+        TokenExpired,
+        UserNotFound, 
+        AccountInactive 
     }
 }

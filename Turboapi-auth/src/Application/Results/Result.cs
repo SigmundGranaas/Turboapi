@@ -4,11 +4,15 @@ namespace Turboapi.Application.Results
     /// Base class for results, indicating success or failure with an error.
     /// </summary>
     /// <typeparam name="TError">The type of the error enum or class.</typeparam>
-    public abstract class ResultBase<TError> where TError : notnull // Can be Enum or a class/record
+    public interface IResult {
+        bool IsSuccess { get; }
+    }
+    
+    public abstract class ResultBase<TError> : IResult where TError : notnull
     {
         public bool IsSuccess { get; }
         public bool IsFailure => !IsSuccess;
-        public TError? Error { get; } // Nullable if TError is a reference type, or if it's an enum and success
+        public TError? Error { get; }
 
         protected ResultBase(bool isSuccess, TError? error)
         {

@@ -3,11 +3,11 @@ using Turboapi.Domain.Interfaces; // For IPasswordHasher if used directly in Acc
 using Turboapi.Infrastructure.Persistence;
 using Turboapi.Infrastructure.Persistence.Repositories;
 using Xunit;
-using Microsoft.EntityFrameworkCore; // For ToListAsync, etc.
+using Microsoft.EntityFrameworkCore;
 
 namespace Turboapi.Infrastructure.Tests.Persistence
 {
-    [Collection("PostgresContainerCollection")] // Use the shared Testcontainer fixture
+    [Collection("PostgresContainerCollection")]
     public class AccountRepositoryTests
     {
         private readonly PostgresContainerFixture _fixture;

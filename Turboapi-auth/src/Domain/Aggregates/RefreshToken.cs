@@ -14,24 +14,24 @@ namespace Turboapi.Domain.Aggregates
         public DateTime? RevokedAt { get; private set; }
         public string? RevokedReason { get; private set; }
 
-        // Private constructor for EF Core
-        private RefreshToken() 
-        {
-        }
+        private RefreshToken() { }
 
-        // Private constructor for factory method
-        private RefreshToken(Guid accountId, string token, DateTime expiresAt, DateTime? createdDate = null, Guid? tokenId = null, bool skipValidation = false)
+        private RefreshToken(Guid accountId, string token, DateTime expiresAt, DateTime? createdDate, Guid? tokenId, bool skipValidation)
         {
+            // *** FIX: Validate tokenId *before* assigning it ***
+            var effectiveTokenId = tokenId ?? Guid.NewGuid();
+            if (effectiveTokenId == Guid.Empty)
+                throw new DomainException("RefreshToken ID cannot be empty.");
+            
             if (accountId == Guid.Empty)
                 throw new DomainException("Account ID for RefreshToken cannot be empty.");
             if (string.IsNullOrWhiteSpace(token))
                 throw new DomainException("Token string for RefreshToken cannot be empty.");
             
-            // Skip validation for test scenarios where we need to create expired tokens
             if (!skipValidation && expiresAt <= DateTime.UtcNow)
                 throw new DomainException("RefreshToken expiration must be in the future.");
 
-            Id = tokenId ?? Guid.NewGuid();
+            Id = effectiveTokenId;
             AccountId = accountId;
             Token = token;
             ExpiresAt = expiresAt.ToUniversalTime(); 
@@ -41,28 +41,25 @@ namespace Turboapi.Domain.Aggregates
 
         public static RefreshToken Create(Guid accountId, string token, DateTime expiresAt)
         {
-            return new RefreshToken(accountId, token, expiresAt);
+            return new RefreshToken(accountId, token, expiresAt, null, null, false);
         }
         
-        // Overload for test scenarios where we need specific created dates
         public static RefreshToken Create(Guid accountId, string token, DateTime expiresAt, DateTime createdDate)
         {
-            // For test scenarios, allow creation of expired tokens
             var skipValidation = expiresAt <= DateTime.UtcNow;
             return new RefreshToken(accountId, token, expiresAt, createdDate, null, skipValidation);
         }
         
         public static RefreshToken Create(Guid tokenId, Guid accountId, string token, DateTime expiresAt)
         {
-            return new RefreshToken(accountId, token, expiresAt, null, tokenId);
+            return new RefreshToken(accountId, token, expiresAt, null, tokenId, false);
         }
 
         public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
 
         public void Revoke(string? reason = null)
         {
-            if (IsRevoked)
-                return; 
+            if (IsRevoked) return; 
 
             IsRevoked = true;
             RevokedAt = DateTime.UtcNow; 

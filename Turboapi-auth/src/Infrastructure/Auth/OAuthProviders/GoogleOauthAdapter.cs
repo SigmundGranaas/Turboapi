@@ -29,14 +29,13 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
             IOptions<GoogleAuthSettings> settings,
             ILogger<GoogleOAuthAdapter> logger)
         {
-            _httpClient = httpClientFactory.CreateClient(ProviderName); // Named client if configured, else default
+            _httpClient = httpClientFactory.CreateClient(ProviderName); 
             _settings = settings?.Value ?? throw new ArgumentNullException(nameof(settings));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             if (string.IsNullOrWhiteSpace(_settings.ClientId) || string.IsNullOrWhiteSpace(_settings.ClientSecret))
             {
                 _logger.LogError("{ProviderName} ClientId or ClientSecret is not configured.", ProviderName);
-                // This state will cause ConfigurationError when methods are called.
             }
         }
 
@@ -58,9 +57,8 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
             {
                 queryParams["state"] = state;
             }
-            // Common Google OAuth parameters:
-            queryParams["access_type"] = "offline"; // To get a refresh token
-            queryParams["prompt"] = "consent";      // To ensure refresh token is returned on subsequent authorizations
+            queryParams["access_type"] = "offline"; 
+            queryParams["prompt"] = "consent";      
 
             return $"{_settings.AuthorizationEndpoint}?{queryParams.ToString()}";
         }
@@ -104,11 +102,10 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogError("Error exchanging code for tokens with {ProviderName}. Status: {StatusCode}, Response: {ErrorResponse}",
                         ProviderName, response.StatusCode, errorContent);
-                    // Attempt to parse Google specific error
                     var googleError = TryParseGoogleError(errorContent);
                     return googleError?.Error switch
                     {
-                        "invalid_grant" => OAuthError.InvalidCode, // Common for expired/used code or redirect_uri mismatch
+                        "invalid_grant" => OAuthError.InvalidCode, 
                         "invalid_client" => OAuthError.ConfigurationError,
                         _ => OAuthError.TokenExchangeFailed
                     };
@@ -182,20 +179,13 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
                     return OAuthError.UserInfoFailed;
                 }
 
-                // If email_verified is false and your policy requires verified emails:
-                // if (!userInfo.EmailVerified.GetValueOrDefault(false)) // Assuming EmailVerified can be null
-                // {
-                //     _logger.LogWarning("User email '{UserEmail}' from {ProviderName} is not verified.", userInfo.Email, ProviderName);
-                //     return OAuthError.EmailNotVerified;
-                // }
-
                 return new OAuthUserInfo(
                     userInfo.Sub,
                     userInfo.Email,
                     userInfo.EmailVerified.GetValueOrDefault(false),
                     userInfo.GivenName,
                     userInfo.FamilyName,
-                    userInfo.Name, // Full name
+                    userInfo.Name, 
                     userInfo.Picture
                 );
             }
@@ -247,7 +237,7 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
                     var errorContent = await response.Content.ReadAsStringAsync();
                     _logger.LogError("Error refreshing access token with {ProviderName}. Status: {StatusCode}, Response: {ErrorResponse}",
                         ProviderName, response.StatusCode, errorContent);
-                    return OAuthError.TokenExchangeFailed; // Or a more specific error if parsable
+                    return OAuthError.TokenExchangeFailed; 
                 }
 
                 var providerTokens = await response.Content.ReadFromJsonAsync<GoogleTokenResponse>(_jsonSerializerOptions);
@@ -257,13 +247,10 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
                     return OAuthError.TokenExchangeFailed;
                 }
                 
-                // Google typically does NOT return a new refresh token during a refresh_token grant.
-                // The original refresh token remains valid until revoked.
-                // So, providerTokens.RefreshToken will likely be null here. We should return the original one.
                 return new OAuthProviderTokens(
                     providerTokens.AccessToken,
-                    providerTokens.IdToken, // ID token might be returned
-                    refreshToken, // Return the original refresh token as Google doesn't issue new ones on refresh
+                    providerTokens.IdToken, 
+                    refreshToken, 
                     providerTokens.ExpiresIn,
                     providerTokens.TokenType,
                     providerTokens.Scope
@@ -281,7 +268,6 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
             }
         }
 
-        // Helper to parse Google's error response
         private GoogleErrorResponse? TryParseGoogleError(string errorContent)
         {
             try
@@ -294,7 +280,6 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
             }
         }
 
-        // DTOs for Google-specific responses
         private class GoogleTokenResponse
         {
             [JsonPropertyName("access_token")]
@@ -329,7 +314,7 @@ namespace Turboapi.Infrastructure.Auth.OAuthProviders
         private class GoogleUserInfoResponse
         {
             [JsonPropertyName("sub")]
-            public string? Sub { get; set; } // Subject - The user's unique Google ID
+            public string? Sub { get; set; } 
 
             [JsonPropertyName("name")]
             public string? Name { get; set; }

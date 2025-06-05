@@ -57,4 +57,10 @@ namespace Turboapi.Domain.Events
         [property: JsonPropertyName("revocationReason")] string? RevocationReason,
         [property: JsonPropertyName("revokedAt")] DateTime RevokedAt
     ) : IDomainEvent, IAccountAssociatedEvent;
+    
+    public record SuspiciousRefreshTokenAttemptEvent(
+        [property: JsonPropertyName("accountId")] Guid AccountId,
+        [property: JsonPropertyName("tokenAttempted")] string TokenAttempted,
+        [property: JsonPropertyName("reason")]string Reason
+    ) : IDomainEvent, IAccountAssociatedEvent;
 }

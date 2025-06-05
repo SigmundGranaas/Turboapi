@@ -141,6 +141,68 @@ namespace Turboapi.Domain.Tests
             var ex = Assert.Throws<DomainException>(act);
             Assert.Equal("Account must be created with at least one valid initial role name.", ex.Message);
         }
+        
+        // In test/Domain/AccountTests.cs, inside the AccountTests class
+
+// Helper to create a RefreshToken for testing. Let's add it to the test class.
+private RefreshToken CreateTestRefreshToken(Guid accountId, string tokenValue, bool isExpired = false)
+{
+    var expiresAt = isExpired ? DateTime.UtcNow.AddMinutes(-1) : DateTime.UtcNow.AddDays(7);
+    // Using the test-friendly overload of the factory
+    return RefreshToken.Create(accountId, tokenValue, expiresAt, DateTime.UtcNow.AddDays(isExpired ? -2 : -1));
+}
+
+[Fact]
+public void RotateRefreshToken_WithValidToken_ShouldRevokeOldAndAddNewToken()
+{
+    // Arrange
+    var account = Account.Create(_accountId, ValidEmail, _initialRoles);
+    var oldTokenValue = "valid-old-token";
+    var oldRefreshToken = CreateTestRefreshToken(_accountId, oldTokenValue);
+    account.AddRefreshToken(oldRefreshToken); // Pre-load the token into the account
+    account.ClearDomainEvents();
+
+    var newRefreshTokenValue = "brand-new-refresh-token";
+    var newRefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
+
+    // Act
+    var result = account.RotateRefreshToken(
+        oldTokenValue,
+        newRefreshTokenValue,
+        newRefreshTokenExpiry
+    );
+
+    // Assert
+    Assert.True(result.IsSuccess);
+    var newDomainRefreshToken = result.Value;
+    Assert.NotNull(newDomainRefreshToken);
+
+    // 1. Verify the new token was created correctly and added to the account
+    Assert.Equal(newRefreshTokenValue, newDomainRefreshToken.Token);
+    Assert.Equal(_accountId, newDomainRefreshToken.AccountId);
+    Assert.False(newDomainRefreshToken.IsRevoked);
+    Assert.Contains(newDomainRefreshToken, account.RefreshTokens);
+
+    // 2. Verify the old token was revoked
+    var oldTokenInCollection = account.RefreshTokens.FirstOrDefault(rt => rt.Token == oldTokenValue);
+    Assert.NotNull(oldTokenInCollection);
+    Assert.True(oldTokenInCollection.IsRevoked);
+    Assert.Equal("Rotated: New token pair issued", oldTokenInCollection.RevokedReason);
+
+    // 3. Verify the correct domain events were raised
+    var revokedEvents = account.DomainEvents.OfType<RefreshTokenRevokedEvent>().ToList();
+    Assert.Single(revokedEvents);
+    Assert.Equal(oldTokenInCollection.Id, revokedEvents.First().RefreshTokenId);
+    Assert.Equal("Rotated: New token pair issued", revokedEvents.First().RevocationReason);
+
+    var generatedEvents = account.DomainEvents.OfType<RefreshTokenGeneratedEvent>().ToList();
+    Assert.Single(generatedEvents);
+    Assert.Equal(newDomainRefreshToken.Id, generatedEvents.First().RefreshTokenId);
+
+    // 4. Verify LastLogin/Activity was updated
+    Assert.NotNull(account.LastLoginAt);
+    Assert.Contains(account.DomainEvents, e => e is AccountLastLoginUpdatedEvent);
+}
 
 
         [Fact]

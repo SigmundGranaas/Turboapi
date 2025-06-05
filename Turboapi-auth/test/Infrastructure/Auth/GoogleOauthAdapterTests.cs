@@ -98,6 +98,7 @@ namespace Turboapi.Infrastructure.Tests.Auth.OAuthProviders
             var result = await adapter.ExchangeCodeForTokensAsync("auth_code");
 
             Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Value);
             Assert.Equal(expectedTokens.access_token, result.Value.AccessToken);
             Assert.Equal(expectedTokens.id_token, result.Value.IdToken);
             Assert.Equal(expectedTokens.refresh_token, result.Value.RefreshToken);
@@ -114,7 +115,7 @@ namespace Turboapi.Infrastructure.Tests.Auth.OAuthProviders
             var result = await adapter.ExchangeCodeForTokensAsync("invalid_code");
 
             Assert.False(result.IsSuccess);
-            Assert.Equal(OAuthError.InvalidCode, result.Error); // invalid_grant typically maps to InvalidCode
+            Assert.Equal(OAuthError.InvalidCode, result.Error); 
         }
         
         [Fact]
@@ -153,6 +154,7 @@ namespace Turboapi.Infrastructure.Tests.Auth.OAuthProviders
             var result = await adapter.GetUserInfoAsync("test_access_token");
 
             Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Value);
             Assert.Equal(expectedUserInfo.sub, result.Value.ExternalId);
             Assert.Equal(expectedUserInfo.email, result.Value.Email);
             Assert.Equal(expectedUserInfo.email_verified, result.Value.IsEmailVerified);
@@ -196,6 +198,7 @@ namespace Turboapi.Infrastructure.Tests.Auth.OAuthProviders
             var result = await adapter.RefreshAccessTokenAsync(originalRefreshToken);
 
             Assert.True(result.IsSuccess);
+            Assert.NotNull(result.Value);
             Assert.Equal(expectedResponse.access_token, result.Value.AccessToken);
             Assert.Equal(expectedResponse.id_token, result.Value.IdToken);
             Assert.Equal(originalRefreshToken, result.Value.RefreshToken); 
