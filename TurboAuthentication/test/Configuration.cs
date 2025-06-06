@@ -172,7 +172,7 @@ namespace TurboAuthentication.Tests.Configuration
             var cookieConfig = serviceProvider.GetRequiredService<IOptions<CookieConfig>>().Value;
             
             // Assert
-            Assert.Equal("AccessToken", cookieConfig.Name); // Default
+            Assert.Equal("TurboAuth.AccessToken", cookieConfig.Name); // Default
             Assert.True(cookieConfig.HttpOnly); // Default
             Assert.Equal(SameSiteMode.Lax, cookieConfig.SameSite); // Default
             Assert.Equal(CookieSecurePolicy.SameAsRequest, cookieConfig.SecurePolicy); // Default
