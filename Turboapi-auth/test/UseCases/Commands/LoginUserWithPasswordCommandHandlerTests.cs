@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Contracts.V1.Tokens;
 using Turboapi.Application.Interfaces;
 using Turboapi.Application.Results;
 using Turboapi.Application.Results.Errors;
@@ -54,15 +53,14 @@ namespace Turboapi.Application.Tests.UseCases.Commands.LoginUserWithPassword
             var password = "Password123!";
             var command = new LoginUserWithPasswordCommand("test@example.com", password);
             var expectedHash = "hashed_password_for_valid_test";
-
-            // *** FIX: Setup HashPassword before creating the account ***
+            
             _mockPasswordHasher.Setup(h => h.HashPassword(password)).Returns(expectedHash);
             
             var account = CreateCleanTestAccountWithPassword(Guid.NewGuid(), command.Email, password, _mockPasswordHasher.Object);
             
             _mockAccountRepository.Setup(r => r.GetByEmailAsync(command.Email)).ReturnsAsync(account);
             _mockPasswordHasher.Setup(h => h.VerifyPassword(password, expectedHash)).Returns(true);
-            _mockAuthTokenService.Setup(s => s.GenerateTokensAsync(account)).ReturnsAsync(new TokenResult("access_token", "refresh_token", account.Id));
+            _mockAuthTokenService.Setup(s => s.GenerateNewTokenStringsAsync(account)).ReturnsAsync(new NewTokenStrings("access_token", "refresh_token", DateTime.UtcNow.AddDays(7)));
             
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
@@ -81,14 +79,13 @@ namespace Turboapi.Application.Tests.UseCases.Commands.LoginUserWithPassword
             var command = new LoginUserWithPasswordCommand("test@example.com", password);
             var expectedHash = "hashed_password_for_fail_test";
             
-            // *** FIX: Setup HashPassword before creating the account ***
             _mockPasswordHasher.Setup(h => h.HashPassword(password)).Returns(expectedHash);
 
             var account = CreateCleanTestAccountWithPassword(Guid.NewGuid(), command.Email, password, _mockPasswordHasher.Object);
 
             _mockAccountRepository.Setup(r => r.GetByEmailAsync(command.Email)).ReturnsAsync(account);
             _mockPasswordHasher.Setup(h => h.VerifyPassword(password, expectedHash)).Returns(true);
-            _mockAuthTokenService.Setup(s => s.GenerateTokensAsync(account)).ReturnsAsync(new TokenResult("a", "r", account.Id));
+            _mockAuthTokenService.Setup(s => s.GenerateNewTokenStringsAsync(account)).ReturnsAsync(new NewTokenStrings("a", "r", DateTime.UtcNow.AddDays(7)));
             _mockEventPublisher.Setup(p => p.PublishAsync(It.IsAny<IDomainEvent>())).ThrowsAsync(new Exception("Kafka down"));
 
             // Act

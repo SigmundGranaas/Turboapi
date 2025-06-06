@@ -9,9 +9,21 @@ namespace Turboapi.Presentation.Controllers
     [Route("api/v1/[controller]")]
     public abstract class BaseApiController : ControllerBase
     {
+        protected IActionResult HandleResult<TError>(Result<TError> result)
+            where TError : Enum
+        {
+            if (result.IsSuccess)
+            {
+                return NoContent();
+            }
+
+            return HandleError(result.Error);
+        }
+        
         protected IActionResult HandleResult<TSuccess, TError>(Result<TSuccess, TError> result)
             where TError : Enum
         {
+            
             if (result.IsSuccess)
             {
                 // For void-like success results (e.g., Result<SuccessUnit, TError>)

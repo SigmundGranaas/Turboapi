@@ -16,13 +16,6 @@ namespace Turboapi.Application.Interfaces
     public interface IAuthTokenService
     {
         /// <summary>
-        /// Generates a new pair of access and refresh tokens for the given account.
-        /// The implementation is responsible for persisting the refresh token.
-        /// Note: This is kept for compatibility with existing handlers but should be phased out.
-        /// </summary>
-        Task<TokenResult> GenerateTokensAsync(Account account);
-
-        /// <summary>
         /// Generates new token strings and expiry information without any persistence.
         /// </summary>
         /// <param name="account">The account for which to generate token strings.</param>

@@ -51,13 +51,12 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
 
                 var account = await _accountRepository.GetByOAuthAsync(command.ProviderName, userInfo.ExternalId) ?? await _accountRepository.GetByEmailAsync(userInfo.Email);
                 
-                OAuthAuthMethod? currentOAuthMethod;
-
+                bool isNewAccount = false;
                 if (account == null)
                 {
+                    isNewAccount = true;
                     account = Account.Create(Guid.NewGuid(), userInfo.Email, new[] { "User" });
                     account.AddOAuthAuthMethod(command.ProviderName, userInfo.ExternalId, tokenExchangeResult.Value!.AccessToken, tokenExchangeResult.Value!.RefreshToken, null);
-                    await _accountRepository.AddAsync(account);
                 }
                 else
                 {
@@ -74,16 +73,22 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
                     }
                 }
                 
-                // *** FIX: Update last login AFTER potential method creation/update ***
                 account.UpdateLastLogin();
-                currentOAuthMethod = account.AuthenticationMethods.OfType<OAuthAuthMethod>().First(m => m.ProviderName.Equals(command.ProviderName, StringComparison.OrdinalIgnoreCase));
+                var currentOAuthMethod = account.AuthenticationMethods.OfType<OAuthAuthMethod>().First(m => m.ProviderName.Equals(command.ProviderName, StringComparison.OrdinalIgnoreCase));
                 currentOAuthMethod.UpdateLastUsed();
 
-                await _accountRepository.UpdateAsync(account);
+                var newTokens = await _authTokenService.GenerateNewTokenStringsAsync(account);
+                account.AddNewRefreshToken(newTokens.RefreshTokenValue, newTokens.RefreshTokenExpiresAt);
 
-                var tokenResult = await _authTokenService.GenerateTokensAsync(account);
+                if (isNewAccount)
+                {
+                    await _accountRepository.AddAsync(account);
+                }
+                else
+                {
+                    await _accountRepository.UpdateAsync(account);
+                }
 
-                // *** FIX: Publish all domain events from the aggregate ***
                 var eventsToPublish = account.DomainEvents.ToList();
                 account.ClearDomainEvents();
                 foreach (var domainEvent in eventsToPublish)
@@ -91,16 +96,14 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
                     await _eventPublisher.PublishAsync(domainEvent);
                 }
                 
-                // *** FIX: Explicitly publish the application-level login event ***
                 await _eventPublisher.PublishAsync(new AccountLoggedInEvent(account.Id, currentOAuthMethod.Id, command.ProviderName, DateTime.UtcNow));
 
-                return new AuthTokenResponse(tokenResult.AccessToken, tokenResult.RefreshToken, account.Id, account.Email);
+                return new AuthTokenResponse(newTokens.AccessToken, newTokens.RefreshTokenValue, account.Id, account.Email);
             }
-            // *** FIX: Catch potential exceptions during persistence ***
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An unexpected error occurred during OAuth authentication for provider {Provider}", command.ProviderName);
-                return OAuthLoginError.AccountCreationFailed; // Or a more generic error
+                return OAuthLoginError.AccountCreationFailed;
             }
         }
     }

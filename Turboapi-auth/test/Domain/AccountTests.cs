@@ -434,5 +434,39 @@ public void RotateRefreshToken_WithValidToken_ShouldRevokeOldAndAddNewToken()
                 Assert.Equal("OAuth ExternalUser ID cannot be empty.", ex.Message);
             }
         }
+        
+        // Add this test method to the existing AccountTests class
+        [Fact]
+        public void RevokeRefreshToken_ShouldMarkTokenAsRevoked_AndRaiseEvent()
+        {
+            // Arrange
+            var account = Account.Create(_accountId, ValidEmail, _initialRoles);
+            var tokenToRevoke = RefreshToken.Create(_accountId, "token-to-revoke", DateTime.UtcNow.AddDays(7));
+            var otherToken = RefreshToken.Create(_accountId, "other-token", DateTime.UtcNow.AddDays(7));
+    
+            // Use internal method for test setup
+            account.AddRefreshToken(tokenToRevoke);
+            account.AddRefreshToken(otherToken);
+            account.ClearDomainEvents();
+
+            // Act
+            account.RevokeRefreshToken(tokenToRevoke.Token, "User logged out");
+
+            // Assert
+            var revokedToken = account.RefreshTokens.FirstOrDefault(rt => rt.Token == tokenToRevoke.Token);
+            var untouchedToken = account.RefreshTokens.FirstOrDefault(rt => rt.Token == otherToken.Token);
+
+            Assert.NotNull(revokedToken);
+            Assert.True(revokedToken.IsRevoked);
+            Assert.Equal("User logged out", revokedToken.RevokedReason);
+
+            Assert.NotNull(untouchedToken);
+            Assert.False(untouchedToken.IsRevoked);
+
+            var revokedEvents = account.DomainEvents.OfType<RefreshTokenRevokedEvent>().ToList();
+            Assert.Single(revokedEvents);
+            Assert.Equal(revokedToken.Id, revokedEvents.First().RefreshTokenId);
+            Assert.Equal("User logged out", revokedEvents.First().RevocationReason);
+        }
     }
 }

@@ -18,7 +18,6 @@ namespace Turboapi.Infrastructure.Tests.Auth
     {
         private readonly PostgresContainerFixture _fixture;
         private readonly AuthDbContext _dbContext;
-        private readonly RefreshTokenRepository _refreshTokenRepository;
         private readonly JwtConfig _jwtConfig;
         private readonly JwtService _jwtService;
 
@@ -28,8 +27,6 @@ namespace Turboapi.Infrastructure.Tests.Auth
             _dbContext = _fixture.CreateContext(); 
 
             CleanupDatabase();
-
-            _refreshTokenRepository = new RefreshTokenRepository(_dbContext);
 
             _jwtConfig = new JwtConfig
             {
@@ -45,7 +42,6 @@ namespace Turboapi.Infrastructure.Tests.Auth
 
             _jwtService = new JwtService(
                 Options.Create(_jwtConfig),
-                _refreshTokenRepository,
                 mockLoggerJwtService
             );
         }
@@ -73,39 +69,6 @@ namespace Turboapi.Infrastructure.Tests.Auth
         }
 
         [Fact]
-        public async Task GenerateTokensAsync_ShouldCreateValidJwtAndPersistRefreshToken()
-        {
-            // Arrange
-            var account = await SeedAccountAsync(roleNames: new[] { "User", "Admin" });
-
-            // Act
-            var tokenResult = await _jwtService.GenerateTokensAsync(account);
-            await _dbContext.SaveChangesAsync();
-
-            // Assert Access Token
-            Assert.NotNull(tokenResult.AccessToken);
-            var handler = new JwtSecurityTokenHandler();
-            var jsonToken = handler.ReadToken(tokenResult.AccessToken) as JwtSecurityToken;
-            Assert.NotNull(jsonToken);
-            Assert.Equal(_jwtConfig.Issuer, jsonToken.Issuer);
-            Assert.Equal(_jwtConfig.Audience, jsonToken.Audiences.First());
-            Assert.Equal(account.Id.ToString(), jsonToken.Subject);
-            Assert.Equal(account.Email, jsonToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Email).Value);
-            Assert.Contains(jsonToken.Claims, c => c.Type == ClaimTypes.Role && c.Value == "User");
-            Assert.Contains(jsonToken.Claims, c => c.Type == ClaimTypes.Role && c.Value == "Admin");
-            Assert.True(jsonToken.ValidTo > DateTime.UtcNow);
-
-            // Assert Refresh Token in DB
-            Assert.NotNull(tokenResult.RefreshToken);
-            var persistedRefreshToken = await _dbContext.RefreshTokens
-                .FirstOrDefaultAsync(rt => rt.Token == tokenResult.RefreshToken && rt.AccountId == account.Id);
-            Assert.NotNull(persistedRefreshToken);
-            Assert.False(persistedRefreshToken.IsRevoked);
-            Assert.True(persistedRefreshToken.ExpiresAt > DateTime.UtcNow);
-            Assert.Equal(account.Id, tokenResult.AccountId);
-        }
-
-        [Fact]
         public async Task GenerateNewTokenStringsAsync_ShouldReturnValidStringsAndCorrectExpiry_WithoutPersistence()
         {
             // Arrange
@@ -127,6 +90,9 @@ namespace Turboapi.Infrastructure.Tests.Auth
             var jsonToken = handler.ReadToken(result.AccessToken) as JwtSecurityToken;
             Assert.NotNull(jsonToken);
             Assert.Equal(account.Id.ToString(), jsonToken.Subject);
+            Assert.Equal(_jwtConfig.Issuer, jsonToken.Issuer);
+            Assert.Equal(_jwtConfig.Audience, jsonToken.Audiences.First());
+
 
             // Check Refresh Token Expiry
             var expectedExpiry = DateTime.UtcNow.AddDays(_jwtConfig.RefreshTokenExpirationDays);
@@ -142,8 +108,7 @@ namespace Turboapi.Infrastructure.Tests.Auth
         {
             // Arrange
             var account = await SeedAccountAsync();
-            var tokenResult = await _jwtService.GenerateTokensAsync(account); 
-            await _dbContext.SaveChangesAsync();
+            var tokenResult = await _jwtService.GenerateNewTokenStringsAsync(account); 
 
             // Act
             var principal = await _jwtService.ValidateAccessTokenAsync(tokenResult.AccessToken);
@@ -168,12 +133,11 @@ namespace Turboapi.Infrastructure.Tests.Auth
             };
             var tempServiceWithDifferentKey = new JwtService(
                 Options.Create(differentKeyConfig), 
-                _refreshTokenRepository, 
                 new LoggerFactory().CreateLogger<JwtService>()
             );
             
             var account = await SeedAccountAsync();
-            var tokenResultFromDifferentKey = await tempServiceWithDifferentKey.GenerateTokensAsync(account);
+            var tokenResultFromDifferentKey = await tempServiceWithDifferentKey.GenerateNewTokenStringsAsync(account);
 
             // Act
             var principal = await _jwtService.ValidateAccessTokenAsync(tokenResultFromDifferentKey.AccessToken);

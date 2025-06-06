@@ -1,6 +1,9 @@
 using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -16,6 +19,7 @@ using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
 using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
 using Turboapi.Application.UseCases.Commands.RefreshToken;
 using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RevokeRefreshToken;
 using Turboapi.Application.UseCases.Queries.ValidateSession;
 using Turboapi.Domain.Interfaces;
 using Turboapi.Infrastructure.Auth;
@@ -23,17 +27,21 @@ using Turboapi.Infrastructure.Auth.OAuthProviders;
 using Turboapi.Infrastructure.Messaging;
 using Turboapi.Infrastructure.Persistence;
 using Turboapi.Infrastructure.Persistence.Repositories;
+using Turboapi.Presentation.Cookies;
 using Turboapi.Presentation.Middleware;
+using Turboapi.Presentation.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ... (All other service registrations are correct) ...
+#region Service Registrations
 // #############################################
 // # 1. Core Services Configuration
 // #############################################
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
-builder.Services.AddHttpContextAccessor(); // Useful for services that need HTTP context
+builder.Services.AddHttpContextAccessor(); // Essential for services that need HTTP context, like CookieManager
 
 // #############################################
 // # 2. Database & Persistence Configuration
@@ -60,23 +68,51 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // # 3. Application Use Case Handlers
 // #############################################
 
-// Command Handlers (with Unit of Work Decorator)
+// Register Command Handlers with the UnitOfWork decorator
 builder.Services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();
 builder.Services.AddCommandHandler<LoginUserWithPasswordCommand, Result<AuthTokenResponse, LoginError>, LoginUserWithPasswordCommandHandler>();
 builder.Services.AddCommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>, RefreshTokenCommandHandler>();
 builder.Services.AddCommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>, AuthenticateWithOAuthCommandHandler>();
+builder.Services.AddCommandHandler<RevokeRefreshTokenCommand, Result<RefreshTokenError>, RevokeRefreshTokenCommandHandler>();
 
-// Query Handlers (no decorator needed)
+// Register Query Handlers (no decorator needed)
 builder.Services.AddScoped<ValidateSessionQueryHandler>();
+#endregion
 
 // #############################################
 // # 3.5 Authentication & Authorization
 // #############################################
 var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>()!;
-builder.Services.AddAuthentication(options =>
+builder.Services.AddSingleton(jwtConfig);
+
+// Register the custom ticket format handler. It's stateless so Singleton is fine.
+builder.Services.AddSingleton<ISecureDataFormat<AuthenticationTicket>, JwtDataFormat>();
+
+// Configure authentication to use Cookies as the default, but also support JWT Bearer tokens.
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.Cookie.Name = CookieManager.AccessTokenCookieName;
+        options.Cookie.HttpOnly = true;
+        // Use Lax for better UX with external OAuth redirects.
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+        // Suppress the default redirect behavior for API clients.
+        options.Events.OnRedirectToLogin = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
+        };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+
+        // Use a factory to resolve the TicketDataFormat from the DI container.
+        // This is a robust way to handle dependency injection for authentication options.
+        options.TicketDataFormat = builder.Services.BuildServiceProvider().GetRequiredService<ISecureDataFormat<AuthenticationTicket>>();
     })
     .AddJwtBearer(options =>
     {
@@ -95,6 +131,8 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+
+#region More Service Registrations and Middleware
 // #############################################
 // # 4. Infrastructure & Integration Services
 // #############################################
@@ -104,6 +142,8 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IAuthTokenService, JwtService>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<CookieSettings>(builder.Configuration.GetSection("Cookie"));
+builder.Services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieManager>();
 
 // OAuth Provider Services
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
@@ -156,13 +196,10 @@ builder.Logging.AddOpenTelemetry(logging =>
     });
 });
 
-
 // #############################################
 // # 6. Middleware Pipeline Configuration
 // #############################################
 var app = builder.Build();
-
-
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -173,24 +210,16 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPrometheusScrapingEndpoint();
-
 app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-
-app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
-
 
 // #############################################
 // # 7. Local Classes and Extension Methods
 // #############################################
 public partial class Program { }
-
 public class DatabaseOptions
 {
     public string Host { get; set; } = "localhost";
@@ -199,7 +228,6 @@ public class DatabaseOptions
     public string Username { get; set; } = "postgres";
     public string Password { get; set; } = "yourpassword";
 }
-
 public static class CommandHandlerServiceCollectionExtensions
 {
     public static IServiceCollection AddCommandHandler<TCommand, TResponse, THandler>(this IServiceCollection services)
@@ -214,3 +242,4 @@ public static class CommandHandlerServiceCollectionExtensions
         return services;
     }
 }
+#endregion

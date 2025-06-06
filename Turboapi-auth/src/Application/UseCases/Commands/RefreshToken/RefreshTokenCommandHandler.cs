@@ -14,17 +14,14 @@ namespace Turboapi.Application.UseCases.Commands.RefreshToken
         private readonly IAuthTokenService _authTokenService;
         private readonly IEventPublisher _eventPublisher;
         private readonly ILogger<RefreshTokenCommandHandler> _logger;
-        private readonly IRefreshTokenRepository _refreshTokenRepository;
 
         public RefreshTokenCommandHandler(
             IAccountRepository accountRepository,
-            IRefreshTokenRepository refreshTokenRepository,
             IAuthTokenService authTokenService,
             IEventPublisher eventPublisher,
             ILogger<RefreshTokenCommandHandler> logger)
         {
             _accountRepository = accountRepository;
-            _refreshTokenRepository = refreshTokenRepository;
             _authTokenService = authTokenService;
             _eventPublisher = eventPublisher;
             _logger = logger;
@@ -34,13 +31,13 @@ namespace Turboapi.Application.UseCases.Commands.RefreshToken
             RefreshTokenCommand command,
             CancellationToken cancellationToken)
         {
-            var oldRefreshTokenEntity = await _refreshTokenRepository.GetByTokenAsync(command.RefreshTokenString);
-            if (oldRefreshTokenEntity == null) return RefreshTokenError.InvalidToken;
-            if (oldRefreshTokenEntity.IsRevoked) return RefreshTokenError.Revoked;
-            if (oldRefreshTokenEntity.IsExpired) return RefreshTokenError.Expired;
-
-            var account = await _accountRepository.GetByIdAsync(oldRefreshTokenEntity.AccountId);
-            if (account == null) return RefreshTokenError.AccountNotFound;
+            var account = await _accountRepository.GetByRefreshTokenAsync(command.RefreshTokenString);
+            
+            if (account == null)
+            {
+                // To prevent token scanning, we don't differentiate between not found, revoked, or expired.
+                return RefreshTokenError.InvalidToken;
+            }
 
             var newGeneratedTokenStrings = await _authTokenService.GenerateNewTokenStringsAsync(account);
 
@@ -52,6 +49,7 @@ namespace Turboapi.Application.UseCases.Commands.RefreshToken
 
             if (domainRotationResult.IsFailure)
             {
+                // This will catch if the token was found but was expired, and handle domain logic errors.
                 return domainRotationResult.Error;
             }
 

@@ -47,10 +47,11 @@ namespace Turboapi.Application.UseCases.Commands.LoginUserWithPassword
             account.UpdateLastLogin();
             passwordAuthMethod.UpdateLastUsed();
 
+            var newTokens = await _authTokenService.GenerateNewTokenStringsAsync(account);
+            account.AddNewRefreshToken(newTokens.RefreshTokenValue, newTokens.RefreshTokenExpiresAt);
+
             await _accountRepository.UpdateAsync(account);
             
-            var tokenResult = await _authTokenService.GenerateTokensAsync(account);
-
             try
             {
                 var eventsToPublish = account.DomainEvents.ToList();
@@ -67,8 +68,8 @@ namespace Turboapi.Application.UseCases.Commands.LoginUserWithPassword
             }
 
             return new AuthTokenResponse(
-                tokenResult.AccessToken,
-                tokenResult.RefreshToken,
+                newTokens.AccessToken,
+                newTokens.RefreshTokenValue,
                 account.Id,
                 account.Email
             );

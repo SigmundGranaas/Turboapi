@@ -64,7 +64,7 @@ namespace Turboapi.Application.Tests.UseCases.Commands.AuthenticateWithOAuth
             _mockAccountRepository.Setup(r => r.GetByOAuthAsync(_defaultProviderName, userInfo.ExternalId)).ReturnsAsync((Account?)null);
             _mockAccountRepository.Setup(r => r.GetByEmailAsync(userInfo.Email)).ReturnsAsync((Account?)null);
             _mockAccountRepository.Setup(r => r.AddAsync(It.IsAny<Account>())).Callback<Account>(acc => capturedAccount = acc);
-            _mockAuthTokenService.Setup(s => s.GenerateTokensAsync(It.IsAny<Account>())).ReturnsAsync((Account acc) => new TokenResult("sys_access_token", "sys_refresh_token", acc.Id));
+            _mockAuthTokenService.Setup(s => s.GenerateNewTokenStringsAsync(It.IsAny<Account>())).ReturnsAsync(new NewTokenStrings("sys_access_token", "sys_refresh_token", DateTime.UtcNow.AddDays(7)));
 
             var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -89,7 +89,7 @@ namespace Turboapi.Application.Tests.UseCases.Commands.AuthenticateWithOAuth
             _mockOAuthAdapter.Setup(a => a.ExchangeCodeForTokensAsync(command.AuthorizationCode, command.RedirectUri)).ReturnsAsync(providerTokens);
             _mockOAuthAdapter.Setup(a => a.GetUserInfoAsync(providerTokens.AccessToken)).ReturnsAsync(userInfo);
             _mockAccountRepository.Setup(r => r.GetByOAuthAsync(_defaultProviderName, userInfo.ExternalId)).ReturnsAsync(existingAccount);
-            _mockAuthTokenService.Setup(s => s.GenerateTokensAsync(existingAccount)).ReturnsAsync(new TokenResult("sys_access_token", "sys_refresh_token", existingAccount.Id));
+            _mockAuthTokenService.Setup(s => s.GenerateNewTokenStringsAsync(existingAccount)).ReturnsAsync(new NewTokenStrings("sys_access_token", "sys_refresh_token", DateTime.UtcNow.AddDays(7)));
 
             var result = await _handler.Handle(command, CancellationToken.None);
 
@@ -111,7 +111,7 @@ namespace Turboapi.Application.Tests.UseCases.Commands.AuthenticateWithOAuth
             _mockOAuthAdapter.Setup(a => a.GetUserInfoAsync(providerTokens.AccessToken)).ReturnsAsync(userInfo);
             _mockAccountRepository.Setup(r => r.GetByOAuthAsync(_defaultProviderName, userInfo.ExternalId)).ReturnsAsync((Account?)null);
             _mockAccountRepository.Setup(r => r.GetByEmailAsync(userInfo.Email)).ReturnsAsync(existingAccount);
-            _mockAuthTokenService.Setup(s => s.GenerateTokensAsync(existingAccount)).ReturnsAsync(new TokenResult("sys_access_token", "sys_refresh_token", existingAccount.Id));
+            _mockAuthTokenService.Setup(s => s.GenerateNewTokenStringsAsync(existingAccount)).ReturnsAsync(new NewTokenStrings("sys_access_token", "sys_refresh_token", DateTime.UtcNow.AddDays(7)));
 
             var result = await _handler.Handle(command, CancellationToken.None);
 

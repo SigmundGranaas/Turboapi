@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Turboapi.Application.Contracts.V1.Auth;
 using Turboapi.Application.Interfaces;
 using Turboapi.Application.Results;
 using Turboapi.Application.Results.Errors;
 using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
+using Turboapi.Infrastructure.Auth;
+using Turboapi.Presentation.Cookies;
 
 namespace Turboapi.Presentation.Controllers
 {
@@ -11,13 +14,19 @@ namespace Turboapi.Presentation.Controllers
     {
         private readonly ICommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>> _authHandler;
         private readonly IEnumerable<IOAuthProviderAdapter> _providerAdapters;
+        private readonly ICookieManager _cookieManager;
+        private readonly JwtConfig _jwtConfig;
 
         public OAuthController(
             ICommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>> authHandler,
-            IEnumerable<IOAuthProviderAdapter> providerAdapters)
+            IEnumerable<IOAuthProviderAdapter> providerAdapters,
+            ICookieManager cookieManager,
+            IOptions<JwtConfig> jwtConfig)
         {
             _authHandler = authHandler;
             _providerAdapters = providerAdapters;
+            _cookieManager = cookieManager;
+            _jwtConfig = jwtConfig.Value;
         }
 
         [HttpGet("{provider}/url")]
@@ -33,7 +42,6 @@ namespace Turboapi.Presentation.Controllers
         }
 
         [HttpGet("{provider}/callback")]
-        [ProducesResponseType(typeof(AuthTokenResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> Callback(string provider, [FromQuery] string code, [FromQuery] string? state)
         {
             var command = new AuthenticateWithOAuthCommand(
@@ -43,12 +51,23 @@ namespace Turboapi.Presentation.Controllers
                 state);
 
             var result = await _authHandler.Handle(command, HttpContext.RequestAborted);
+            
+            result.Switch(
+                success => _cookieManager.SetAuthCookies(success.AccessToken, success.RefreshToken, _jwtConfig.TokenExpirationMinutes),
+                failure => {}
+            );
+
             return HandleResult(result);
         }
         
         private string CreateCallbackRedirectUri(string provider)
         {
-            return $"{Request.Scheme}://{Request.Host}{Request.PathBase}{Url.Action(nameof(Callback), new { provider })}";
+            var scheme = Request.Scheme;
+            var host = Request.Host;
+            var pathBase = Request.PathBase;
+            var action = Url.Action(nameof(Callback), new { provider });
+
+            return $"{scheme}://{host}{pathBase}{action}";
         }
     }
 }

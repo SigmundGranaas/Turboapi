@@ -43,6 +43,15 @@ namespace Turboapi.Infrastructure.Persistence.Repositories
                      .Any(oam => oam.ProviderName == providerName && oam.ExternalUserId == externalUserId));
         }
 
+        public async Task<Account?> GetByRefreshTokenAsync(string refreshToken)
+        {
+            return await _context.Accounts
+                .Include(a => a.Roles)
+                .Include(a => a.AuthenticationMethods)
+                .Include(a => a.RefreshTokens)
+                .FirstOrDefaultAsync(a => a.RefreshTokens.Any(rt => rt.Token == refreshToken && !rt.IsRevoked));
+        }
+
         public async Task AddAsync(Account account)
         {
             if (account == null) throw new ArgumentNullException(nameof(account));

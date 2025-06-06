@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 using Turboapi.Application.Interfaces;
@@ -46,7 +47,7 @@ namespace Turboapi.Presentation.Tests.Controllers
             Factory = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
-                    builder.UseEnvironment("Test");
+                    // Let the factory use its default Kestrel server setup, which includes HTTPS
                     builder.ConfigureServices(services =>
                     {
                         services.RemoveAll<DbContextOptions<AuthDbContext>>();
@@ -58,10 +59,20 @@ namespace Turboapi.Presentation.Tests.Controllers
                     });
                 });
                 
+            // By default, CreateClient targets the HTTPS endpoint if it's available.
+            // This is the simplest way to ensure our tests run over a secure connection.
             Client = Factory.CreateClient();
-            await ResetDatabaseAsync(); // Ensure DB is clean and migrated on first start
+            await ResetDatabaseAsync(); 
         }
+        
+        // ... The rest of the ApiTestFixture (ResetDatabaseAsync, etc.) remains unchanged ...
 
+        public async Task ResetDatabaseAsync()
+        {
+            await RunFlywayCommandAsync("clean", cleanDisabled: false);
+            await RunFlywayCommandAsync("migrate");
+        }
+        
         private async Task RunFlywayCommandAsync(string command, bool cleanDisabled = true)
         {
             var host = _dbContainer.Hostname;
@@ -91,12 +102,6 @@ namespace Turboapi.Presentation.Tests.Controllers
                 throw new Exception($"Flyway command '{command}' failed. Error: {error}");
             }
         }
-        
-        public async Task ResetDatabaseAsync()
-        {
-            await RunFlywayCommandAsync("clean", cleanDisabled: false);
-            await RunFlywayCommandAsync("migrate");
-        }
 
         public async Task DisposeAsync()
         {
@@ -104,6 +109,9 @@ namespace Turboapi.Presentation.Tests.Controllers
             await Factory.DisposeAsync();
         }
     }
+
+    [CollectionDefinition("ApiCollection")]
+    public class ApiCollection : ICollectionFixture<ApiTestFixture> {}
     
     public class TestEventPublisher : IEventPublisher
     {
@@ -115,7 +123,4 @@ namespace Turboapi.Presentation.Tests.Controllers
         }
         public void Clear() => PublishedEvents.Clear();
     }
-
-    [CollectionDefinition("ApiCollection")]
-    public class ApiCollection : ICollectionFixture<ApiTestFixture> {}
 }

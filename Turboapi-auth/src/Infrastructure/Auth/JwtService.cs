@@ -4,45 +4,22 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Turboapi.Application.Contracts.V1.Tokens;
 using Turboapi.Application.Interfaces;
 using Turboapi.Domain.Aggregates;
-using Turboapi.Domain.Interfaces;
 
 namespace Turboapi.Infrastructure.Auth
 {
     public class JwtService : IAuthTokenService
     {
         private readonly JwtConfig _jwtConfig;
-        private readonly IRefreshTokenRepository _refreshTokenRepository; // Kept for GenerateTokensAsync
         private readonly ILogger<JwtService> _logger;
 
         public JwtService(
             IOptions<JwtConfig> jwtConfig,
-            IRefreshTokenRepository refreshTokenRepository, // Kept for GenerateTokensAsync
             ILogger<JwtService> logger)
         {
             _jwtConfig = jwtConfig?.Value ?? throw new ArgumentNullException(nameof(jwtConfig));
-            _refreshTokenRepository = refreshTokenRepository ?? throw new ArgumentNullException(nameof(refreshTokenRepository));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        public async Task<TokenResult> GenerateTokensAsync(Account account)
-        {
-            if (account == null) throw new ArgumentNullException(nameof(account));
-            _logger.LogInformation("Generating new token pair with persistence for account {AccountId}", account.Id);
-
-            var newTokens = await GenerateNewTokenStringsAsync(account);
-            
-            var refreshTokenEntity = RefreshToken.Create(
-                account.Id,
-                newTokens.RefreshTokenValue,
-                newTokens.RefreshTokenExpiresAt
-            );
-
-            await _refreshTokenRepository.AddAsync(refreshTokenEntity);
-
-            return new TokenResult(newTokens.AccessToken, newTokens.RefreshTokenValue, account.Id);
         }
 
         public Task<NewTokenStrings> GenerateNewTokenStringsAsync(Account account)

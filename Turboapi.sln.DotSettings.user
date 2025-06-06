@@ -57,99 +57,16 @@
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AUuid7_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FDecompilerCache_003Fdecompiler_003F56175dc6c2b945a181b978eb43a2dd5f6e00_003Fac_003F1bab8ec8_003FUuid7_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AWebApplicationBuilder_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FSourcesCache_003F504c8bdd5124a1bbe189b9d9082277bdbfeff4c69af26aa899960a929e99_003FWebApplicationBuilder_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
 	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=7020124F_002D9FFC_002D4AC3_002D8F3D_002DAAB8E0240759_002Ff_003AWebApplicationFactory_002Ecs_002Fl_003A_002E_002E_003F_002E_002E_003F_002E_002E_003F_002Econfig_003FJetBrains_003FRider2024_002E3_003Fresharper_002Dhost_003FSourcesCache_003F255f916e5a2d424ef01b291afc761e049b367614440bf4b216824ec479064b_003FWebApplicationFactory_002Ecs/@EntryIndexedValue">ForceIncluded</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=204ddd78_002D09d2_002D40f8_002Dbf54_002D1c34edc17758/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="RefreshTokenRepositoryTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4bb00d29_002D4bff_002D4bc8_002Dab03_002D8cdaaf48fab0/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="TokenAndSessionControllerTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
   &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Persistence.RefreshTokenRepositoryTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Persistence.AccountRepositoryTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Integration.Tests.Messaging.KafkaEventPublisherIntegrationTests&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
-&lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=4698929d_002D3917_002D42f0_002Db97d_002Dad362d2ce31e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="All tests from LocationIntegrationTest.cs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;Or&gt;
-    &lt;ProjectFile&gt;816F75C5-73CC-4045-A4EF-00D55A3C8C11/d:test/d:integration/f:LocationIntegrationTest.cs&lt;/ProjectFile&gt;
-    &lt;TestAncestor&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::LocationsControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.CreateActivity.CreateActivityFromBasicParameters&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.CreateActivity.UpdateActivity&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.CreateActivityHandlerTest.ExecuteCreateActivityCommand&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::TestEventStoreWriterTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::EventHandling.Kafka.Tests.KafkaEventStoreWriterTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::KafkaEventReaderTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::EventHandling.Kafka.Tests.KafkaConsumerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.controller.ActivityControllerTest.CreateActivity&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.ActivityQuery.getActivityById&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.ActivityQuery.cannotGetActivityWithWrongOwner&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.ActivityQuery&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.controller.ActivityControllerTest.GetExistingActivity&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.controller.ActivityControllerTest&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.CreateActivityHandlerTest&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.integration.HandlerKafkaIntegration.publishCreateActivityEvents&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.EditActivityHandlerTest.ExecuteEditActivityCommand&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.domain.DeleteActivityHandlerTest.ExecuteDeleteActivityCommand&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.integration.HandlerKafkaIntegration.publishDeleteActivityEvents&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::95224B46-AFB4-4647-B39A-68C8F16C0BBB::net9.0::Turbo_pg_data.test.DatabaseSetupServiceTests.InitializeDatabaseAsync_ShouldCreateDatabase&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::95224B46-AFB4-4647-B39A-68C8F16C0BBB::net9.0::Turbo_pg_data.test.DatabaseSetupServiceTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::95224B46-AFB4-4647-B39A-68C8F16C0BBB::net9.0::Turbo_pg_data.test.FlywayMigrationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::95224B46-AFB4-4647-B39A-68C8F16C0BBB::net9.0::NewMigrationTest&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::F73227A4-B29F-4189-A805-3D5EE840D742::net9.0::Turboauth_activity.test.integration.ControllerIntegrationTest.CreateAndGetActivity&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.domain.CreateLocationHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.domain.DeleteLocationHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.UpdateLocationPositionHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::LocationEventHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.LocationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.DeleteLocationHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.domain.CreateLocationHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.integration.LocationLocationConsumerIntegrationTest.CreateLocation_ShouldPersistToDatabase_AndPublishEvent&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::816F75C5-73CC-4045-A4EF-00D55A3C8C11::net9.0::Turboapi_geo.test.integration.LocationConsumerIntegrationTest.CreateLocation_ShouldPersistToDatabase_AndPublishEvent&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.KafkaConsumerIntegrationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.MultiConsumerIntegrationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.KafkaConsumerRestartTest&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::7B03E88A-271C-40BD-AE4E-DCC664E0082A::net9.0::Turboapi.Tests.WebApiStyleKafkaTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Tests.AuthControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.JwtConfigTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.CookieConfigTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.AuthSchemeTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Configuration.NullConfigTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Handlers.CookieJwtHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868::net9.0::TurboAuthentication.Tests.Handlers.CookieJwtHandlerIntegrationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Domain.Tests.AccountTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Domain.Tests.OAuthAuthMethodTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Domain.Tests.PasswordAuthMethodTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.PasswordHasherTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Integration.Tests.Messaging.KafkaEventPublisherIntegrationTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.JwtServiceTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Auth.OAuthProviders.GoogleOAuthAdapterTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.LoginUserWithPassword.LoginUserWithPasswordCommandHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.AuthenticateWithOAuth.AuthenticateWithOAuthCommandHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Commands.RefreshTokenCommandHandlerTests.RefreshTokenCommandHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Application.Tests.UseCases.Queries.ValidateSessionTests.ValidateSessionQueryHandlerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Presentation.Tests.Controllers.AuthControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net8.0::Turboapi.Presentation.Tests.Controllers.AuthControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net8.0::Turboapi.Presentation.Tests.Controllers.TokenAndSessionControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net8.0::Turboapi.test.Presentation.Controller.TokenAndSessionControllerTests&lt;/TestId&gt;
-      &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.test.Presentation.Controller.AuthControllerTests&lt;/TestId&gt;
-    &lt;/TestAncestor&gt;
-    &lt;ProjectFolder&gt;3AA6D570-6A96-4E9B-8B9F-5690F23F5B40/d:test/d:Infrastructure/d:Persistence&lt;/ProjectFolder&gt;
-  &lt;/Or&gt;
-&lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=ac368f13_002D5f02_002D43db_002Db50a_002D31e292c9f48e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="TokenAndSessionControllerTests #2" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Presentation.Tests.Controllers.AuthControllerTests&lt;/TestId&gt;
     &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Presentation.Tests.Controllers.TokenAndSessionControllerTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Persistence.AccountRepositoryTests&lt;/TestId&gt;
   &lt;/TestAncestor&gt;
 &lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=afdf0467_002D3a4a_002D41e8_002Da791_002Dcd5aab67362d/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="TokenAndSessionControllerTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.test.Presentation.Controller.TokenAndSessionControllerTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.Infrastructure.Tests.Persistence.AccountRepositoryTests&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::3AA6D570-6A96-4E9B-8B9F-5690F23F5B40::net9.0::Turboapi.test.Presentation.Controller.AuthControllerTests.Register_WithValidData_ReturnsSuccessAndTokens&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
-&lt;/SessionState&gt;</s:String>
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=e9f90abf_002Da775_002D4a15_002D964f_002D0be3beb5bdae/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="AuthenticateWithOAuthCommandHandlerTests" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;ProjectFolder&gt;3AA6D570-6A96-4E9B-8B9F-5690F23F5B40/d:test&lt;/ProjectFolder&gt;
-&lt;/SessionState&gt;</s:String>
+	
+	
+	
+	
+	
 	
 	
 	

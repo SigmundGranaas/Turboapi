@@ -65,7 +65,6 @@ namespace Turboapi.Domain.Tests
         [Fact]
         public void Revoke_ShouldBeIdempotent()
         {
-            // *** FIX: Use the correct Create overload that takes a tokenId ***
             var refreshToken = RefreshToken.Create(_tokenId, _accountId, ValidTokenString, DateTime.UtcNow.AddDays(7));
             refreshToken.Revoke("Initial revocation");
             var firstRevokedAt = refreshToken.RevokedAt;

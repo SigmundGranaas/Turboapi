@@ -42,9 +42,10 @@ namespace Turboapi.Application.UseCases.Commands.RegisterUserWithPassword
             var account = Account.Create(Guid.NewGuid(), command.Email, new[] { "User" });
             account.AddPasswordAuthMethod(command.Password, _passwordHasher);
             
-            await _accountRepository.AddAsync(account);
+            var newTokens = await _authTokenService.GenerateNewTokenStringsAsync(account);
+            account.AddNewRefreshToken(newTokens.RefreshTokenValue, newTokens.RefreshTokenExpiresAt);
             
-            var tokenResult = await _authTokenService.GenerateTokensAsync(account);
+            await _accountRepository.AddAsync(account);
             
             try
             {
@@ -62,8 +63,8 @@ namespace Turboapi.Application.UseCases.Commands.RegisterUserWithPassword
             }
             
             return new AuthTokenResponse(
-                tokenResult.AccessToken,
-                tokenResult.RefreshToken,
+                newTokens.AccessToken,
+                newTokens.RefreshTokenValue,
                 account.Id,
                 account.Email
             );

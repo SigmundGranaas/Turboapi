@@ -137,6 +137,13 @@ namespace Turboapi.Domain.Aggregates
             return newDomainRefreshToken;
         }
         
+        public RefreshToken AddNewRefreshToken(string tokenValue, DateTime expiresAt)
+        {
+            var newDomainRefreshToken = RefreshToken.Create(Id, tokenValue, expiresAt);
+            _refreshTokens.Add(newDomainRefreshToken);
+            AddDomainEvent(new RefreshTokenGeneratedEvent(Id, newDomainRefreshToken.Id, newDomainRefreshToken.Token, newDomainRefreshToken.ExpiresAt, newDomainRefreshToken.CreatedAt));
+            return newDomainRefreshToken;
+        }
         
         public void AddPasswordAuthMethod(string password, IPasswordHasher passwordHasher)
         {
@@ -208,6 +215,19 @@ namespace Turboapi.Domain.Aggregates
             {
                 return false;
             }
+        }
+
+        public void RevokeRefreshToken(string tokenToRevoke, string reason)
+        {
+            var refreshToken = _refreshTokens.FirstOrDefault(rt => rt.Token == tokenToRevoke);
+
+            if (refreshToken == null || refreshToken.IsRevoked)
+            {
+                return;
+            }
+
+            refreshToken.Revoke(reason);
+            AddDomainEvent(new RefreshTokenRevokedEvent(Id, refreshToken.Id, refreshToken.RevokedReason, refreshToken.RevokedAt!.Value));
         }
     }
 
