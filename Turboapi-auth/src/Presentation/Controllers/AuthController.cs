@@ -11,7 +11,6 @@ using Turboapi.Presentation.Cookies;
 
 namespace Turboapi.Presentation.Controllers
 {
-    // The Route attribute is changed to match the gateway's public-facing path segment.
     [Route("api/auth/[controller]")] 
     public class AuthController : BaseApiController
     {
