@@ -11,6 +11,8 @@ using Turboapi.Presentation.Cookies;
 
 namespace Turboapi.Presentation.Controllers
 {
+    // The Route attribute is changed to match the gateway's public-facing path segment.
+    [Route("api/auth/[controller]")] 
     public class AuthController : BaseApiController
     {
         private readonly ICommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>> _registerHandler;
@@ -35,7 +37,8 @@ namespace Turboapi.Presentation.Controllers
         {
             if (request.Password != request.ConfirmPassword)
             {
-                return BadRequest("Passwords do not match.");
+                // This is now handled by the error mapping in BaseApiController for consistency.
+                return HandleResult<AuthTokenResponse, RegistrationError>(RegistrationError.InvalidInput);
             }
             var command = new RegisterUserWithPasswordCommand(request.Email, request.Password);
             var result = await _registerHandler.Handle(command, HttpContext.RequestAborted);

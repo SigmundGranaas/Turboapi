@@ -8,6 +8,7 @@ using Turboapi.Domain.Interfaces;
 
 namespace Turboapi.Presentation.Controllers
 {
+    [Route("api/auth/[controller]")]
     [Authorize(AuthenticationSchemes = $"{CookieAuthenticationDefaults.AuthenticationScheme},{JwtBearerDefaults.AuthenticationScheme}")]
     public class SessionController : BaseApiController
     {
@@ -24,27 +25,22 @@ namespace Turboapi.Presentation.Controllers
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<IActionResult> GetCurrentUser()
         {
-            // The [Authorize] attribute ensures that by the time this code is reached,
-            // HttpContext.User has been populated by a successful authentication (either cookie or bearer).
             var accountIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) 
                                  ?? User.FindFirstValue("sub");
 
             if (!Guid.TryParse(accountIdClaim, out var accountId))
             {
-                // This case should be rare, as a valid token is required to get this far.
                 return Unauthorized("Invalid token format: 'sub' claim is not a valid GUID.");
             }
 
             var account = await _accountRepository.GetByIdAsync(accountId);
             if (account == null)
             {
-                // A valid token was presented for a user that no longer exists.
                 return Unauthorized();
             }
 
             if (!account.IsActive)
             {
-                // The user is valid but not allowed to access the system.
                 return Forbid();
             }
 

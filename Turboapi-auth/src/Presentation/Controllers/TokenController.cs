@@ -13,6 +13,7 @@ using Turboapi.Presentation.Cookies;
 
 namespace Turboapi.Presentation.Controllers
 {
+    [Route("api/auth/[controller]")]
     public class TokenController : BaseApiController
     {
         private readonly ICommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>> _refreshHandler;
@@ -33,14 +34,9 @@ namespace Turboapi.Presentation.Controllers
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request) // Make request nullable
+        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request)
         {
-            // FIX: Use null-conditional operator to prevent NullReferenceException
-            var tokenToRefresh = request?.RefreshToken;
-            if (string.IsNullOrWhiteSpace(tokenToRefresh))
-            {
-                tokenToRefresh = _cookieManager.GetRefreshToken();
-            }
+            var tokenToRefresh = request?.RefreshToken ?? _cookieManager.GetRefreshToken();
 
             if (string.IsNullOrWhiteSpace(tokenToRefresh))
             {
@@ -59,16 +55,10 @@ namespace Turboapi.Presentation.Controllers
         }
 
         [HttpPost("revoke")]
-        public async Task<IActionResult> Revoke([FromBody] RevokeTokenRequest? request) // Make request nullable
+        public async Task<IActionResult> Revoke([FromBody] RevokeTokenRequest? request)
         {
-            // FIX: Use null-conditional operator to prevent NullReferenceException
-            var tokenToRevoke = request?.RefreshToken;
-            if (string.IsNullOrWhiteSpace(tokenToRevoke))
-            {
-                tokenToRevoke = _cookieManager.GetRefreshToken();
-            }
-
-            // Always clear cookies on logout, regardless of whether a token was provided
+            var tokenToRevoke = request?.RefreshToken ?? _cookieManager.GetRefreshToken();
+            
             _cookieManager.ClearAuthCookies();
 
             if (string.IsNullOrWhiteSpace(tokenToRevoke))

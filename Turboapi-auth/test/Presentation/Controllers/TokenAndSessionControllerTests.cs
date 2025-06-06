@@ -17,7 +17,6 @@ namespace Turboapi.Presentation.Tests.Controllers
         public TokenAndSessionControllerTests(ApiTestFixture fixture)
         {
             _fixture = fixture;
-            // Use the factory to create a new, clean client for each test run
             _client = fixture.Factory.CreateClient();
             _eventPublisher = fixture.EventPublisher;
 
@@ -27,27 +26,22 @@ namespace Turboapi.Presentation.Tests.Controllers
 
         #region Helper Methods
 
-        /// <summary>
-        /// Registers and logs in a new user, then extracts the raw Set-Cookie headers
-        /// from the login response for manual use in subsequent requests.
-        /// </summary>
         private async Task<(List<string> cookies, AuthTokenResponse tokens)> SetupUserAndGetCookiesAsync()
         {
             var userEmail = $"user-{Guid.NewGuid()}@session.com";
             var password = "Password123!";
 
             var registerRequest = new RegisterUserWithPasswordRequest(userEmail, password, password);
-            var regResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", registerRequest);
+            var regResponse = await _client.PostAsJsonAsync("/api/auth/Auth/register", registerRequest);
             Assert.Equal(HttpStatusCode.OK, regResponse.StatusCode);
 
             var loginRequest = new LoginUserWithPasswordRequest(userEmail, password);
-            var loginResponse = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var loginResponse = await _client.PostAsJsonAsync("/api/auth/Auth/login", loginRequest);
             Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
 
             var tokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResponse>();
             Assert.NotNull(tokens);
 
-            // Extract the raw Set-Cookie headers
             var cookies = loginResponse.Headers.GetValues("Set-Cookie").ToList();
             Assert.NotEmpty(cookies);
 
@@ -74,9 +68,8 @@ namespace Turboapi.Presentation.Tests.Controllers
         {
             // Arrange
             var (cookies, originalTokens) = await SetupUserAndGetCookiesAsync();
-            var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/v1/token/refresh");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, "/api/auth/Token/refresh");
             
-            // Manually build the "Cookie" header from the "Set-Cookie" response headers.
             var cookieHeader = string.Join("; ", cookies.Select(c => c.Split(';')[0]));
             requestMessage.Headers.Add("Cookie", cookieHeader);
             
@@ -99,7 +92,7 @@ namespace Turboapi.Presentation.Tests.Controllers
             var cookieHeader = string.Join("; ", cookies.Select(c => c.Split(';')[0]));
 
             // Act: Send revoke request with the manually added cookie.
-            var revokeRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/token/revoke");
+            var revokeRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/Token/revoke");
             revokeRequest.Headers.Add("Cookie", cookieHeader);
             var revokeResponse = await _client.SendAsync(revokeRequest);
 
@@ -108,7 +101,7 @@ namespace Turboapi.Presentation.Tests.Controllers
             AssertAuthCookiesAreCleared(revokeResponse);
 
             // Act 2: Attempt to use the now-revoked token from the original cookie.
-            var refreshRequest = new HttpRequestMessage(HttpMethod.Post, "/api/v1/token/refresh");
+            var refreshRequest = new HttpRequestMessage(HttpMethod.Post, "/api/auth/Token/refresh");
             refreshRequest.Headers.Add("Cookie", cookieHeader); // Send the stale, now-revoked token
             var refreshResponse = await _client.SendAsync(refreshRequest);
 
@@ -121,7 +114,7 @@ namespace Turboapi.Presentation.Tests.Controllers
         {
             // Arrange
             var (cookies, originalTokens) = await SetupUserAndGetCookiesAsync();
-            var requestMessage = new HttpRequestMessage(HttpMethod.Get, "/api/v1/session/me");
+            var requestMessage = new HttpRequestMessage(HttpMethod.Get, "/api/auth/Session/me");
             var cookieHeader = string.Join("; ", cookies.Select(c => c.Split(';')[0]));
             requestMessage.Headers.Add("Cookie", cookieHeader);
 
@@ -143,7 +136,7 @@ namespace Turboapi.Presentation.Tests.Controllers
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", userTokens.AccessToken);
 
             // Act
-            var response = await _client.GetAsync("/api/v1/session/me");
+            var response = await _client.GetAsync("/api/auth/Session/me");
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);

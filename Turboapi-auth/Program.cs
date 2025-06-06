@@ -32,16 +32,35 @@ using Turboapi.Presentation.Middleware;
 using Turboapi.Presentation.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+var webAppPolicy = "WebAppPolicy";
 
-// ... (All other service registrations are correct) ...
-#region Service Registrations
 // #############################################
 // # 1. Core Services Configuration
 // #############################################
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
-builder.Services.AddHttpContextAccessor(); // Essential for services that need HTTP context, like CookieManager
+builder.Services.AddHttpContextAccessor();
+
+// #############################################
+// # 1.5 CORS Configuration for Web Client
+// #############################################
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: webAppPolicy, policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000", // Common React/Flutter dev port
+                "http://localhost:8080",
+                "http://localhost:5173", // Common Vite dev port
+                "https://kart.sandring.no" // Production frontend
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Essential for cookie-based auth
+    });
+});
+
 
 // #############################################
 // # 2. Database & Persistence Configuration
@@ -77,7 +96,6 @@ builder.Services.AddCommandHandler<RevokeRefreshTokenCommand, Result<RefreshToke
 
 // Register Query Handlers (no decorator needed)
 builder.Services.AddScoped<ValidateSessionQueryHandler>();
-#endregion
 
 // #############################################
 // # 3.5 Authentication & Authorization
@@ -94,11 +112,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.Cookie.Name = CookieManager.AccessTokenCookieName;
         options.Cookie.HttpOnly = true;
-        // Use Lax for better UX with external OAuth redirects.
-        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SameSite = SameSiteMode.Lax; // Lax is fine as OAuth flow is a top-level navigation
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 
-        // Suppress the default redirect behavior for API clients.
         options.Events.OnRedirectToLogin = context =>
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -110,8 +126,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
             return Task.CompletedTask;
         };
 
-        // Use a factory to resolve the TicketDataFormat from the DI container.
-        // This is a robust way to handle dependency injection for authentication options.
         options.TicketDataFormat = builder.Services.BuildServiceProvider().GetRequiredService<ISecureDataFormat<AuthenticationTicket>>();
     })
     .AddJwtBearer(options =>
@@ -132,25 +146,18 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 
-#region More Service Registrations and Middleware
 // #############################################
 // # 4. Infrastructure & Integration Services
 // #############################################
 builder.Services.AddHttpClient();
-
-// Auth Services
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
 builder.Services.AddScoped<IAuthTokenService, JwtService>();
 builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<CookieSettings>(builder.Configuration.GetSection("Cookie"));
 builder.Services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieManager>();
-
-// OAuth Provider Services
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
 builder.Services.AddHttpClient<GoogleOAuthAdapter>();
 builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
-
-// Messaging Services
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
 builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
 
@@ -158,22 +165,19 @@ builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
 // # 5. Observability (OpenTelemetry)
 // #############################################
 var otel = builder.Services.AddOpenTelemetry();
-
 otel.ConfigureResource(resource => resource
     .AddService(serviceName: builder.Environment.ApplicationName ?? "Turboapi-Auth", serviceVersion: "1.0.0"));
-
 otel.WithTracing(tracing =>
 {
     tracing.AddAspNetCoreInstrumentation(options => { options.RecordException = true; });
     tracing.AddHttpClientInstrumentation(options => { options.RecordException = true; });
     tracing.AddEntityFrameworkCoreInstrumentation(options => { options.SetDbStatementForText = true; });
-    tracing.AddSource(new System.Diagnostics.ActivitySource("Turboapi.Infrastructure.Messaging.*").Name); // For Kafka
+    tracing.AddSource(new System.Diagnostics.ActivitySource("Turboapi.Infrastructure.Messaging.*").Name);
     tracing.AddOtlpExporter(otlpOptions =>
     {
         otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
     });
 });
-
 otel.WithMetrics(metrics =>
 {
     metrics.AddAspNetCoreInstrumentation();
@@ -185,7 +189,6 @@ otel.WithMetrics(metrics =>
         otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
     });
 });
-
 builder.Logging.AddOpenTelemetry(logging =>
 {
     logging.IncludeFormattedMessage = true;
@@ -210,9 +213,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPrometheusScrapingEndpoint();
-app.UseCors(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+app.UseRouting(); // Routing must come before CORS and Auth
+
+app.UseCors(webAppPolicy); // Apply the CORS policy
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.Run();
 
@@ -242,4 +250,3 @@ public static class CommandHandlerServiceCollectionExtensions
         return services;
     }
 }
-#endregion

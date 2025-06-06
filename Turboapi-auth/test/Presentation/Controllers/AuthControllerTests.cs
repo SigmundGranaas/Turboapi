@@ -35,10 +35,10 @@ namespace Turboapi.Presentation.Tests.Controllers
         {
             // Arrange
             var request = new RegisterUserWithPasswordRequest("test@example.com", "Password123!", "Password123!");
-            await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            await _client.PostAsJsonAsync("/api/auth/Auth/register", request);
             
             // Act
-            var secondResponse = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var secondResponse = await _client.PostAsJsonAsync("/api/auth/Auth/register", request);
 
             // Assert
             Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
@@ -53,7 +53,6 @@ namespace Turboapi.Presentation.Tests.Controllers
             Assert.All(setCookieHeaders, h => Assert.Contains("httponly", h, StringComparison.OrdinalIgnoreCase));
             Assert.All(setCookieHeaders, h => Assert.Contains("samesite=Lax", h, StringComparison.OrdinalIgnoreCase));
             Assert.All(setCookieHeaders, h => Assert.Contains("path=/", h, StringComparison.OrdinalIgnoreCase));
-            // FIX: Since the client is now using HTTPS, we MUST assert that the 'secure' flag is present.
             Assert.All(setCookieHeaders, h => Assert.Contains("secure", h, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -64,7 +63,7 @@ namespace Turboapi.Presentation.Tests.Controllers
             var request = new RegisterUserWithPasswordRequest("test@example.com", "Password123!", "Password123!");
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/register", request);
+            var response = await _client.PostAsJsonAsync("/api/auth/Auth/register", request);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -85,11 +84,11 @@ namespace Turboapi.Presentation.Tests.Controllers
         {
             // Arrange
             var registerRequest = new RegisterUserWithPasswordRequest("login.valid@example.com", "Password123!", "Password123!");
-            await _client.PostAsJsonAsync("/api/v1/auth/register", registerRequest);
+            await _client.PostAsJsonAsync("/api/auth/Auth/register", registerRequest);
             var loginRequest = new LoginUserWithPasswordRequest("login.valid@example.com", "Password123!");
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/auth/Auth/login", loginRequest);
 
             // Assert
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -101,12 +100,12 @@ namespace Turboapi.Presentation.Tests.Controllers
         {
             // Arrange
             var registerRequest = new RegisterUserWithPasswordRequest("login.invalid@example.com", "Password123!", "Password123!");
-            await _client.PostAsJsonAsync("/api/v1/auth/register", registerRequest);
+            await _client.PostAsJsonAsync("/api/auth/Auth/register", registerRequest);
             
             var loginRequest = new LoginUserWithPasswordRequest("login.invalid@example.com", "WrongPassword!");
 
             // Act
-            var response = await _client.PostAsJsonAsync("/api/v1/auth/login", loginRequest);
+            var response = await _client.PostAsJsonAsync("/api/auth/Auth/login", loginRequest);
 
             // Assert
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
