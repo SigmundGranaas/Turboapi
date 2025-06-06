@@ -1,261 +1,250 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
-
-// Service-specific usings
-using Turboapi.auth;
-using Turboapi.controller;
-using Turboapi.core;
-using TurboApi.Data.Entity;
-using Turboapi.infrastructure;
-using Turboapi.services;
-using AuthenticationService = Turboapi.services.AuthenticationService;
-using IAuthenticationService = Turboapi.services.IAuthenticationService;
+using Turboapi.Application.Behaviors;
+using Turboapi.Application.Contracts.V1.Auth;
+using Turboapi.Application.Interfaces;
+using Turboapi.Application.Results;
+using Turboapi.Application.Results.Errors;
+using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
+using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RefreshToken;
+using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RevokeRefreshToken;
+using Turboapi.Application.UseCases.Queries.ValidateSession;
+using Turboapi.Domain.Interfaces;
+using Turboapi.Infrastructure.Auth;
+using Turboapi.Infrastructure.Auth.OAuthProviders;
+using Turboapi.Infrastructure.Messaging;
+using Turboapi.Infrastructure.Persistence;
+using Turboapi.Infrastructure.Persistence.Repositories;
+using Turboapi.Presentation.Cookies;
+using Turboapi.Presentation.Middleware;
+using Turboapi.Presentation.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+var webAppPolicy = "WebAppPolicy";
 
 // #############################################
-// # 1. Core API Configuration
+// # 1. Core Services Configuration
 // #############################################
-builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Configuration.AddEnvironmentVariables();
-// #############################################
-// # 2. Database Configuration
-// #############################################
-var dbOptions = new DatabaseOptions
-{
-    Host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost",
-    Port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432",
-    Database = Environment.GetEnvironmentVariable("DB_NAME") ?? "auth",
-    Username = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres",
-    Password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword"
-};
+builder.Services.AddOpenApi();
+builder.Services.AddHttpContextAccessor();
 
-var connectionString = $"Host={dbOptions.Host};Port={dbOptions.Port};Database={dbOptions.Database};Username={dbOptions.Username};Password={dbOptions.Password}";
-
-// Register DbContext
-builder.Services.AddDbContext<AuthDbContext>((s, options) =>
+// #############################################
+// # 1.5 CORS Configuration for Web Client
+// #############################################
+builder.Services.AddCors(options =>
 {
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+    options.AddPolicy(name: webAppPolicy, policy =>
     {
-        npgsqlOptions.EnableRetryOnFailure();
+        policy.WithOrigins(
+                "http://localhost:3000", // Common React/Flutter dev port
+                "http://localhost:8080",
+                "http://localhost:5173", // Common Vite dev port
+                "https://kart.sandring.no" // Production frontend
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Essential for cookie-based auth
     });
 });
 
+
 // #############################################
-// # 3. Authentication Configuration
+// # 2. Database & Persistence Configuration
 // #############################################
-// 3.1 Password and Token Services
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<AuthHelper>();
-builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
-builder.Services.AddScoped<IJwtService, JwtService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
-builder.Services.AddScoped<IGoogleAuthenticationService, GoogleAuthenticationService>();
+var dbOptionsConfig = new DatabaseOptions();
+builder.Configuration.GetSection("Database").Bind(dbOptionsConfig);
 
-builder.Services.Configure<CookieSettings>(options => {
-    // Bind from appsettings.json first
-    builder.Configuration.GetSection("Cookie").Bind(options);
-    
-    // Override with environment variables
-    options.Domain = Environment.GetEnvironmentVariable("COOKIE_DOMAIN") ?? options.Domain;
-    options.SameSite = Environment.GetEnvironmentVariable("COOKIE_SAME_SITE") ?? options.SameSite;
-    options.Secure = CookieSettings.ParseBoolEnvVar("COOKIE_SECURE", options.Secure);
-    options.ExpiryDays = CookieSettings.ParseIntEnvVar("COOKIE_EXPIRY_DAYS", options.ExpiryDays);
-    options.Path = Environment.GetEnvironmentVariable("COOKIE_PATH") ?? options.Path;
-    options.UseAdditionalEncryption = CookieSettings.ParseBoolEnvVar("COOKIE_USE_ADDITIONAL_ENCRYPTION", options.UseAdditionalEncryption);
-});
+var connectionString = $"Host={Environment.GetEnvironmentVariable("DB_HOST") ?? dbOptionsConfig.Host};" +
+                       $"Port={Environment.GetEnvironmentVariable("DB_PORT") ?? dbOptionsConfig.Port};" +
+                       $"Database={Environment.GetEnvironmentVariable("DB_NAME") ?? dbOptionsConfig.Database};" +
+                       $"Username={Environment.GetEnvironmentVariable("DB_USER") ?? dbOptionsConfig.Username};" +
+                       $"Password={Environment.GetEnvironmentVariable("DB_PASSWORD") ?? dbOptionsConfig.Password}";
 
-// 3.2 JWT Configuration
-var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>();
-builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+builder.Services.AddDbContext<AuthDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+        npgsqlOptions.EnableRetryOnFailure()));
 
-builder.Services.AddAuthentication("AuthScheme")
-    .AddPolicyScheme("AuthScheme", "Authorization Bearer or Cookie", options =>
-    {
-        options.ForwardDefaultSelector = context =>
-        {
-            // Check if the request contains the JWT bearer token
-            string authorization = context.Request.Headers["Authorization"];
-            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-                return JwtBearerDefaults.AuthenticationScheme;
-            
-            // Otherwise use cookies
-            return CookieAuthenticationDefaults.AuthenticationScheme;
-        };
-    })
+// Register Repositories and Unit of Work
+builder.Services.AddScoped<IAccountRepository, AccountRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// #############################################
+// # 3. Application Use Case Handlers
+// #############################################
+
+// Register Command Handlers with the UnitOfWork decorator
+builder.Services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();
+builder.Services.AddCommandHandler<LoginUserWithPasswordCommand, Result<AuthTokenResponse, LoginError>, LoginUserWithPasswordCommandHandler>();
+builder.Services.AddCommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>, RefreshTokenCommandHandler>();
+builder.Services.AddCommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>, AuthenticateWithOAuthCommandHandler>();
+builder.Services.AddCommandHandler<RevokeRefreshTokenCommand, Result<RefreshTokenError>, RevokeRefreshTokenCommandHandler>();
+
+// Register Query Handlers (no decorator needed)
+builder.Services.AddScoped<ValidateSessionQueryHandler>();
+
+// #############################################
+// # 3.5 Authentication & Authorization
+// #############################################
+var jwtConfig = builder.Configuration.GetSection("Jwt").Get<JwtConfig>()!;
+builder.Services.AddSingleton(jwtConfig);
+
+// Register the custom ticket format handler. It's stateless so Singleton is fine.
+builder.Services.AddSingleton<ISecureDataFormat<AuthenticationTicket>, JwtDataFormat>();
+
+// Configure authentication to use Cookies as the default, but also support JWT Bearer tokens.
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
-        options.Cookie.Name = "AccessToken";
+        options.Cookie.Name = CookieManager.AccessTokenCookieName;
         options.Cookie.HttpOnly = true;
-        options.ExpireTimeSpan = TimeSpan.FromHours(1);
-    
-        // Prevent redirects for API calls
-        options.Events = new CookieAuthenticationEvents
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+
+        options.Events.OnRedirectToLogin = context =>
         {
-            OnRedirectToLogin = context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                return Task.CompletedTask;
-            },
-            OnRedirectToAccessDenied = context =>
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                return Task.CompletedTask;
-            },
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            return Task.CompletedTask;
         };
+        options.Events.OnRedirectToAccessDenied = context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            return Task.CompletedTask;
+        };
+
+        options.TicketDataFormat = builder.Services.BuildServiceProvider().GetRequiredService<ISecureDataFormat<AuthenticationTicket>>();
     })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtConfig.Key)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Key)),
             ValidateIssuer = true,
-            ValidateAudience = true,
             ValidIssuer = jwtConfig.Issuer,
+            ValidateAudience = true,
             ValidAudience = jwtConfig.Audience,
+            ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
     });
 
-
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(name: "Default",
-        policy  =>
-        {
-            policy
-                .WithOrigins("http://localhost:8080", "https://kart-api.sandring.no",  "https://kart.sandring.no")
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials();
-        });
-});
-
-// 3.3 Authentication Providers
-builder.Services.AddScoped<IAuthenticationProvider, GoogleAuthenticationProvider>();
-builder.Services.AddScoped<IAuthenticationProvider, PasswordAuthenticationProvider>();
-builder.Services.AddScoped<IAuthenticationProvider, RefreshTokenProvider>();
-
-// 3.4 Google Authentication
-builder.Services.Configure<GoogleAuthSettings>(
-    builder.Configuration.GetSection("Authentication:Google"));
+builder.Services.AddAuthorization();
 
 
 // #############################################
-// # 4. Integration Services
+// # 4. Infrastructure & Integration Services
 // #############################################
-// 4.1 Kafka Configuration
-builder.Services.AddKafkaIntegration(builder.Configuration);
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IAuthTokenService, JwtService>();
+builder.Services.Configure<JwtConfig>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<CookieSettings>(builder.Configuration.GetSection("Cookie"));
+builder.Services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieManager>();
+builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
+builder.Services.AddHttpClient<GoogleOAuthAdapter>();
+builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
+builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
+builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
 
 // #############################################
-// # 5. Observability Configuration
+// # 5. Observability (OpenTelemetry)
 // #############################################
 var otel = builder.Services.AddOpenTelemetry();
-
-// 5.1 Configure OpenTelemetry Resources
 otel.ConfigureResource(resource => resource
-    .AddService(serviceName: builder.Environment.ApplicationName));
-
-// 5.2 Logging Configuration
-builder.Logging.AddOpenTelemetry(options =>
-{
-    options
-        .SetResourceBuilder(
-            ResourceBuilder.CreateDefault()
-                .AddService("TurboApi-auth"))
-        .AddOtlpExporter(opt =>
-        {
-            opt.Endpoint = new Uri("http://localhost:4317");
-        });
-});
-
-// 5.3 Metrics Configuration
-otel.WithMetrics(metrics => metrics
-    .AddAspNetCoreInstrumentation()
-    .AddHttpClientInstrumentation()
-    .AddMeter("Microsoft.AspNetCore.Hosting")
-    .AddMeter("Microsoft.AspNetCore.Server.Kestrel")
-    .AddOtlpExporter(otlpOptions =>
-    {
-        otlpOptions.Endpoint = new Uri("http://localhost:4317");
-        otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
-    })
-    .AddPrometheusExporter());
-
-// 5.4 Tracing Configuration
+    .AddService(serviceName: builder.Environment.ApplicationName ?? "Turboapi-Auth", serviceVersion: "1.0.0"));
 otel.WithTracing(tracing =>
 {
-    tracing.AddAspNetCoreInstrumentation();
-    tracing.AddHttpClientInstrumentation();
-    tracing.AddEntityFrameworkCoreInstrumentation();
-    tracing.SetSampler(new AlwaysOnSampler());
+    tracing.AddAspNetCoreInstrumentation(options => { options.RecordException = true; });
+    tracing.AddHttpClientInstrumentation(options => { options.RecordException = true; });
+    tracing.AddEntityFrameworkCoreInstrumentation(options => { options.SetDbStatementForText = true; });
+    tracing.AddSource(new System.Diagnostics.ActivitySource("Turboapi.Infrastructure.Messaging.*").Name);
     tracing.AddOtlpExporter(otlpOptions =>
     {
-        otlpOptions.Endpoint = new Uri("http://localhost:4317");
-        otlpOptions.Protocol = OpenTelemetry.Exporter.OtlpExportProtocol.Grpc;
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
+    });
+});
+otel.WithMetrics(metrics =>
+{
+    metrics.AddAspNetCoreInstrumentation();
+    metrics.AddHttpClientInstrumentation();
+    metrics.AddRuntimeInstrumentation();
+    metrics.AddPrometheusExporter();
+    metrics.AddOtlpExporter(otlpOptions =>
+    {
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
+    });
+});
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+    logging.AddOtlpExporter(otlpOptions =>
+    {
+        otlpOptions.Endpoint = new Uri(builder.Configuration.GetValue<string>("OTLP_ENDPOINT_URL") ?? "http://localhost:4317");
     });
 });
 
 // #############################################
-// # 6. App Configuration and Middleware
+// # 6. Middleware Pipeline Configuration
 // #############################################
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference();
+app.UseMiddleware<GlobalExceptionMiddleware>();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
 app.MapPrometheusScrapingEndpoint();
-app.UseMiddleware<ExceptionLoggingMiddleware>();
-app.UseCors("Default");
-app.UseHttpsRedirection();
+
+app.UseRouting(); // Routing must come before CORS and Auth
+
+app.UseCors(webAppPolicy); // Apply the CORS policy
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 app.Run();
 
-// For testing
+// #############################################
+// # 7. Local Classes and Extension Methods
+// #############################################
 public partial class Program { }
-
-// #############################################
-// # 7. Extension Methods
-// #############################################
-public static class KafkaConfiguration
-{
-    public static IServiceCollection AddKafkaIntegration(
-        this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        services.Configure<KafkaSettings>(
-            configuration.GetSection("Kafka"));
-        
-        services.AddSingleton<IEventPublisher>(sp => 
-            new KafkaEventPublisher(
-                sp.GetRequiredService<IOptions<KafkaSettings>>(),
-                sp.GetRequiredService<ILogger<KafkaEventPublisher>>()
-            ));        
-        return services;
-    }
-}
-
 public class DatabaseOptions
 {
-    public string Host { get; set; }
-    public string Port { get; set; }
-    public string Database { get; set; }
-    public string Username { get; set; }
-    public string Password { get; set; }
+    public string Host { get; set; } = "localhost";
+    public string Port { get; set; } = "5432";
+    public string Database { get; set; } = "auth";
+    public string Username { get; set; } = "postgres";
+    public string Password { get; set; } = "yourpassword";
+}
+public static class CommandHandlerServiceCollectionExtensions
+{
+    public static IServiceCollection AddCommandHandler<TCommand, TResponse, THandler>(this IServiceCollection services)
+        where THandler : class, ICommandHandler<TCommand, TResponse>
+    {
+        services.AddScoped<THandler>();
+        services.AddScoped<ICommandHandler<TCommand, TResponse>>(provider =>
+            new UnitOfWorkCommandHandlerDecorator<TCommand, TResponse>(
+                provider.GetRequiredService<THandler>(),
+                provider.GetRequiredService<IUnitOfWork>())
+        );
+        return services;
+    }
 }

@@ -3,6 +3,5 @@
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/Turboapi-auth/db/migrations/V1__Create_Auth_Schema.sql" dialect="PostgreSQL" />
     <file url="file://$PROJECT_DIR$/Turboapi-auth/db/migrations/init.sql" dialect="PostgreSQL" />
-    <file url="file://$PROJECT_DIR$/Turboapi-auth/test/integration/DbIntegration.cs" dialect="PostgreSQL" />
   </component>
 </project>

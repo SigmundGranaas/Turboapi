@@ -18,7 +18,7 @@ namespace TurboAuthentication.Tests.Handlers
         private readonly string _validKey = "ThisIsAValidSecretKeyWithAtLeast32Chars";
         private readonly string _validIssuer = "test-issuer";
         private readonly string _validAudience = "test-audience";
-        private readonly string _cookieName = "AccessToken";
+        private readonly string _cookieName = "TurboAuth.AccessToken";
 
         private TestServer CreateTestServer(Dictionary<string, string> configValues = null)
         {
