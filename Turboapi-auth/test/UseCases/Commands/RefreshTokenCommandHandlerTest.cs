@@ -27,7 +27,6 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
             _mockEventPublisher = new Mock<IEventPublisher>();
             _mockLogger = new Mock<ILogger<RefreshTokenCommandHandler>>();
 
-            // The handler no longer depends on IRefreshTokenRepository
             _handler = new RefreshTokenCommandHandler(
                 _mockAccountRepository.Object,
                 _mockAuthTokenService.Object,
@@ -36,16 +35,20 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
             );
         }
 
+        // Helper to create an Account aggregate with a specific refresh token for testing.
+        // This helper uses the internal 'AddRefreshToken' method on the Account, which
+        // assumes 'InternalsVisibleTo' is configured for the test project.
         private Account CreateTestAccountWithToken(string token, bool isExpired = false)
         {
             var accountId = Guid.NewGuid();
             var account = Account.Create(accountId, "test@example.com", new[] { "User" });
             
             var expiresAt = isExpired ? DateTime.UtcNow.AddMinutes(-5) : DateTime.UtcNow.AddDays(7);
-            // Use the test-friendly constructor for RefreshToken to create an expired one if needed.
+            
+            // Use the test-friendly factory to create a token that can be expired.
             var refreshToken = RefreshToken.Create(accountId, token, expiresAt, DateTime.UtcNow.AddDays(-1));
             
-            // Use internal helper to add token to the aggregate for the test setup.
+            // This is the key part of the setup: ensuring the token is part of the aggregate's state.
             account.AddRefreshToken(refreshToken);
             account.ClearDomainEvents();
             return account;
@@ -58,7 +61,6 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
             var command = new RefreshTokenCommand("valid-token");
             var account = CreateTestAccountWithToken(command.RefreshTokenString);
 
-            // Correctly mock the GetByRefreshTokenAsync method
             _mockAccountRepository
                 .Setup(r => r.GetByRefreshTokenAsync(command.RefreshTokenString))
                 .ReturnsAsync(account);
@@ -70,7 +72,7 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            Assert.True(result.IsSuccess, "The operation should have succeeded.");
+            Assert.True(result.IsSuccess, "The operation with a valid token should have succeeded.");
             Assert.NotNull(result.Value);
             Assert.Equal(newStrings.AccessToken, result.Value.AccessToken);
             Assert.Equal(newStrings.RefreshTokenValue, result.Value.RefreshToken);
@@ -85,18 +87,22 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
         {
             // Arrange
             var command = new RefreshTokenCommand("expired-token");
-            var account = CreateTestAccountWithToken(command.RefreshTokenString, isExpired: true);
+            var accountWithExpiredToken = CreateTestAccountWithToken(command.RefreshTokenString, isExpired: true);
 
-            // The repo should still find the account, as it doesn't check for expiry.
             _mockAccountRepository
                 .Setup(r => r.GetByRefreshTokenAsync(command.RefreshTokenString))
-                .ReturnsAsync(account);
+                .ReturnsAsync(accountWithExpiredToken);
+
+            // FIX: Add the missing mock setup for GenerateNewTokenStringsAsync.
+            // The handler calls this method BEFORE it checks the domain logic for expiry.
+            _mockAuthTokenService
+                .Setup(s => s.GenerateNewTokenStringsAsync(It.IsAny<Account>()))
+                .ReturnsAsync(new NewTokenStrings("any-access-token", "any-refresh-token", DateTime.UtcNow.AddDays(7)));
 
             // Act
             var result = await _handler.Handle(command, CancellationToken.None);
 
             // Assert
-            // The handler calls account.RotateRefreshToken, which will detect the expiry and return the correct error.
             Assert.False(result.IsSuccess);
             Assert.Equal(RefreshTokenError.Expired, result.Error);
         }
@@ -107,7 +113,7 @@ namespace Turboapi.Application.Tests.UseCases.Commands.RefreshTokenTests
             // Arrange
             var command = new RefreshTokenCommand("non-existent-token");
             
-            // Setup the mock to return null, simulating a token that doesn't exist.
+            // The repository will return null for a token that doesn't belong to any account.
             _mockAccountRepository
                 .Setup(r => r.GetByRefreshTokenAsync(command.RefreshTokenString))
                 .ReturnsAsync((Account?)null);
