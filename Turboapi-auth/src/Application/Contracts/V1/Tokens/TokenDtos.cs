@@ -6,5 +6,5 @@ namespace Turboapi.Application.Contracts.V1.Tokens
         Guid AccountId
     );
 
-    public record RefreshTokenRequest(string RefreshToken);
+    public record RefreshTokenRequest(string? RefreshToken);
 }
