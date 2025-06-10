@@ -34,7 +34,7 @@ namespace Turboapi.Presentation.Controllers
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest? request)
+        public async Task<IActionResult> Refresh([FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] RefreshTokenRequest? request)
         {
             var tokenToRefresh = request?.RefreshToken ?? _cookieManager.GetRefreshToken();
 
