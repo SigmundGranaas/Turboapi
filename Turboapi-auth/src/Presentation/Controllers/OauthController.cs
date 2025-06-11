@@ -18,17 +18,20 @@ namespace Turboapi.Presentation.Controllers
         private readonly IEnumerable<IOAuthProviderAdapter> _providerAdapters;
         private readonly ICookieManager _cookieManager;
         private readonly JwtConfig _jwtConfig;
+        private readonly IConfiguration _configuration;
 
         public OAuthController(
             ICommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>> authHandler,
             IEnumerable<IOAuthProviderAdapter> providerAdapters,
             ICookieManager cookieManager,
-            IOptions<JwtConfig> jwtConfig)
+            IOptions<JwtConfig> jwtConfig,
+            IConfiguration configuration)
         {
             _authHandler = authHandler;
             _providerAdapters = providerAdapters;
             _cookieManager = cookieManager;
             _jwtConfig = jwtConfig.Value;
+            _configuration = configuration;
         }
 
         [HttpGet("{provider}/url")]
@@ -54,27 +57,34 @@ namespace Turboapi.Presentation.Controllers
 
             var result = await _authHandler.Handle(command, HttpContext.RequestAborted);
             
-            result.Switch(
-                success => _cookieManager.SetAuthCookies(success.AccessToken, success.RefreshToken, _jwtConfig.TokenExpirationMinutes),
-                failure => {}
-            );
-            
-            // On successful web auth, redirect to the main app page
-            if (result.IsSuccess)
-            {
-                // This assumes a front-end running on the same domain or a configured one.
-                // You might need a more dynamic redirect URI from configuration.
-                return Redirect("http://localhost:8080/login/success"); // Or your main app URL
-            }
+            return result.Match<IActionResult>(
+                success =>
+                {
+                    // For web flow, set the session cookies
+                    _cookieManager.SetAuthCookies(success.AccessToken, success.RefreshToken, _jwtConfig.TokenExpirationMinutes);
 
-            return HandleResult(result);
+                    // Check if the client is an API client (like Flutter mobile) expecting JSON,
+                    // or a browser that needs a redirect.
+                    var isApiRequest = Request.Headers.Accept.ToString().Contains("application/json");
+
+                    if (isApiRequest)
+                    {
+                        // For mobile/API clients, return the tokens directly in the body.
+                        return Ok(success);
+                    }
+                    else
+                    {
+                        // For web clients (browsers), redirect to the frontend success page.
+                        var frontendUrl = _configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:8080";
+                        return Redirect($"{frontendUrl}/login/success");
+                    }
+                },
+                failure => HandleResult(result) // HandleResult maps the error to a status code.
+            );
         }
         
         private string CreateCallbackRedirectUri(string provider)
         {
-            // This method must construct the exact URI that was sent to the provider.
-            // It should match the one configured in `appsettings.Development.json` for Google.
-            // Using a hardcoded value from config is safer than dynamically building it.
             var googleSettings = HttpContext.RequestServices.GetRequiredService<IOptions<GoogleAuthSettings>>().Value;
             return googleSettings.RedirectUri;
         }
