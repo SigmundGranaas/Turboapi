@@ -1,4 +1,3 @@
-// FILE: /home/sigmund/development/turboapi/Turboapi/Turboapi-auth/src/Infrastructure/Persistence/Repositories/AccountRepository.cs
 using Microsoft.EntityFrameworkCore;
 using Turboapi.Domain.Aggregates;
 using Turboapi.Domain.Interfaces;
