@@ -44,23 +44,15 @@ spec:
             - name: Authentication__Google__ClientId
               valueFrom:
                 secretKeyRef:
-                  name: auth-secrets
+                  name: google-oauth-secrets
                   key: google-client-id
             - name: Authentication__Google__ClientSecret
               valueFrom:
                 secretKeyRef:
-                  name: auth-secrets
+                  name: google-oauth-secrets
                   key: google-client-secret
             - name: Authentication__Google__RedirectUri
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: Authentication__Google__RedirectUri
-            - name: Authentication__Google__TokenInfoEndpoint
-              valueFrom:
-                configMapKeyRef:
-                  name: app-config
-                  key: Authentication__Google__TokenInfoEndpoint
+              value: "https://kart-api.sandring.no/api/auth/oauth/google/callback"
             # Add Cookie Configuration
             - name: COOKIE_DOMAIN
               value: ".sandring.no"

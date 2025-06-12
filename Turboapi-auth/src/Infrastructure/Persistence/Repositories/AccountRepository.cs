@@ -34,9 +34,13 @@ namespace Turboapi.Infrastructure.Persistence.Repositories
 
         public async Task<Account?> GetByOAuthAsync(string providerName, string externalUserId)
         {
+            // [FIX] The .OfType<OAuthAuthMethod>() was removed from the .Include() statement.
+            // EF Core will correctly load all authentication methods and instantiate the
+            // right derived types (OAuthAuthMethod, PasswordAuthMethod) for the found account.
+            // The filtering logic remains in the FirstOrDefaultAsync predicate, which is correct.
             return await _context.Accounts
                 .Include(a => a.Roles)
-                .Include(a => a.AuthenticationMethods.OfType<OAuthAuthMethod>()) // Eager load OAuth methods
+                .Include(a => a.AuthenticationMethods) 
                 .Include(a => a.RefreshTokens)
                 .FirstOrDefaultAsync(a =>
                     a.AuthenticationMethods.OfType<OAuthAuthMethod>()
