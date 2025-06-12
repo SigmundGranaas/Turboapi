@@ -14,6 +14,9 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: CORS__AllowedOrigins
+            # Frontend configuration
+            - name: FrontendUrl
+              value: "https://kart.sandring.no" 
             # Add JWT Configuration
             - name: Jwt__Key
               valueFrom:
