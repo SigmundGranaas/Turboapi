@@ -1,5 +1,6 @@
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using DotNet.Testcontainers.Builders;
 using Testcontainers.Kafka;
 using Xunit;
 
@@ -19,13 +20,19 @@ namespace Turboapi.Integration.Tests.Fixtures
                 builder
                     .AddFilter("Default", LogLevel.Information)
                     .AddFilter("Microsoft", LogLevel.Warning)
-                    .AddFilter("Testcontainers", LogLevel.Information) 
+                    .AddFilter("Testcontainers", LogLevel.Information)
                     .AddConsole();
             });
             _logger = loggerFactory.CreateLogger<KafkaContainerFixture>();
 
             KafkaContainer = new KafkaBuilder()
                 .WithImage("confluentinc/cp-kafka:latest")
+                // The default wait strategy can time out in slow CI environments.
+                // We replace it with a more reliable strategy that waits for a specific log message
+                // and has a longer timeout, as specified by the configuration lambda.
+                .WithWaitStrategy(Wait.ForUnixContainer()
+                    .UntilMessageIsLogged(@"INFO \[KafkaServer id=\d+\] started", // Wait for the "started" log message.
+                        waitStrategyOption => waitStrategyOption.WithTimeout(TimeSpan.FromMinutes(2)))) // Set a 2-minute timeout for this wait.
                 .Build();
         }
 
@@ -40,7 +47,8 @@ namespace Turboapi.Integration.Tests.Fixtures
         private async Task CreateTestTopicAsync()
         {
             _logger.LogInformation("Creating test topic: {TestTopic}", TestTopic);
-            using var adminClient = new AdminClientBuilder(new AdminClientConfig { BootstrapServers = BootstrapServers }).Build();
+            var adminConfig = new AdminClientConfig { BootstrapServers = BootstrapServers };
+            using var adminClient = new AdminClientBuilder(adminConfig).Build();
             try
             {
                 await adminClient.CreateTopicsAsync(new TopicSpecification[]
