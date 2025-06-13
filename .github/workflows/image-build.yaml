@@ -33,13 +33,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Convert owner to lowercase
+        id: string
+        run: echo "owner_lc=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Get service version
         id: get_version
         run: |
-          # Use xmllint (from libxml2-utils) to parse XML, as it's more robust than regex.
           sudo apt-get update && sudo apt-get install -y libxml2-utils
           VERSION=$(xmllint --xpath "string(//Project/PropertyGroup/Version)" ${{ matrix.project_path }})
           if [ -z "$VERSION" ]; then
@@ -59,8 +62,8 @@ jobs:
       - name: Check if image with version tag already exists
         id: check_image
         run: |
-          echo "Checking for image: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}"
-          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+          echo "Checking for image: ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}"
+          if docker manifest inspect ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "Image with this version tag already exists."
           else
@@ -76,14 +79,14 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}
-            ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:latest
+            ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}
+            ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Image already exists
         if: steps.check_image.outputs.exists == 'true'
-        run: echo "Image ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} already exists. Skipping build."
+        run: echo "Image ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} already exists. Skipping build."
 
       - name: Dry Run Info for Pull Request
         if: steps.check_image.outputs.exists == 'false' && github.event_name == 'pull_request'
@@ -96,8 +99,6 @@ jobs:
       matrix:
         service: [auth, geo, activity]
         include:
-          # This workflow assumes your migration SQL files are located in a 'db' directory
-          # inside each service's main folder, e.g., 'Turboapi-auth/db/'.
           - service: auth
             db_dir: ./Turboapi-auth/db
           - service: geo
@@ -107,6 +108,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Convert owner to lowercase
+        id: string
+        run: echo "owner_lc=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -118,7 +123,6 @@ jobs:
             HASH="no-migrations-found-$(date +%s)"
             echo "Warning: Directory ${{ matrix.db_dir }} not found. Using unique hash to force potential check."
           else
-            # Hash all file contents and names within the directory to create a deterministic ID
             HASH=$(find ${{ matrix.db_dir }} -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
           fi
           echo "hash=${HASH}" >> $GITHUB_OUTPUT
@@ -134,8 +138,8 @@ jobs:
       - name: Check if migration image with hash tag already exists
         id: check_image
         run: |
-          echo "Checking for image: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}"
-          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }} > /dev/null 2>&1; then
+          echo "Checking for image: ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}"
+          if docker manifest inspect ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }} > /dev/null 2>&1; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "Migration image with this hash already exists."
           else
@@ -150,7 +154,7 @@ jobs:
           context: .
           file: migrations/Dockerfile.migration
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}
+          tags: ghcr.io/${{ steps.string.outputs.owner_lc }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
