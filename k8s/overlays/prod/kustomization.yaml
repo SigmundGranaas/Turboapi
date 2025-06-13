@@ -28,10 +28,10 @@ replicas:
 images:
   - name: turboapi-auth
     newName: ghcr.io/sigmundgranaas/turboapi-auth
-    newTag: latest
+    newTag: 1.0.0
   - name: turboapi-geo
     newName: ghcr.io/sigmundgranaas/turboapi-geo
-    newTag: latest
+    newTag: 1.0.0
   - name: turboapi-activity
     newName: ghcr.io/sigmundgranaas/turboapi-activity
     newTag: latest

@@ -4,88 +4,156 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+
 permissions:
   contents: read
   packages: write
+
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [turboapi-auth, turboapi-geo, turboapi-activity]
-        include:
-          - service: turboapi-auth
-            dockerfile: ./Turboapi-auth/Dockerfile
-          - service: turboapi-geo
-            dockerfile: ./Turboapi-geo/Dockerfile
-          - service: turboapi-activity
-            dockerfile: ./Turboapi-activity/Dockerfile
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.service }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=short
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-  build-and-push-migrations:
+  build-and-push-services:
+    name: Build and Push Service Image
     runs-on: ubuntu-latest
     strategy:
       matrix:
         service: [auth, geo, activity]
         include:
           - service: auth
+            project_path: ./Turboapi-auth/Turboapi-auth.csproj
+            dockerfile: ./Turboapi-auth/Dockerfile
+            context: ./
           - service: geo
+            project_path: ./Turboapi-geo/Turboapi-geo.csproj
+            dockerfile: ./Turboapi-geo/Dockerfile
+            context: ./
           - service: activity
+            project_path: ./Turboapi-activity/Turboapi-activity.csproj
+            dockerfile: ./Turboapi-activity/Dockerfile
+            context: ./
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+
+      - name: Get service version
+        id: get_version
+        run: |
+          # Use xmllint (from libxml2-utils) to parse XML, as it's more robust than regex.
+          sudo apt-get update && sudo apt-get install -y libxml2-utils
+          VERSION=$(xmllint --xpath "string(//Project/PropertyGroup/Version)" ${{ matrix.project_path }})
+          if [ -z "$VERSION" ]; then
+            echo "Error: The <Version> tag was not found in ${{ matrix.project_path }}"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Found version ${VERSION} for service ${{ matrix.service }}"
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
+
+      - name: Check if image with version tag already exists
+        id: check_image
+        run: |
+          echo "Checking for image: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}"
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Image with this version tag already exists."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Image with this version tag does not exist. A new image will be built."
+          fi
+
+      - name: Build and push Docker image
+        if: steps.check_image.outputs.exists == 'false' && github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,format=short
+            ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image already exists
+        if: steps.check_image.outputs.exists == 'true'
+        run: echo "Image ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}:${{ steps.get_version.outputs.version }} already exists. Skipping build."
+
+      - name: Dry Run Info for Pull Request
+        if: steps.check_image.outputs.exists == 'false' && github.event_name == 'pull_request'
+        run: echo "This is a pull request. A new image for ${{ matrix.service }} version ${{ steps.get_version.outputs.version }} would be built and pushed on merge."
+
+  build-and-push-migrations:
+    name: Build and Push Migration Image
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [auth, geo, activity]
+        include:
+          # This workflow assumes your migration SQL files are located in a 'db' directory
+          # inside each service's main folder, e.g., 'Turboapi-auth/db/'.
+          - service: auth
+            db_dir: ./Turboapi-auth/db
+          - service: geo
+            db_dir: ./Turboapi-geo/db
+          - service: activity
+            db_dir: ./Turboapi-activity/db
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Calculate DB directory hash
+        id: get_hash
+        run: |
+          if [ ! -d "${{ matrix.db_dir }}" ]; then
+            HASH="no-migrations-found-$(date +%s)"
+            echo "Warning: Directory ${{ matrix.db_dir }} not found. Using unique hash to force potential check."
+          else
+            # Hash all file contents and names within the directory to create a deterministic ID
+            HASH=$(find ${{ matrix.db_dir }} -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
+          fi
+          echo "hash=${HASH}" >> $GITHUB_OUTPUT
+          echo "Calculated hash for ${{ matrix.service }} migrations: ${HASH}"
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if migration image with hash tag already exists
+        id: check_image
+        run: |
+          echo "Checking for image: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}"
+          if docker manifest inspect ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Migration image with this hash already exists."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Migration image with this hash does not exist. A new image will be built."
+          fi
+
       - name: Build and push migration Docker image
+        if: steps.check_image.outputs.exists == 'false' && github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: migrations/Dockerfile.migration
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/turboapi-${{ matrix.service }}-migration:${{ steps.get_hash.outputs.hash }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             SERVICE_NAME=${{ matrix.service }}
+
+      - name: Migration image already exists
+        if: steps.check_image.outputs.exists == 'true'
+        run: echo "Migration image for service ${{ matrix.service }} with hash ${{ steps.get_hash.outputs.hash }} already exists. Skipping build."
+
+      - name: Dry Run Info for Pull Request
+        if: steps.check_image.outputs.exists == 'false' && github.event_name == 'pull_request'
+        run: echo "This is a pull request. A new migration image for ${{ matrix.service }} with hash ${{ steps.get_hash.outputs.hash }} would be built and pushed on merge."
