@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using Turboapi.Application.Contracts.V1.Auth;
+using Turboapi.Application.Contracts.V1.OAuth;
 using Turboapi.Application.Interfaces;
 using Turboapi.Application.Results;
 using Turboapi.Application.Results.Errors;
@@ -46,6 +47,34 @@ namespace Turboapi.Presentation.Controllers
             return Ok(new { AuthorizationUrl = url });
         }
 
+        /// <summary>
+        /// A dedicated endpoint for mobile/API clients to sign in with an OAuth provider's code.
+        /// This endpoint always returns JSON and never redirects.
+        /// </summary>
+        [HttpPost("mobile-signin")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(AuthTokenResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(Application.Contracts.V1.Common.ErrorResponse), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(Application.Contracts.V1.Common.ErrorResponse), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(Application.Contracts.V1.Common.ErrorResponse), StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> MobileSignIn([FromBody] MobileSignInRequest request)
+        {
+            var command = new AuthenticateWithOAuthCommand(
+                request.Provider,
+                request.Code,
+                CreateCallbackRedirectUri(request.Provider),
+                request.State);
+
+            var result = await _authHandler.Handle(command, HttpContext.RequestAborted);
+            
+            // This endpoint *only* returns JSON. It never sets cookies or redirects.
+            return HandleResult(result);
+        }
+
+        /// <summary>
+        /// This endpoint handles the callback from the OAuth provider for the web-based redirect flow.
+        /// It sets session cookies and redirects the browser to the frontend.
+        /// </summary>
         [HttpGet("{provider}/callback")]
         public async Task<IActionResult> Callback(string provider, [FromQuery] string code, [FromQuery] string? state)
         {
@@ -63,21 +92,9 @@ namespace Turboapi.Presentation.Controllers
                     // For web flow, set the session cookies
                     _cookieManager.SetAuthCookies(success.AccessToken, success.RefreshToken, _jwtConfig.TokenExpirationMinutes);
 
-                    // Check if the client is an API client (like Flutter mobile) expecting JSON,
-                    // or a browser that needs a redirect.
-                    var isApiRequest = Request.Headers.Accept.ToString().Contains("application/json");
-
-                    if (isApiRequest)
-                    {
-                        // For mobile/API clients, return the tokens directly in the body.
-                        return Ok(success);
-                    }
-                    else
-                    {
-                        // For web clients (browsers), redirect to the frontend success page.
-                        var frontendUrl = _configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:8080";
-                        return Redirect($"{frontendUrl}/login/success");
-                    }
+                    // For web clients (browsers), redirect to the frontend success page.
+                    var frontendUrl = _configuration.GetValue<string>("FrontendUrl") ?? "http://localhost:8080";
+                    return Redirect($"{frontendUrl}/login/success");
                 },
                 failure => HandleResult(result) // HandleResult maps the error to a status code.
             );
@@ -85,6 +102,7 @@ namespace Turboapi.Presentation.Controllers
         
         private string CreateCallbackRedirectUri(string provider)
         {
+            // This might need to be more dynamic if you add more providers.
             var googleSettings = HttpContext.RequestServices.GetRequiredService<IOptions<GoogleAuthSettings>>().Value;
             return googleSettings.RedirectUri;
         }
