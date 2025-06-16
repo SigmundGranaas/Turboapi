@@ -26,13 +26,12 @@ namespace Turboapi.Integration.Tests.Fixtures
             _logger = loggerFactory.CreateLogger<KafkaContainerFixture>();
 
             KafkaContainer = new KafkaBuilder()
-                .WithImage("confluentinc/cp-kafka:latest")
                 // The default wait strategy can time out in slow CI environments.
                 // We replace it with a more reliable strategy that waits for a specific log message
                 // and has a longer timeout, as specified by the configuration lambda.
                 .WithWaitStrategy(Wait.ForUnixContainer()
-                    .UntilMessageIsLogged(@"INFO \[KafkaServer id=\d+\] started", // Wait for the "started" log message.
-                        waitStrategyOption => waitStrategyOption.WithTimeout(TimeSpan.FromMinutes(2)))) // Set a 2-minute timeout for this wait.
+                    .UntilMessageIsLogged(@"INFO \[KafkaServer id=\d+\] started",
+                        waitStrategyOption => waitStrategyOption.WithTimeout(TimeSpan.FromMinutes(2))))
                 .Build();
         }
 
