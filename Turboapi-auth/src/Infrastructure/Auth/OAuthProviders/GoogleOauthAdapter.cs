@@ -1,3 +1,4 @@
+// ==== FILE: /home/sigmund/development/turboapi/Turboapi/Turboapi-auth/src/Infrastructure/Auth/OAuthProviders/GoogleOauthAdapter.cs ====
 using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text.Json;
