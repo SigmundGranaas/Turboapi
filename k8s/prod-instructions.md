@@ -76,6 +76,9 @@ kubectl get ingress
 If you see `ImagePullBackOff` errors, you may need to set up registry credentials:
 
 ```bash
+# If the secret already exists.    
+kubectl delete secret ghcr-auth --namespace default
+
 # Create a docker-registry secret for ghcr.io
 kubectl create secret docker-registry ghcr-auth \
   --docker-server=ghcr.io \
@@ -87,7 +90,10 @@ kubectl create secret docker-registry ghcr-auth \
 kubectl patch serviceaccount default \
   -p '{"imagePullSecrets": [{"name": "ghcr-auth"}]}' \
   --namespace default
+ 
 ```
+
+
 
 ### Database Migration Issues
 
