@@ -79,8 +79,22 @@ builder.Services.AddSingleton<ITopicInitializer, SimpleKafkaTopicInitializer>();
 
 // Register event infrastructure
 builder.Services.AddSingleton<IEventTopicResolver, ActivityEventTopicResolver>();
-builder.Services.AddSingleton<IEventStoreWriter, KafkaEventStoreWriter>();
 builder.Services.AddSingleton<IKafkaConsumerFactory, KafkaConsumerFactory>();
+
+// Outbox-driven publish path: command handlers append to the outbox in the
+// same DB transaction as the aggregate change. A hosted dispatcher polls
+// the outbox and publishes envelopes through IMessageTransport. The
+// transport today is a thin bridge over Confluent.Kafka so existing
+// Kafka consumers (registered below) still receive messages; step 5 of
+// the messaging refactor swaps this transport for NATS JetStream.
+builder.Services.AddScoped<Turbo.Outbox.IOutbox, Turbo.Outbox.Postgres.PgOutbox<ActivityContext>>();
+builder.Services.AddSingleton<Func<Turbo.Messaging.EventEnvelope, string>>(_ =>
+{
+    var resolver = new Turboauth_activity.infrastructure.ActivityEnvelopeTopicResolver();
+    return resolver.ResolveTopicFor;
+});
+builder.Services.AddSingleton<Turbo.Messaging.IMessageTransport, Turboauth_activity.infrastructure.KafkaMessageTransport>();
+builder.Services.AddHostedService<Turbo.Outbox.Postgres.OutboxDispatcherHostedService<ActivityContext>>();
 
 builder.Services.AddKafkaConsumer<ActivityCreated, ActivityEventHandler>("activities", "activity-created");
 builder.Services.AddKafkaConsumer<ActivityUpdated, ActivityEventHandler>("activities", "activity-updated");
