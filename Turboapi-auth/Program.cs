@@ -248,3 +248,5 @@ public static class CommandHandlerServiceCollectionExtensions
         return services;
     }
 }
+
+public partial class Program { }

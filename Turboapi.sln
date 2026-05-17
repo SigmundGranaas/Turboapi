@@ -22,6 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurboAuthentication", "Turb
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo.Activity.Behaviour", "tests\Turbo.Activity.Behaviour\Turbo.Activity.Behaviour.csproj", "{B1A11A01-0001-4A0E-B0AC-0E1A7E1A0001}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo.Auth.Behaviour", "tests\Turbo.Auth.Behaviour\Turbo.Auth.Behaviour.csproj", "{B1A11A01-0002-4A0E-B0AC-0E1A7E1A0002}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -60,5 +62,9 @@ Global
 		{B1A11A01-0001-4A0E-B0AC-0E1A7E1A0001}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B1A11A01-0001-4A0E-B0AC-0E1A7E1A0001}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B1A11A01-0001-4A0E-B0AC-0E1A7E1A0001}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B1A11A01-0002-4A0E-B0AC-0E1A7E1A0002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B1A11A01-0002-4A0E-B0AC-0E1A7E1A0002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B1A11A01-0002-4A0E-B0AC-0E1A7E1A0002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B1A11A01-0002-4A0E-B0AC-0E1A7E1A0002}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
