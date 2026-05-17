@@ -23,9 +23,6 @@
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.5" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
 
-        <!-- Kafka Integration -->
-        <PackageReference Include="Confluent.Kafka" Version="2.10.0" />
-
         <!-- OpenTelemetry - All versions must be consistent -->
         <PackageReference Include="OpenTelemetry" Version="1.12.0" />
         <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
