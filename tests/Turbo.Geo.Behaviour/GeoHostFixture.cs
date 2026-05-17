@@ -3,15 +3,15 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
 using Turbo_pg_data.db;
-using Turboapi.infrastructure;
 using Turboapi_geo.domain.query.model;
 using Xunit;
 
@@ -26,8 +26,11 @@ public sealed class GeoHostFixture : IAsyncLifetime
         .WithPassword("postgres")
         .Build();
 
-    private readonly KafkaContainer _kafka = new KafkaBuilder()
-        .WithImage("confluentinc/cp-kafka:6.2.10")
+    private readonly IContainer _nats = new ContainerBuilder()
+        .WithImage("nats:2.10-alpine")
+        .WithCommand("-js")
+        .WithPortBinding(4222, true)
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
     private WebApplicationFactory<Program>? _factory;
@@ -45,15 +48,18 @@ public sealed class GeoHostFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Task.WhenAll(_postgres.StartAsync(), _kafka.StartAsync());
+        await Task.WhenAll(_postgres.StartAsync(), _nats.StartAsync());
 
         var setup = new DatabaseSetupService(_postgres.GetConnectionString(), LocateGeoMigrations());
         await setup.InitializeDatabaseAsync();
         await setup.RunMigrationsAsync();
 
+        var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
+
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {
                 _jwtSecret = context.Configuration["Jwt:Key"]
@@ -65,12 +71,6 @@ public sealed class GeoHostFixture : IAsyncLifetime
 
                 services.AddDbContext<LocationReadContext>(o =>
                     o.UseNpgsql(_postgres.GetConnectionString(), x => x.UseNetTopologySuite()));
-
-                services.Configure<KafkaSettings>(o =>
-                {
-                    o.BootstrapServers = _kafka.GetBootstrapAddress();
-                    o.LocationEventsTopic = "location-events";
-                });
             });
         });
     }
@@ -78,11 +78,11 @@ public sealed class GeoHostFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _factory?.Dispose();
-        await Task.WhenAll(_kafka.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
+        await Task.WhenAll(_nats.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
     }
 
-    public Task PauseBrokerAsync() => _kafka.PauseAsync();
-    public Task UnpauseBrokerAsync() => _kafka.UnpauseAsync();
+    public Task PauseBrokerAsync() => _nats.PauseAsync();
+    public Task UnpauseBrokerAsync() => _nats.UnpauseAsync();
 
     private static string LocateGeoMigrations()
     {

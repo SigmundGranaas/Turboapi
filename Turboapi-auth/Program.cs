@@ -20,9 +20,9 @@ using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
 using Turboapi.Application.UseCases.Commands.RevokeRefreshToken;
 using Turboapi.Application.UseCases.Queries.ValidateSession;
 using Turboapi.Domain.Interfaces;
+using Turbo.Messaging.Nats;
 using Turboapi.Infrastructure.Auth;
 using Turboapi.Infrastructure.Auth.OAuthProviders;
-using Turboapi.Infrastructure.Messaging;
 using Turboapi.Infrastructure.Persistence;
 using Turboapi.Infrastructure.Persistence.Repositories;
 using Turboapi.Presentation.Cookies;
@@ -156,19 +156,22 @@ builder.Services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieM
 builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection("Authentication:Google"));
 builder.Services.AddHttpClient<GoogleOAuthAdapter>();
 builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
-builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
-
 // Outbox-driven publish path:
 //  - UnitOfWork.SaveChangesAsync drains aggregate domain events into the
 //    transactional outbox in the same database transaction.
 //  - A hosted dispatcher polls the outbox and publishes envelopes through
-//    IMessageTransport. The temporary AuthKafkaMessageTransport forwards
-//    them to the existing "authentication-events" Kafka topic so external
-//    consumers keep working. Step 5 of the messaging refactor replaces
-//    this transport with NATS JetStream.
+//    IMessageTransport (NATS JetStream). External auditors can attach
+//    durable consumers to turbo.auth.> subjects on the JetStream stream.
 builder.Services.AddScoped<Turbo.Outbox.IOutbox, Turbo.Outbox.Postgres.PgOutbox<AuthDbContext>>();
-builder.Services.AddSingleton<Turbo.Messaging.IMessageTransport, Turboapi.Infrastructure.Messaging.AuthKafkaMessageTransport>();
 builder.Services.AddHostedService<Turbo.Outbox.Postgres.OutboxDispatcherHostedService<AuthDbContext>>();
+
+builder.Services.AddNatsMessaging(o =>
+{
+    o.Url = builder.Configuration["Nats:Url"] ?? "nats://localhost:4222";
+    o.StreamName = "TURBO_AUTH";
+    o.Subjects = ["turbo.auth.>"];
+    o.SubjectPrefix = "turbo.auth";
+});
 
 // #############################################
 // # 5. Observability (OpenTelemetry)

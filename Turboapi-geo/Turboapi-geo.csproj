@@ -44,6 +44,7 @@
         <ProjectReference Include="../Turbo-event/Turbo-event.csproj" />
         <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" Version="0.0.1" />
         <ProjectReference Include="../src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj" />
+        <ProjectReference Include="../src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj" />
         <PackageReference Include="xunit" Version="2.9.3" />
         <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

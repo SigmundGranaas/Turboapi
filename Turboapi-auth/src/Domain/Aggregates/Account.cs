@@ -3,7 +3,6 @@ using Turboapi.Application.Results.Errors;
 using Turboapi.Domain.Events;
 using Turboapi.Domain.Exceptions;
 using Turboapi.Domain.Interfaces;
-using Turboapi.Infrastructure.Messaging;
 
 namespace Turboapi.Domain.Aggregates
 {

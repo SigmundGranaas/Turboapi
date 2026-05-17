@@ -1,5 +1,4 @@
-using System.Text.Json.Serialization; 
-using Turboapi.Infrastructure.Messaging;
+using System.Text.Json.Serialization;
 
 namespace Turboapi.Domain.Events
 {

@@ -1,14 +1,14 @@
 using System.Reflection;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
 using Turbo_pg_data.db;
 using Turboapi.Infrastructure.Persistence;
 using Xunit;
-using KafkaSettings = Turboapi.Infrastructure.Messaging.KafkaSettings;
 
 namespace Turbo.Auth.Behaviour;
 
@@ -20,8 +20,11 @@ public sealed class AuthHostFixture : IAsyncLifetime
         .WithPassword("postgres")
         .Build();
 
-    private readonly KafkaContainer _kafka = new KafkaBuilder()
-        .WithImage("confluentinc/cp-kafka:6.2.10")
+    private readonly IContainer _nats = new ContainerBuilder()
+        .WithImage("nats:2.10-alpine")
+        .WithCommand("-js")
+        .WithPortBinding(4222, true)
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
     private WebApplicationFactory<Program>? _factory;
@@ -30,15 +33,18 @@ public sealed class AuthHostFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Task.WhenAll(_postgres.StartAsync(), _kafka.StartAsync());
+        await Task.WhenAll(_postgres.StartAsync(), _nats.StartAsync());
 
         var setup = new DatabaseSetupService(_postgres.GetConnectionString(), LocateAuthMigrations());
         await setup.InitializeDatabaseAsync();
         await setup.RunMigrationsAsync();
 
+        var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
+
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {
                 var dbDescriptor = services.SingleOrDefault(d =>
@@ -46,11 +52,6 @@ public sealed class AuthHostFixture : IAsyncLifetime
                 if (dbDescriptor is not null) services.Remove(dbDescriptor);
 
                 services.AddDbContext<AuthDbContext>(o => o.UseNpgsql(_postgres.GetConnectionString()));
-
-                services.Configure<KafkaSettings>(o =>
-                {
-                    o.BootstrapServers = _kafka.GetBootstrapAddress();
-                });
             });
         });
     }
@@ -58,11 +59,11 @@ public sealed class AuthHostFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _factory?.Dispose();
-        await Task.WhenAll(_kafka.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
+        await Task.WhenAll(_nats.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
     }
 
-    public Task PauseBrokerAsync() => _kafka.PauseAsync();
-    public Task UnpauseBrokerAsync() => _kafka.UnpauseAsync();
+    public Task PauseBrokerAsync() => _nats.PauseAsync();
+    public Task UnpauseBrokerAsync() => _nats.UnpauseAsync();
 
     private static string LocateAuthMigrations()
     {
