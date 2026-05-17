@@ -26,6 +26,7 @@ builder.Services.AddNatsMessaging(o =>
     o.Subjects = ["turbo.geo.>"];
     o.SubjectPrefix = "turbo.geo";
 });
+builder.Services.AddGeoNatsSubscribers();
 
 var otel = builder.Services.AddOpenTelemetry();
 otel.ConfigureResource(resource => resource

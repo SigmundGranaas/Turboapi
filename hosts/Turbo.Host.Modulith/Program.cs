@@ -1,6 +1,7 @@
 using Turbo.Messaging.InProcess;
 using Turboapi;
 using Turboapi_geo;
+using Turboapi_geo.domain.events;
 using Turboauth_activity;
 using Turboauth_activity.domain.events;
 
@@ -24,6 +25,9 @@ builder.Services.AddInProcessMessaging();
 builder.Services.AddInProcessSubscriber<ActivityCreated>("turbo.activity.ActivityCreated");
 builder.Services.AddInProcessSubscriber<ActivityUpdated>("turbo.activity.ActivityUpdated");
 builder.Services.AddInProcessSubscriber<ActivityDeleted>("turbo.activity.ActivityDeleted");
+builder.Services.AddInProcessSubscriber<LocationCreated>("turbo.geo.LocationCreated");
+builder.Services.AddInProcessSubscriber<LocationUpdated>("turbo.geo.LocationUpdated");
+builder.Services.AddInProcessSubscriber<LocationDeleted>("turbo.geo.LocationDeleted");
 
 var app = builder.Build();
 

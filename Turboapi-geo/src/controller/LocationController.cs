@@ -70,13 +70,23 @@ public class LocationsController : ControllerBase
             );
 
             var locationId = await _createHandler.Handle(command);
-            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(locationId, userId));
-            
-            return CreatedAtAction(
-                nameof(GetById), 
-                new { id = locationId }, 
-                LocationResponse.FromDto(location)
-            );
+
+            // The read-model projection is async (outbox → transport →
+            // subscriber). The response echoes the request as the authoritative
+            // representation of the just-committed write; the read endpoint
+            // catches up shortly after via the projection.
+            var response = new LocationResponse
+            {
+                Id = locationId,
+                Geometry = request.Geometry,
+                Display = new DisplayData
+                {
+                    Name = request.Display.Name,
+                    Description = request.Display.Description ?? "",
+                    Icon = request.Display.Icon ?? ""
+                }
+            };
+            return CreatedAtAction(nameof(GetById), new { id = locationId }, response);
         }
         catch (UnauthorizedAccessException)
         {
@@ -128,10 +138,27 @@ public class LocationsController : ControllerBase
                 locationUpdateParams // Pass the unified parameters
             );
 
-            await _updateHandler.Handle(command);
-            var location = await _locationQueryHandler.Handle(new GetLocationByIdQuery(id, userId));
+            var location = await _updateHandler.Handle(command);
 
-            return Ok(LocationResponse.FromDto(location));
+            // Build the response from the freshly-mutated aggregate, not the
+            // read model — the projection runs asynchronously through the
+            // outbox + transport and may not have caught up yet.
+            var response = new LocationResponse
+            {
+                Id = location.Id,
+                Geometry = new GeometryData
+                {
+                    Longitude = location.Coordinates.Longitude,
+                    Latitude = location.Coordinates.Latitude
+                },
+                Display = new DisplayData
+                {
+                    Name = location.Display.Name,
+                    Description = location.Display.Description ?? "",
+                    Icon = location.Display.Icon ?? ""
+                }
+            };
+            return Ok(response);
         }
         catch (UnauthorizedAccessException)
         {

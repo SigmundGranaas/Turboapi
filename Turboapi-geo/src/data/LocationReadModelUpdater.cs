@@ -1,12 +1,12 @@
 using System.Diagnostics;
 using NetTopologySuite.Geometries;
+using Turbo.Messaging;
 using Turboapi_geo.data.model;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
 
-public interface ILocationEventHandler<in TEvent> where TEvent : DomainEvent
+public interface ILocationEventHandler<in TEvent> : IEventHandler<TEvent> where TEvent : DomainEvent, IDomainEvent
 {
-    Task HandleAsync(TEvent @event, CancellationToken cancellationToken);
 }
 
 public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>

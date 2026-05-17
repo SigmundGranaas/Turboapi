@@ -107,10 +107,16 @@ public sealed class ModulithBehaviour
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await create.Content.ReadFromJsonAsync<LocationResponse>();
 
-        var get = await client.GetAsync($"/api/geo/Locations/{created!.Id}");
-        get.IsSuccessStatusCode.Should().BeTrue();
-        var body = await get.Content.ReadFromJsonAsync<LocationResponse>();
-        body!.Display.Name.Should().Be("London");
+        // The projection runs through the in-process subscriber chain.
+        var body = await Eventually.Returns<LocationResponse>(async () =>
+        {
+            var r = await client.GetAsync($"/api/geo/Locations/{created!.Id}");
+            return r.IsSuccessStatusCode
+                ? await r.Content.ReadFromJsonAsync<LocationResponse>()
+                : null;
+        }, description: "Geo GET reflects POST after in-process projection");
+
+        body.Display.Name.Should().Be("London");
         body.Geometry.Longitude.Should().BeApproximately(-0.1, 0.0001);
     }
 

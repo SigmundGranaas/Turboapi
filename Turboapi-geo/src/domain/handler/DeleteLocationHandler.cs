@@ -1,5 +1,4 @@
 using Turbo.Outbox;
-using Turboapi_geo.data;
 using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.query;
@@ -13,18 +12,15 @@ public class DeleteLocationHandler
     private readonly IOutbox<LocationReadContext> _outbox;
     private readonly LocationReadContext _db;
     private readonly ILocationReadRepository _locationReadRepository;
-    private readonly IDirectReadModelProjector _readModelHandler;
 
     public DeleteLocationHandler(
         IOutbox<LocationReadContext> outbox,
         LocationReadContext db,
-        ILocationReadRepository locationReadRepository,
-        IDirectReadModelProjector readModelHandler)
+        ILocationReadRepository locationReadRepository)
     {
         _outbox = outbox;
         _db = db;
         _locationReadRepository = locationReadRepository;
-        _readModelHandler = readModelHandler;
     }
 
     public async Task Handle(DeleteLocationCommand command)
@@ -35,7 +31,6 @@ public class DeleteLocationHandler
 
         location.Delete(command.UserId);
 
-        await _readModelHandler.ProjectEventsAsync(location.Events);
         await _outbox.AppendGeoEventsAsync(location.Id, location.Events);
         await _db.SaveChangesAsync();
     }

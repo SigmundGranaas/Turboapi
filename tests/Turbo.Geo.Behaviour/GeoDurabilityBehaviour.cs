@@ -8,13 +8,13 @@ using Xunit;
 namespace Turbo.Geo.Behaviour;
 
 /// <summary>
-/// Failure-mode guarantee: when the broker is unreachable at the moment a
-/// write commits, the write still succeeds with 201 and a subsequent read
-/// returns the body. Today Geo also projects synchronously through
-/// DirectReadModelProjector inside the same DB transaction as the outbox
-/// write, so the read is available immediately rather than after the
-/// dispatcher catches up — both behaviours are user-visible and acceptable
-/// expressions of the same guarantee.
+/// Failure-mode guarantee: when the broker is unreachable at the moment
+/// a write commits, the write still succeeds with 201, the read endpoint
+/// returns 404 while the broker is down (the projection runs through the
+/// subscriber, which depends on the dispatcher), and the read endpoint
+/// eventually returns the body after the broker comes back. This is the
+/// same shape as the Activity durability test; both modules now run the
+/// projection asynchronously through the outbox + transport pipeline.
 /// </summary>
 [Collection("GeoHost")]
 public sealed class GeoDurabilityBehaviour
@@ -23,7 +23,7 @@ public sealed class GeoDurabilityBehaviour
     public GeoDurabilityBehaviour(GeoHostFixture host) => _host = host;
 
     [Fact]
-    public async Task creates_succeed_and_become_visible_even_while_the_broker_is_down()
+    public async Task creates_succeed_and_become_visible_after_the_broker_recovers()
     {
         var owner = Guid.NewGuid();
         var client = _host.CreateClientAs(owner);
@@ -42,20 +42,25 @@ public sealed class GeoDurabilityBehaviour
                 "the write path must commit to the outbox even when the broker is unreachable");
             locationId = (await create.Content.ReadFromJsonAsync<LocationResponse>())!.Id;
 
-            var get = await client.GetAsync($"/api/geo/Locations/{locationId}");
-            get.IsSuccessStatusCode.Should().BeTrue(
-                "the synchronous read-model projection runs in the same transaction as the outbox write");
-            var body = await get.Content.ReadFromJsonAsync<LocationResponse>();
-            body!.Display.Name.Should().Be("Recorded during outage");
+            var whilePaused = await client.GetAsync($"/api/geo/Locations/{locationId}");
+            whilePaused.StatusCode.Should().Be(HttpStatusCode.NotFound,
+                "the projection runs through the broker; with the broker paused the read model cannot catch up");
         }
         finally
         {
             await _host.UnpauseBrokerAsync();
         }
 
-        // After recovery the same endpoint still answers — confirming the outage
-        // did not corrupt or roll back the committed state.
-        var afterRecovery = await client.GetAsync($"/api/geo/Locations/{locationId}");
-        afterRecovery.IsSuccessStatusCode.Should().BeTrue();
+        var recovered = await Eventually.Returns<LocationResponse>(async () =>
+        {
+            var r = await client.GetAsync($"/api/geo/Locations/{locationId}");
+            return r.IsSuccessStatusCode
+                ? await r.Content.ReadFromJsonAsync<LocationResponse>()
+                : null;
+        }, timeout: TimeSpan.FromSeconds(20),
+           description: $"GET /api/geo/Locations/{locationId} after broker recovery");
+
+        recovered.Id.Should().Be(locationId);
+        recovered.Display.Name.Should().Be("Recorded during outage");
     }
 }
