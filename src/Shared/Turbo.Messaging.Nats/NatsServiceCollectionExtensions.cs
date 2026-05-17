@@ -9,7 +9,7 @@ public static class NatsServiceCollectionExtensions
     /// <summary>
     /// Registers <see cref="NatsMessageTransport"/> as the publish-side
     /// <see cref="IMessageTransport"/> and the host that consumes any
-    /// subscriptions added via <see cref="AddNatsSubscriber{TEvent, THandler}"/>.
+    /// subscriptions added via <see cref="AddNatsSubscriber{TEvent}"/>.
     /// </summary>
     public static IServiceCollection AddNatsMessaging(
         this IServiceCollection services,
@@ -22,27 +22,16 @@ public static class NatsServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a NATS JetStream subscription for one event type, routed
-    /// to <typeparamref name="THandler"/> through a fresh DI scope per message.
-    /// <typeparamref name="THandler"/> must declare a public
-    /// <c>Task HandleAsync(TEvent, CancellationToken)</c> method.
+    /// Registers a JetStream subscription that resolves
+    /// <see cref="IEventHandler{TEvent}"/> from a fresh DI scope and
+    /// invokes <c>HandleAsync</c> for each delivered envelope.
     /// </summary>
-    public static IServiceCollection AddNatsSubscriber<TEvent, THandler>(
+    public static IServiceCollection AddNatsSubscriber<TEvent>(
         this IServiceCollection services,
         string subject,
         string durableName)
         where TEvent : class, IDomainEvent
-        where THandler : class
     {
-        services.TryAddScoped<THandler>();
-
-        var method = typeof(THandler).GetMethod(
-            "HandleAsync",
-            [typeof(TEvent), typeof(CancellationToken)])
-            ?? throw new InvalidOperationException(
-                $"{typeof(THandler).Name} does not declare " +
-                $"public Task HandleAsync({typeof(TEvent).Name}, CancellationToken)");
-
         services.AddSingleton(new NatsSubscriberRegistration
         {
             Subject = subject,
@@ -53,8 +42,8 @@ public static class NatsServiceCollectionExtensions
                 var evt = JsonSerializer.Deserialize<TEvent>(data.Span)
                           ?? throw new InvalidOperationException(
                               $"NATS payload for subject {subject} deserialized to null for {typeof(TEvent).Name}");
-                var handler = sp.GetRequiredService<THandler>();
-                await (Task)method.Invoke(handler, [evt, ct])!;
+                var handler = sp.GetRequiredService<IEventHandler<TEvent>>();
+                await handler.HandleAsync(evt, ct);
             }
         });
         return services;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using Turbo.Messaging;
 using Turbo.Messaging.Nats;
 using Turboauth_activity.data;
 using Turboauth_activity.domain.events;
@@ -83,11 +84,11 @@ builder.Services.AddNatsMessaging(o =>
     o.SubjectPrefix = "turbo.activity";
 });
 
-builder.Services.AddNatsSubscriber<ActivityCreated, ActivityEventHandler>(
+builder.Services.AddNatsSubscriber<ActivityCreated>(
     "turbo.activity.ActivityCreated", "activity-created");
-builder.Services.AddNatsSubscriber<ActivityUpdated, ActivityEventHandler>(
+builder.Services.AddNatsSubscriber<ActivityUpdated>(
     "turbo.activity.ActivityUpdated", "activity-updated");
-builder.Services.AddNatsSubscriber<ActivityDeleted, ActivityEventHandler>(
+builder.Services.AddNatsSubscriber<ActivityDeleted>(
     "turbo.activity.ActivityDeleted", "activity-deleted");
 
 builder.Services.AddScoped<ActivityQueryHandler>();

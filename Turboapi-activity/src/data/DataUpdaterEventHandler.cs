@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Turbo.Messaging;
 using Turboauth_activity.domain.events;
 using Turboauth_activity.domain.query;
 
