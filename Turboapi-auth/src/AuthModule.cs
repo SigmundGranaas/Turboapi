@@ -1,0 +1,168 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
+using Turboapi.Application.Behaviors;
+using Turboapi.Application.Contracts.V1.Auth;
+using Turboapi.Application.Interfaces;
+using Turboapi.Application.Results;
+using Turboapi.Application.Results.Errors;
+using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
+using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RefreshToken;
+using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Application.UseCases.Commands.RevokeRefreshToken;
+using Turboapi.Application.UseCases.Queries.ValidateSession;
+using Turboapi.Domain.Interfaces;
+using Turboapi.Infrastructure.Auth;
+using Turboapi.Infrastructure.Auth.OAuthProviders;
+using Turboapi.Infrastructure.Persistence;
+using Turboapi.Infrastructure.Persistence.Repositories;
+using Turboapi.Presentation.Controllers;
+using Turboapi.Presentation.Cookies;
+using Turboapi.Presentation.Security;
+
+namespace Turboapi;
+
+/// <summary>
+/// Composition entry point for the Auth module. Wires persistence,
+/// the UnitOfWork + outbox path, the JWT issuance pipeline, OAuth
+/// adapters, and the controllers. Owns the shared auth scheme
+/// (Cookie + JwtBearer) because Auth is the module that issues the
+/// tokens the other modules validate.
+/// </summary>
+public static class AuthModule
+{
+    public const string ConnectionStringName = "Auth";
+
+    public static IServiceCollection AddAuthModule(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var connectionString = ResolveConnectionString(configuration);
+
+        services.AddDbContext<AuthDbContext>(options =>
+            options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
+
+        services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IOutbox, PgOutbox<AuthDbContext>>();
+        services.AddHostedService<OutboxDispatcherHostedService<AuthDbContext>>();
+
+        services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();
+        services.AddCommandHandler<LoginUserWithPasswordCommand, Result<AuthTokenResponse, LoginError>, LoginUserWithPasswordCommandHandler>();
+        services.AddCommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>, RefreshTokenCommandHandler>();
+        services.AddCommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>, AuthenticateWithOAuthCommandHandler>();
+        services.AddCommandHandler<RevokeRefreshTokenCommand, Result<RefreshTokenError>, RevokeRefreshTokenCommandHandler>();
+        services.AddScoped<ValidateSessionQueryHandler>();
+
+        services.AddHttpClient();
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IAuthTokenService, JwtService>();
+        services.Configure<JwtConfig>(configuration.GetSection("Jwt"));
+        services.Configure<CookieSettings>(configuration.GetSection("Cookie"));
+        services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieManager>();
+        services.Configure<GoogleAuthSettings>(configuration.GetSection("Authentication:Google"));
+        services.AddHttpClient<GoogleOAuthAdapter>();
+        services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
+
+        services.AddHttpContextAccessor();
+        services.AddControllers().AddApplicationPart(typeof(AuthController).Assembly);
+
+        services.AddTurboSharedAuthentication(configuration);
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the Cookie + JwtBearer authentication scheme that the
+    /// other modules also validate against. Idempotent across modules
+    /// — only the first call sets up the scheme; subsequent calls in
+    /// the same DI container are no-ops via TryAdd.
+    /// </summary>
+    public static IServiceCollection AddTurboSharedAuthentication(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var jwtConfig = configuration.GetSection("Jwt").Get<JwtConfig>()
+                        ?? throw new InvalidOperationException("Jwt configuration section is missing");
+
+        services.AddSingleton(jwtConfig);
+        services.AddSingleton<ISecureDataFormat<AuthenticationTicket>, JwtDataFormat>();
+
+        var authBuilder = services
+            .AddAuthentication(opt =>
+            {
+                opt.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddCookie(options =>
+            {
+                options.Cookie.Name = CookieManager.AccessTokenCookieName;
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Lax;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Events.OnRedirectToLogin = context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    return Task.CompletedTask;
+                };
+                options.Events.OnRedirectToAccessDenied = context =>
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    return Task.CompletedTask;
+                };
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtConfig.Key)),
+                    ValidateIssuer = true,
+                    ValidIssuer = jwtConfig.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = jwtConfig.Audience,
+                    ValidateLifetime = true,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+        services.AddAuthorization();
+        return services;
+    }
+
+    private static string ResolveConnectionString(IConfiguration configuration)
+    {
+        var fromConnectionStrings = configuration.GetConnectionString(ConnectionStringName);
+        if (!string.IsNullOrEmpty(fromConnectionStrings))
+            return fromConnectionStrings;
+
+        var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
+        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
+        var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "auth";
+        var user = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
+        var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword";
+        return $"Host={host};Port={port};Database={database};Username={user};Password={password}";
+    }
+}
+
+public static class CommandHandlerServiceCollectionExtensions
+{
+    public static IServiceCollection AddCommandHandler<TCommand, TResponse, THandler>(this IServiceCollection services)
+        where THandler : class, ICommandHandler<TCommand, TResponse>
+    {
+        services.AddScoped<THandler>();
+        services.AddScoped<ICommandHandler<TCommand, TResponse>>(provider =>
+            new UnitOfWorkCommandHandlerDecorator<TCommand, TResponse>(
+                provider.GetRequiredService<THandler>(),
+                provider.GetRequiredService<IUnitOfWork>())
+        );
+        return services;
+    }
+}
