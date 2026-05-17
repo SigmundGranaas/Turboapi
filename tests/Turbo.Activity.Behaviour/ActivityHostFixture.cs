@@ -3,18 +3,17 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
-using Turbo_event.kafka;
 using Turbo_pg_data.db;
 using Xunit;
 using ActivityContext = Turboauth_activity.data.ActivityContext;
-using KafkaSettings = Turbo_event.kafka.KafkaSettings;
 
 namespace Turbo.Activity.Behaviour;
 
@@ -26,8 +25,11 @@ public sealed class ActivityHostFixture : IAsyncLifetime
         .WithPassword("postgres")
         .Build();
 
-    private readonly KafkaContainer _kafka = new KafkaBuilder()
-        .WithImage("confluentinc/cp-kafka:6.2.10")
+    private readonly IContainer _nats = new ContainerBuilder()
+        .WithImage("nats:2.10-alpine")
+        .WithCommand("-js")
+        .WithPortBinding(4222, true)
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
     private WebApplicationFactory<Program>? _factory;
@@ -45,15 +47,18 @@ public sealed class ActivityHostFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Task.WhenAll(_postgres.StartAsync(), _kafka.StartAsync());
+        await Task.WhenAll(_postgres.StartAsync(), _nats.StartAsync());
 
         var setup = new DatabaseSetupService(_postgres.GetConnectionString(), LocateActivityMigrations());
         await setup.InitializeDatabaseAsync();
         await setup.RunMigrationsAsync();
 
+        var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
+
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {
                 _jwtSecret = context.Configuration["Jwt:Key"]
@@ -64,15 +69,6 @@ public sealed class ActivityHostFixture : IAsyncLifetime
                 if (dbDescriptor is not null) services.Remove(dbDescriptor);
 
                 services.AddDbContext<ActivityContext>(o => o.UseNpgsql(_postgres.GetConnectionString()));
-
-                foreach (var d in services.Where(d => d.ServiceType == typeof(KafkaSettings)).ToList())
-                    services.Remove(d);
-
-                services.Configure<KafkaSettings>(o =>
-                {
-                    o.BootstrapServers = _kafka.GetBootstrapAddress();
-                    o.Topic = "activities";
-                });
             });
         });
     }
@@ -80,11 +76,11 @@ public sealed class ActivityHostFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         _factory?.Dispose();
-        await Task.WhenAll(_kafka.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
+        await Task.WhenAll(_nats.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
     }
 
-    public Task PauseBrokerAsync() => _kafka.PauseAsync();
-    public Task UnpauseBrokerAsync() => _kafka.UnpauseAsync();
+    public Task PauseBrokerAsync() => _nats.PauseAsync();
+    public Task UnpauseBrokerAsync() => _nats.UnpauseAsync();
 
     private static string LocateActivityMigrations()
     {

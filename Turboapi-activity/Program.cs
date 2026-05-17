@@ -3,14 +3,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
-using Turbo_event.kafka;
-using Turbo_event.test.kafka;
-using Turboapi.Infrastructure.Kafka;
+using Turbo.Messaging.Nats;
 using Turboauth_activity.data;
 using Turboauth_activity.domain.events;
 using Turboauth_activity.domain.handler;
 using Turboauth_activity.domain.query;
-using KafkaSettings = Turbo_event.kafka.KafkaSettings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,35 +67,28 @@ builder.Services.AddScoped<IEventHandler<ActivityCreated>, ActivityEventHandler>
 builder.Services.AddScoped<IEventHandler<ActivityUpdated>, ActivityEventHandler>();
 builder.Services.AddScoped<IEventHandler<ActivityDeleted>, ActivityEventHandler>();
 
-// Kafka
-builder.Services.Configure<KafkaSettings>(
-    builder.Configuration.GetSection("Kafka"));
-
-// Register the topic initializer
-builder.Services.AddSingleton<ITopicInitializer, SimpleKafkaTopicInitializer>();
-
-// Register event infrastructure
-builder.Services.AddSingleton<IEventTopicResolver, ActivityEventTopicResolver>();
-builder.Services.AddSingleton<IKafkaConsumerFactory, KafkaConsumerFactory>();
-
 // Outbox-driven publish path: command handlers append to the outbox in the
 // same DB transaction as the aggregate change. A hosted dispatcher polls
 // the outbox and publishes envelopes through IMessageTransport. The
-// transport today is a thin bridge over Confluent.Kafka so existing
-// Kafka consumers (registered below) still receive messages; step 5 of
-// the messaging refactor swaps this transport for NATS JetStream.
+// transport is NATS JetStream; subscribers receive via the JetStream
+// consumer host registered below.
 builder.Services.AddScoped<Turbo.Outbox.IOutbox, Turbo.Outbox.Postgres.PgOutbox<ActivityContext>>();
-builder.Services.AddSingleton<Func<Turbo.Messaging.EventEnvelope, string>>(_ =>
-{
-    var resolver = new Turboauth_activity.infrastructure.ActivityEnvelopeTopicResolver();
-    return resolver.ResolveTopicFor;
-});
-builder.Services.AddSingleton<Turbo.Messaging.IMessageTransport, Turboauth_activity.infrastructure.KafkaMessageTransport>();
 builder.Services.AddHostedService<Turbo.Outbox.Postgres.OutboxDispatcherHostedService<ActivityContext>>();
 
-builder.Services.AddKafkaConsumer<ActivityCreated, ActivityEventHandler>("activities", "activity-created");
-builder.Services.AddKafkaConsumer<ActivityUpdated, ActivityEventHandler>("activities", "activity-updated");
-builder.Services.AddKafkaConsumer<ActivityDeleted, ActivityEventHandler>("activities", "activity-deleted");
+builder.Services.AddNatsMessaging(o =>
+{
+    o.Url = builder.Configuration["Nats:Url"] ?? "nats://localhost:4222";
+    o.StreamName = "TURBO_ACTIVITY";
+    o.Subjects = ["turbo.activity.>"];
+    o.SubjectPrefix = "turbo.activity";
+});
+
+builder.Services.AddNatsSubscriber<ActivityCreated, ActivityEventHandler>(
+    "turbo.activity.ActivityCreated", "activity-created");
+builder.Services.AddNatsSubscriber<ActivityUpdated, ActivityEventHandler>(
+    "turbo.activity.ActivityUpdated", "activity-updated");
+builder.Services.AddNatsSubscriber<ActivityDeleted, ActivityEventHandler>(
+    "turbo.activity.ActivityDeleted", "activity-deleted");
 
 builder.Services.AddScoped<ActivityQueryHandler>();
 
