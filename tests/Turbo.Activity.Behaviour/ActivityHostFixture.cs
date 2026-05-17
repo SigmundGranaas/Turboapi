@@ -1,16 +1,18 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using System.Reflection;
 using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
 using Turbo_event.kafka;
 using Turbo_pg_data.db;
+using Xunit;
 using ActivityContext = Turboauth_activity.data.ActivityContext;
 using KafkaSettings = Turbo_event.kafka.KafkaSettings;
 

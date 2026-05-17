@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Turboauth_activity.controller;
 using Turboauth_activity.domain;
+using Xunit;
 
 namespace Turbo.Activity.Behaviour;
 

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ using Testcontainers.PostgreSql;
 using Turbo_pg_data.db;
 using Turboapi.infrastructure;
 using Turboapi_geo.domain.query.model;
+using Xunit;
 
 namespace Turbo.Geo.Behaviour;
 

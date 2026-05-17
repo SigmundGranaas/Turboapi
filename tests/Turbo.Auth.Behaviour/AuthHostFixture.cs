@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +7,7 @@ using Testcontainers.Kafka;
 using Testcontainers.PostgreSql;
 using Turbo_pg_data.db;
 using Turboapi.Infrastructure.Persistence;
+using Xunit;
 using KafkaSettings = Turboapi.Infrastructure.Messaging.KafkaSettings;
 
 namespace Turbo.Auth.Behaviour;
