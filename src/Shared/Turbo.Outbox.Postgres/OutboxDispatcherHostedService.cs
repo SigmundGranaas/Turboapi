@@ -64,61 +64,72 @@ public sealed class OutboxDispatcherHostedService<TDbContext> : BackgroundServic
         var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
         var transport = scope.ServiceProvider.GetRequiredService<IMessageTransport>();
 
-        await using var tx = await db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.ReadCommitted, ct);
-
         var schema = db.Model.FindEntityType(typeof(OutboxRow))?.GetSchema();
         var qualifiedTable = schema is null ? "\"outbox\"" : $"\"{schema}\".\"outbox\"";
 
+        // Run the claim → publish → mark loop inside the configured execution
+        // strategy so it composes correctly with EnableRetryOnFailure providers
+        // (Npgsql refuses user-initiated transactions otherwise).
+        var strategy = db.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async (innerCt) =>
+        {
+            await using var tx = await db.Database.BeginTransactionAsync(
+                System.Data.IsolationLevel.ReadCommitted, innerCt);
+
 #pragma warning disable EF1002 // schema/table name comes from EF metadata, not user input
-        var rows = await db.Set<OutboxRow>()
-            .FromSqlRaw($"""
-                SELECT * FROM {qualifiedTable}
-                WHERE dispatched_at IS NULL
-                ORDER BY position
-                LIMIT {BatchSize}
-                FOR UPDATE SKIP LOCKED
-                """)
-            .ToListAsync(ct);
+            var rows = await db.Set<OutboxRow>()
+                .FromSqlRaw($"""
+                    SELECT * FROM {qualifiedTable}
+                    WHERE dispatched_at IS NULL
+                    ORDER BY position
+                    LIMIT {BatchSize}
+                    FOR UPDATE SKIP LOCKED
+                    """)
+                .ToListAsync(innerCt);
 #pragma warning restore EF1002
 
-        if (rows.Count == 0)
-        {
-            await tx.CommitAsync(ct);
-            return 0;
-        }
-
-        var dispatched = 0;
-        foreach (var row in rows)
-        {
-            var envelope = new EventEnvelope(
-                EventId: row.Id,
-                Type: row.EventType,
-                Source: row.Source,
-                Time: row.OccurredAt,
-                DataContentType: row.DataContentType,
-                Data: Encoding.UTF8.GetBytes(row.PayloadJson),
-                Headers: DeserializeHeaders(row.HeadersJson));
-
-            try
+            if (rows.Count == 0)
             {
-                await transport.PublishAsync(envelope, ct);
-                row.DispatchedAt = DateTime.UtcNow;
-                dispatched++;
+                await tx.CommitAsync(innerCt);
+                return 0;
             }
-            catch (Exception ex)
-            {
-                row.Attempts++;
-                row.LastError = ex.Message;
-                _logger.LogWarning(ex,
-                    "Outbox publish failed for {EventType} {EventId} (attempt {Attempt})",
-                    row.EventType, row.Id, row.Attempts);
-            }
-        }
 
-        await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        return dispatched;
+            _logger.LogInformation("Outbox dispatcher claimed {Count} rows from {Table}",
+                rows.Count, qualifiedTable);
+
+            var dispatched = 0;
+            foreach (var row in rows)
+            {
+                var envelope = new EventEnvelope(
+                    EventId: row.Id,
+                    Type: row.EventType,
+                    Source: row.Source,
+                    Time: row.OccurredAt,
+                    DataContentType: row.DataContentType,
+                    Data: Encoding.UTF8.GetBytes(row.PayloadJson),
+                    Headers: DeserializeHeaders(row.HeadersJson));
+
+                try
+                {
+                    await transport.PublishAsync(envelope, innerCt);
+                    row.DispatchedAt = DateTime.UtcNow;
+                    dispatched++;
+                    _logger.LogInformation("Outbox dispatched {EventType} {EventId}", row.EventType, row.Id);
+                }
+                catch (Exception ex)
+                {
+                    row.Attempts++;
+                    row.LastError = ex.Message;
+                    _logger.LogWarning(ex,
+                        "Outbox publish failed for {EventType} {EventId} (attempt {Attempt})",
+                        row.EventType, row.Id, row.Attempts);
+                }
+            }
+
+            await db.SaveChangesAsync(innerCt);
+            await tx.CommitAsync(innerCt);
+            return dispatched;
+        }, ct);
     }
 
     private static TimeSpan SlowDown(TimeSpan current)

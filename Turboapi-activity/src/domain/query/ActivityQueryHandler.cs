@@ -1,5 +1,3 @@
-using Turboauth_activity.domain.exception;
-
 namespace Turboauth_activity.domain.query;
 
 public class ActivityQueryHandler
@@ -16,16 +14,17 @@ public class ActivityQueryHandler
         var activity = await _repository.GetById(query.ActivityId);
         if (activity == null)
         {
-            throw new ActivityNotFoundException("Activity not found");
+            return null;
         }
 
-        var notAllowed = !activity.CanSeeActivity(query.UserId);
-        if (notAllowed)
+        if (!activity.CanSeeActivity(query.UserId))
         {
-            throw new UnauthorizedAccessException("You are not allowed to see this activity");
+            // Privacy-preserving: another user's activity is indistinguishable
+            // from a missing one. The controller maps null to 404.
+            return null;
         }
-        
-        var dto = new ActivityQueryDto()
+
+        return new ActivityQueryDto()
         {
             Position = activity.Position,
             ActivityId = activity.Id,
@@ -34,6 +33,5 @@ public class ActivityQueryHandler
             Description = activity.Description,
             Icon = activity.Icon,
         };
-        return dto;
     }
 }

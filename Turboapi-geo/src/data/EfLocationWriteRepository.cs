@@ -83,12 +83,32 @@ public class EfLocationWriteRepository : ILocationWriteRepository
 
         if (displayInformation != null)
         {
-             await _context.Locations
-                .Where(l => l.Id == id)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(l => l.Name, displayInformation.Name)
-                    .SetProperty(l => l.Description, displayInformation.Description)
-                    .SetProperty(l => l.Icon, displayInformation.Icon));
+            // Only set the columns the changeset actually wants to change.
+            // A null field on the changeset means "keep current"; setting it
+            // unconditionally would clobber the row to null, which then
+            // breaks subsequent reads because LocationEntity declares the
+            // properties as non-nullable.
+            if (displayInformation.Name is not null)
+            {
+                await _context.Locations
+                    .Where(l => l.Id == id)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(l => l.Name, displayInformation.Name));
+            }
+            if (displayInformation.Description is not null)
+            {
+                await _context.Locations
+                    .Where(l => l.Id == id)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(l => l.Description, displayInformation.Description));
+            }
+            if (displayInformation.Icon is not null)
+            {
+                await _context.Locations
+                    .Where(l => l.Id == id)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(l => l.Icon, displayInformation.Icon));
+            }
         }
         stopwatch.Stop();
         
