@@ -38,7 +38,6 @@
         <PackageReference Include="Serilog" Version="4.2.0" />
         <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.3.1" />
         <PackageReference Include="Testcontainers" Version="4.1.0" />
-        <PackageReference Include="Testcontainers.Kafka" Version="4.1.0" />
         <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
         <ProjectReference Include="../Turbo-event/Turbo-event.csproj" />
         <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" Version="0.0.1" />

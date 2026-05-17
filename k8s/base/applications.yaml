@@ -101,8 +101,8 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: OTEL_SERVICE_NAME_AUTH
-            - name: Kafka__BootstrapServers
-              value: "kafka:29092"
+            - name: Nats__Url
+              value: "nats://nats:4222"
 ---
 # Geo service with lightweight db check and migration init containers
 apiVersion: apps/v1
@@ -207,8 +207,8 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: OTEL_SERVICE_NAME_GEO
-            - name: Kafka__BootstrapServers
-              value: "kafka:29092"
+            - name: Nats__Url
+              value: "nats://nats:4222"
 ---
 # Activity service with lightweight db check and migration init containers
 apiVersion: apps/v1
@@ -313,5 +313,5 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: OTEL_SERVICE_NAME_ACTIVITY
-            - name: Kafka__BootstrapServers
-              value: "kafka:29092"
+            - name: Nats__Url
+              value: "nats://nats:4222"

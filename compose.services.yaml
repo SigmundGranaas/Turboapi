@@ -13,13 +13,13 @@ services:
       - ConnectionStrings__DefaultConnection=Host=auth-db;Port=5432;Database=auth;Username=postgres;Password=yourpassword
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-auth
-      - Kafka__BootstrapServers=kafka:29092
+      - Nats__Url=nats://nats:4222
     depends_on:
       auth-db-migration:
         condition: service_completed_successfully
       auth-db:
         condition: service_healthy
-      kafka:
+      nats:
         condition: service_healthy
     networks:
       - turbo
@@ -36,13 +36,13 @@ services:
       - ConnectionStrings__DefaultConnection=Host=geo-db;Port=5435;Database=geo;Username=postgres;Password=yourpassword
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-geo
-      - Kafka__BootstrapServers=kafka:29092
+      - Nats__Url=nats://nats:4222
     depends_on:
       geo-db-migration:
         condition: service_completed_successfully
       geo-db:
         condition: service_healthy
-      kafka:
+      nats:
         condition: service_healthy
     networks:
       - turbo
@@ -59,13 +59,13 @@ services:
       - ConnectionStrings__DefaultConnection=Host=activity-db;Port=5436;Database=activity;Username=postgres;Password=yourpassword
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-activity
-      - Kafka__BootstrapServers=kafka:29092
+      - Nats__Url=nats://nats:4222
     depends_on:
       activity-db-migration:
         condition: service_completed_successfully
       activity-db:
         condition: service_healthy
-      kafka:
+      nats:
         condition: service_healthy
     networks:
       - turbo
