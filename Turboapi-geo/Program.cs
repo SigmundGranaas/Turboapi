@@ -85,9 +85,20 @@ builder.Services.AddScoped<GeometryFactory>();
 // #############################################
 // # Integration Services
 // #############################################
-// 4.1 Kafka Configuration
-// Register handlers
+// 4.1 Kafka Configuration — kept until step 5 replaces the transport with NATS.
 builder.Services.AddKafkaEventInfrastructure(builder.Configuration);
+
+// 4.2 Outbox-driven publish path
+// Command handlers append to the outbox in the same DB transaction as the
+// aggregate change and the synchronous read-model projection. A hosted
+// dispatcher polls the outbox and publishes envelopes through
+// IMessageTransport; the temporary KafkaMessageTransport forwards them to
+// the existing location-events topic so any future downstream consumer can
+// pick them up.
+builder.Services.AddScoped<Turbo.Outbox.IOutbox, Turbo.Outbox.Postgres.PgOutbox<LocationReadContext>>();
+builder.Services.AddSingleton<Func<Turbo.Messaging.EventEnvelope, string>>(_ => _ => "location-events");
+builder.Services.AddSingleton<Turbo.Messaging.IMessageTransport, Turboapi_geo.infrastructure.GeoKafkaMessageTransport>();
+builder.Services.AddHostedService<Turbo.Outbox.Postgres.OutboxDispatcherHostedService<LocationReadContext>>();
 
 // #############################################
 // # Observability Configuration

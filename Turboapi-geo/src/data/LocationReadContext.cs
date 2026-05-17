@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Turbo.Outbox.Postgres;
 using Turboapi_geo.data.model;
 
 namespace Turboapi_geo.domain.query.model;
 
 public class LocationReadContext : DbContext
 {
-    public DbSet<LocationEntity> Locations { get; set; }
+    public DbSet<LocationEntity> Locations { get; set; } = null!;
+    public DbSet<OutboxRow> Outbox { get; set; } = null!;
 
     public LocationReadContext(DbContextOptions<LocationReadContext> options)
         : base(options)
@@ -14,6 +16,8 @@ public class LocationReadContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.MapOutbox("geo");
+
         modelBuilder.Entity<LocationEntity>(entity =>
         {
             entity.ToTable("locations_read");
