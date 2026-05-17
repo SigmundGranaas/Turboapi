@@ -17,7 +17,6 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
         private readonly IEnumerable<IOAuthProviderAdapter> _oauthAdapters;
         private readonly IAccountRepository _accountRepository;
         private readonly IAuthTokenService _authTokenService;
-        private readonly IOutbox<AuthDbContext> _outbox;
         private readonly ILogger<AuthenticateWithOAuthCommandHandler> _logger;
         private const bool EmailMustBeVerified = true;
 
@@ -25,13 +24,11 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
             IEnumerable<IOAuthProviderAdapter> oauthAdapters,
             IAccountRepository accountRepository,
             IAuthTokenService authTokenService,
-            IOutbox<AuthDbContext> outbox,
             ILogger<AuthenticateWithOAuthCommandHandler> logger)
         {
             _oauthAdapters = oauthAdapters;
             _accountRepository = accountRepository;
             _authTokenService = authTokenService;
-            _outbox = outbox;
             _logger = logger;
         }
 
@@ -93,14 +90,10 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
                     await _accountRepository.UpdateAsync(account);
                 }
 
-                // Aggregate-emitted events are drained into the outbox by UoW.
-                // The explicit login event is not on the aggregate; append it
-                // directly to the same outbox so it commits in the same
-                // transaction as everything else.
-                var loginEvent = new AccountLoggedInEvent(
-                    account.Id, currentOAuthMethod.Id, command.ProviderName, DateTime.UtcNow);
-                var loginHeaders = new Dictionary<string, string> { ["aggregateId"] = account.Id.ToString() };
-                await _outbox.AppendAsync(EventEnvelopeFactory.For(loginEvent, "auth", loginHeaders), cancellationToken);
+                // Aggregate emits AccountLoggedInEvent through RecordLoggedIn;
+                // UnitOfWork drains it into the outbox alongside the other
+                // domain events in the same transaction.
+                account.RecordLoggedIn(currentOAuthMethod.Id, command.ProviderName);
 
                 return new AuthTokenResponse(newTokens.AccessToken, newTokens.RefreshTokenValue, account.Id, account.Email);
             }

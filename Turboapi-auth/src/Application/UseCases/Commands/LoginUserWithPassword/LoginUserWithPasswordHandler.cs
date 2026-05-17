@@ -42,6 +42,7 @@ namespace Turboapi.Application.UseCases.Commands.LoginUserWithPassword
             }
 
             account.UpdateLastLogin();
+            account.RecordLoggedIn(passwordAuthMethod.Id, passwordAuthMethod.ProviderName);
             passwordAuthMethod.UpdateLastUsed();
 
             var newTokens = await _authTokenService.GenerateNewTokenStringsAsync(account);

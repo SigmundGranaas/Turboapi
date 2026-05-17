@@ -76,6 +76,18 @@ namespace Turboapi.Domain.Aggregates
             AddDomainEvent(new AccountLastLoginUpdatedEvent(Id, LastLoginAt.Value));
         }
 
+        /// <summary>
+        /// Emits an <see cref="AccountLoggedInEvent"/> for audit / downstream
+        /// consumers (notifications, security analytics, etc.) on top of the
+        /// state-change event raised by <see cref="UpdateLastLogin"/>. Both the
+        /// password-login and OAuth-login flows call this so the audit feed is
+        /// consistent across providers.
+        /// </summary>
+        public void RecordLoggedIn(Guid authMethodId, string providerName)
+        {
+            AddDomainEvent(new AccountLoggedInEvent(Id, authMethodId, providerName, DateTime.UtcNow));
+        }
+
         public void AddRole(string roleName)
         {
             AddRoleInternal(roleName, false);
