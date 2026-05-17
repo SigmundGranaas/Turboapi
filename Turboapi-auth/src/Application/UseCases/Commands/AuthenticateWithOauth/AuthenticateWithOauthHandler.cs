@@ -8,6 +8,7 @@ using Turboapi.Application.Results.Errors;
 using Turboapi.Domain.Aggregates;
 using Turboapi.Domain.Events;
 using Turboapi.Domain.Interfaces;
+using Turboapi.Infrastructure.Persistence;
 
 namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
 {
@@ -16,7 +17,7 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
         private readonly IEnumerable<IOAuthProviderAdapter> _oauthAdapters;
         private readonly IAccountRepository _accountRepository;
         private readonly IAuthTokenService _authTokenService;
-        private readonly IOutbox _outbox;
+        private readonly IOutbox<AuthDbContext> _outbox;
         private readonly ILogger<AuthenticateWithOAuthCommandHandler> _logger;
         private const bool EmailMustBeVerified = true;
 
@@ -24,7 +25,7 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
             IEnumerable<IOAuthProviderAdapter> oauthAdapters,
             IAccountRepository accountRepository,
             IAuthTokenService authTokenService,
-            IOutbox outbox,
+            IOutbox<AuthDbContext> outbox,
             ILogger<AuthenticateWithOAuthCommandHandler> logger)
         {
             _oauthAdapters = oauthAdapters;

@@ -5,11 +5,12 @@ using Turbo.Messaging;
 namespace Turbo.Outbox.Postgres;
 
 /// <summary>
-/// EF Core-backed <see cref="IOutbox"/>. Inserting an <see cref="OutboxRow"/>
-/// through the same <typeparamref name="TDbContext"/> the aggregate is written
-/// against ensures the event row commits atomically with the domain change.
+/// EF Core-backed <see cref="IOutbox{TDbContext}"/>. Inserting an
+/// <see cref="OutboxRow"/> through the same <typeparamref name="TDbContext"/>
+/// the aggregate is written against ensures the event row commits
+/// atomically with the domain change.
 /// </summary>
-public sealed class PgOutbox<TDbContext> : IOutbox
+public sealed class PgOutbox<TDbContext> : IOutbox<TDbContext>
     where TDbContext : DbContext
 {
     private readonly TDbContext _db;

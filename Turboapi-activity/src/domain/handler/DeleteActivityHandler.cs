@@ -9,12 +9,12 @@ namespace Turboauth_activity.domain.handler;
 
 public class DeleteActivityHandler
 {
-    private readonly IOutbox _outbox;
+    private readonly IOutbox<ActivityContext> _outbox;
     private readonly ActivityContext _db;
     private readonly IActivityReadRepository _repo;
 
     public DeleteActivityHandler(
-        IOutbox outbox,
+        IOutbox<ActivityContext> outbox,
         ActivityContext db,
         IActivityReadRepository repo)
     {

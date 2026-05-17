@@ -11,13 +11,13 @@ namespace Turboapi_geo.domain.handler;
 public class UpdateLocationHandler
 {
     private readonly ILocationReadRepository _repository;
-    private readonly IOutbox _outbox;
+    private readonly IOutbox<LocationReadContext> _outbox;
     private readonly LocationReadContext _db;
     private readonly IDirectReadModelProjector _readModelHandler;
 
     public UpdateLocationHandler(
         ILocationReadRepository repository,
-        IOutbox outbox,
+        IOutbox<LocationReadContext> outbox,
         LocationReadContext db,
         IDirectReadModelProjector readModelHandler)
     {

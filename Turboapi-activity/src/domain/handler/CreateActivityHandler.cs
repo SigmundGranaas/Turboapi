@@ -7,10 +7,10 @@ namespace Turboauth_activity.domain.handler;
 
 public class CreateActivityHandler
 {
-    private readonly IOutbox _outbox;
+    private readonly IOutbox<ActivityContext> _outbox;
     private readonly ActivityContext _db;
 
-    public CreateActivityHandler(IOutbox outbox, ActivityContext db)
+    public CreateActivityHandler(IOutbox<ActivityContext> outbox, ActivityContext db)
     {
         _outbox = outbox;
         _db = db;

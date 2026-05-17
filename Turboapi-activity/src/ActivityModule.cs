@@ -27,7 +27,6 @@ public static class ActivityModule
         IConfiguration configuration)
     {
         var connectionString = ResolveConnectionString(configuration);
-
         services.AddDbContext<ActivityContext>(o =>
             o.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure()));
 
@@ -43,7 +42,7 @@ public static class ActivityModule
         services.AddScoped<IEventHandler<ActivityUpdated>, ActivityEventHandler>();
         services.AddScoped<IEventHandler<ActivityDeleted>, ActivityEventHandler>();
 
-        services.AddScoped<IOutbox, PgOutbox<ActivityContext>>();
+        services.AddScoped<IOutbox<ActivityContext>, PgOutbox<ActivityContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<ActivityContext>>();
 
         services.AddControllers().AddApplicationPart(typeof(ActivityController).Assembly);

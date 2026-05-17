@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Turbo.Host.Modulith</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
+    <ProjectReference Include="..\..\Turboapi-activity\Turboapi-activity.csproj" />
+    <ProjectReference Include="..\..\Turboapi-geo\Turboapi-geo.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.InProcess\Turbo.Messaging.InProcess.csproj" />
+  </ItemGroup>
+
+</Project>

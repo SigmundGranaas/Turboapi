@@ -9,12 +9,12 @@ namespace Turboapi_geo.domain.handler;
 
 public class CreateLocationHandler
 {
-    private readonly IOutbox _outbox;
+    private readonly IOutbox<LocationReadContext> _outbox;
     private readonly LocationReadContext _db;
     private readonly IDirectReadModelProjector _readModelHandler;
 
     public CreateLocationHandler(
-        IOutbox outbox,
+        IOutbox<LocationReadContext> outbox,
         LocationReadContext db,
         IDirectReadModelProjector readModelHandler)
     {

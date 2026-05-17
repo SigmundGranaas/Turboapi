@@ -8,7 +8,7 @@ internal static class ActivityOutboxExtensions
     private const string Source = "activity";
 
     public static async Task AppendActivityEventsAsync(
-        this IOutbox outbox,
+        this IOutbox<Turboauth_activity.data.ActivityContext> outbox,
         Guid aggregateId,
         IEnumerable<Event> events,
         CancellationToken cancellationToken = default)

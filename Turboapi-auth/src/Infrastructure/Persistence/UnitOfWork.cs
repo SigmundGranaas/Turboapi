@@ -11,9 +11,9 @@ namespace Turboapi.Infrastructure.Persistence
         private const string Source = "auth";
 
         private readonly AuthDbContext _dbContext;
-        private readonly IOutbox _outbox;
+        private readonly IOutbox<AuthDbContext> _outbox;
 
-        public UnitOfWork(AuthDbContext dbContext, IOutbox outbox)
+        public UnitOfWork(AuthDbContext dbContext, IOutbox<AuthDbContext> outbox)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));

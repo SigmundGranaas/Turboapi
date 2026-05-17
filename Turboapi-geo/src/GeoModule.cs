@@ -50,7 +50,7 @@ public static class GeoModule
 
         services.AddScoped<GeometryFactory>();
 
-        services.AddScoped<IOutbox, PgOutbox<LocationReadContext>>();
+        services.AddScoped<IOutbox<LocationReadContext>, PgOutbox<LocationReadContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<LocationReadContext>>();
 
         services.AddControllers().AddApplicationPart(typeof(LocationsController).Assembly);

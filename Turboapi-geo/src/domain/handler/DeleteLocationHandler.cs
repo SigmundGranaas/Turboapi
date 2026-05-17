@@ -10,13 +10,13 @@ namespace Turboapi_geo.domain.handler;
 
 public class DeleteLocationHandler
 {
-    private readonly IOutbox _outbox;
+    private readonly IOutbox<LocationReadContext> _outbox;
     private readonly LocationReadContext _db;
     private readonly ILocationReadRepository _locationReadRepository;
     private readonly IDirectReadModelProjector _readModelHandler;
 
     public DeleteLocationHandler(
-        IOutbox outbox,
+        IOutbox<LocationReadContext> outbox,
         LocationReadContext db,
         ILocationReadRepository locationReadRepository,
         IDirectReadModelProjector readModelHandler)

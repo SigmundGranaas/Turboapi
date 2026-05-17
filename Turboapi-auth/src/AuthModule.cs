@@ -51,7 +51,7 @@ public static class AuthModule
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
-        services.AddScoped<IOutbox, PgOutbox<AuthDbContext>>();
+        services.AddScoped<IOutbox<AuthDbContext>, PgOutbox<AuthDbContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<AuthDbContext>>();
 
         services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();
@@ -95,10 +95,16 @@ public static class AuthModule
         services.AddSingleton(jwtConfig);
         services.AddSingleton<ISecureDataFormat<AuthenticationTicket>, JwtDataFormat>();
 
+        // JwtBearer is the default for both authenticate and challenge so
+        // [Authorize] on cross-module controllers (Activity, Geo) works with
+        // the Bearer header issued by Auth. The Cookie scheme remains
+        // registered for the SessionController which opts into it
+        // explicitly via [Authorize(AuthenticationSchemes = "...")].
         var authBuilder = services
             .AddAuthentication(opt =>
             {
-                opt.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                opt.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
             })
             .AddCookie(options =>
