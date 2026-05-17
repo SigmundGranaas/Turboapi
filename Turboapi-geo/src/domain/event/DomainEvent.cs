@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Medo;
+using Turbo.Messaging;
 using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.domain.events
@@ -7,7 +8,7 @@ namespace Turboapi_geo.domain.events
     /// <summary>
     /// Base event properties
     /// </summary>
-    public abstract record DomainEvent
+    public abstract record DomainEvent : IDomainEvent
     {
         [JsonPropertyName("id")]
         public Guid Id { get; init; } = Uuid7.NewUuid7();

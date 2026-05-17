@@ -62,4 +62,8 @@
         <Folder Include="src\Application\UseCases\Queries\" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\src\Shared\Turbo.Messaging.Abstractions\Turbo.Messaging.Abstractions.csproj" />
+    </ItemGroup>
+
 </Project>
