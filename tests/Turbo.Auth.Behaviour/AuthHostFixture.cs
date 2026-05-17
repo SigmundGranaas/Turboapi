@@ -61,6 +61,9 @@ public sealed class AuthHostFixture : IAsyncLifetime
         await Task.WhenAll(_kafka.DisposeAsync().AsTask(), _postgres.DisposeAsync().AsTask());
     }
 
+    public Task PauseBrokerAsync() => _kafka.PauseAsync();
+    public Task UnpauseBrokerAsync() => _kafka.UnpauseAsync();
+
     private static string LocateAuthMigrations()
     {
         var dir = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);

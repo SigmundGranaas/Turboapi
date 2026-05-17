@@ -13,20 +13,17 @@ namespace Turboapi.Application.UseCases.Commands.RegisterUserWithPassword
         private readonly IAccountRepository _accountRepository;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IAuthTokenService _authTokenService;
-        private readonly IEventPublisher _eventPublisher;
         private readonly ILogger<RegisterUserWithPasswordCommandHandler> _logger;
 
         public RegisterUserWithPasswordCommandHandler(
             IAccountRepository accountRepository,
             IPasswordHasher passwordHasher,
             IAuthTokenService authTokenService,
-            IEventPublisher eventPublisher,
             ILogger<RegisterUserWithPasswordCommandHandler> logger)
         {
             _accountRepository = accountRepository;
             _passwordHasher = passwordHasher;
             _authTokenService = authTokenService;
-            _eventPublisher = eventPublisher;
             _logger = logger;
         }
 
@@ -46,22 +43,11 @@ namespace Turboapi.Application.UseCases.Commands.RegisterUserWithPassword
             account.AddNewRefreshToken(newTokens.RefreshTokenValue, newTokens.RefreshTokenExpiresAt);
             
             await _accountRepository.AddAsync(account);
-            
-            try
-            {
-                var eventsToPublish = account.DomainEvents.ToList();
-                account.ClearDomainEvents();
-                foreach (var domainEvent in eventsToPublish)
-                {
-                    await _eventPublisher.PublishAsync(domainEvent);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to publish domain events for account {AccountId} after registration.", account.Id);
-                return RegistrationError.EventPublishFailed;
-            }
-            
+
+            // Domain events are drained from the aggregate into the transactional
+            // outbox by UnitOfWork.SaveChangesAsync (invoked by the
+            // UnitOfWorkCommandHandlerDecorator after this handler returns).
+
             return new AuthTokenResponse(
                 newTokens.AccessToken,
                 newTokens.RefreshTokenValue,

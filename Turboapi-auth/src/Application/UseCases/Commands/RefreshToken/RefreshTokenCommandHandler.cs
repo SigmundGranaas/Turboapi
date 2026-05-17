@@ -12,18 +12,15 @@ namespace Turboapi.Application.UseCases.Commands.RefreshToken
     {
         private readonly IAccountRepository _accountRepository;
         private readonly IAuthTokenService _authTokenService;
-        private readonly IEventPublisher _eventPublisher;
         private readonly ILogger<RefreshTokenCommandHandler> _logger;
 
         public RefreshTokenCommandHandler(
             IAccountRepository accountRepository,
             IAuthTokenService authTokenService,
-            IEventPublisher eventPublisher,
             ILogger<RefreshTokenCommandHandler> logger)
         {
             _accountRepository = accountRepository;
             _authTokenService = authTokenService;
-            _eventPublisher = eventPublisher;
             _logger = logger;
         }
 
@@ -54,21 +51,9 @@ namespace Turboapi.Application.UseCases.Commands.RefreshToken
             }
 
             await _accountRepository.UpdateAsync(account);
-            
-            try
-            {
-                var eventsToPublish = account.DomainEvents.ToList();
-                account.ClearDomainEvents();
-                foreach (var domainEvent in eventsToPublish)
-                {
-                    await _eventPublisher.PublishAsync(domainEvent);
-                }
-            }
-            catch (Exception ex)
-            {
-                 _logger.LogError(ex, "Failed to publish domain events for account {AccountId} after token refresh.", account.Id);
-                 // Non-critical, so we continue
-            }
+
+            // Domain events are drained from the aggregate into the transactional
+            // outbox by UnitOfWork.SaveChangesAsync.
 
             return new AuthTokenResponse(
                 newGeneratedTokenStrings.AccessToken,

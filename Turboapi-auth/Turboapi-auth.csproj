@@ -64,6 +64,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\src\Shared\Turbo.Messaging.Abstractions\Turbo.Messaging.Abstractions.csproj" />
+        <ProjectReference Include="..\src\Shared\Turbo.Outbox.Postgres\Turbo.Outbox.Postgres.csproj" />
     </ItemGroup>
 
 </Project>

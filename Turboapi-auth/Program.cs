@@ -157,7 +157,18 @@ builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection(
 builder.Services.AddHttpClient<GoogleOAuthAdapter>();
 builder.Services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();
 builder.Services.Configure<KafkaSettings>(builder.Configuration.GetSection("Kafka"));
-builder.Services.AddSingleton<IEventPublisher, KafkaEventPublisher>();
+
+// Outbox-driven publish path:
+//  - UnitOfWork.SaveChangesAsync drains aggregate domain events into the
+//    transactional outbox in the same database transaction.
+//  - A hosted dispatcher polls the outbox and publishes envelopes through
+//    IMessageTransport. The temporary AuthKafkaMessageTransport forwards
+//    them to the existing "authentication-events" Kafka topic so external
+//    consumers keep working. Step 5 of the messaging refactor replaces
+//    this transport with NATS JetStream.
+builder.Services.AddScoped<Turbo.Outbox.IOutbox, Turbo.Outbox.Postgres.PgOutbox<AuthDbContext>>();
+builder.Services.AddSingleton<Turbo.Messaging.IMessageTransport, Turboapi.Infrastructure.Messaging.AuthKafkaMessageTransport>();
+builder.Services.AddHostedService<Turbo.Outbox.Postgres.OutboxDispatcherHostedService<AuthDbContext>>();
 
 // #############################################
 // # 5. Observability (OpenTelemetry)

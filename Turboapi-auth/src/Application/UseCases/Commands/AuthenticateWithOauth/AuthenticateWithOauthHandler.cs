@@ -1,4 +1,6 @@
 // ==== FILE: /home/sigmund/development/turboapi/Turboapi/Turboapi-auth/src/Application/UseCases/Commands/AuthenticateWithOauth/AuthenticateWithOauthHandler.cs ====
+using Turbo.Messaging;
+using Turbo.Outbox;
 using Turboapi.Application.Contracts.V1.Auth;
 using Turboapi.Application.Interfaces;
 using Turboapi.Application.Results;
@@ -14,7 +16,7 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
         private readonly IEnumerable<IOAuthProviderAdapter> _oauthAdapters;
         private readonly IAccountRepository _accountRepository;
         private readonly IAuthTokenService _authTokenService;
-        private readonly IEventPublisher _eventPublisher;
+        private readonly IOutbox _outbox;
         private readonly ILogger<AuthenticateWithOAuthCommandHandler> _logger;
         private const bool EmailMustBeVerified = true;
 
@@ -22,13 +24,13 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
             IEnumerable<IOAuthProviderAdapter> oauthAdapters,
             IAccountRepository accountRepository,
             IAuthTokenService authTokenService,
-            IEventPublisher eventPublisher,
+            IOutbox outbox,
             ILogger<AuthenticateWithOAuthCommandHandler> logger)
         {
             _oauthAdapters = oauthAdapters;
             _accountRepository = accountRepository;
             _authTokenService = authTokenService;
-            _eventPublisher = eventPublisher;
+            _outbox = outbox;
             _logger = logger;
         }
 
@@ -90,14 +92,14 @@ namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
                     await _accountRepository.UpdateAsync(account);
                 }
 
-                var eventsToPublish = account.DomainEvents.ToList();
-                account.ClearDomainEvents();
-                foreach (var domainEvent in eventsToPublish)
-                {
-                    await _eventPublisher.PublishAsync(domainEvent);
-                }
-                
-                await _eventPublisher.PublishAsync(new AccountLoggedInEvent(account.Id, currentOAuthMethod.Id, command.ProviderName, DateTime.UtcNow));
+                // Aggregate-emitted events are drained into the outbox by UoW.
+                // The explicit login event is not on the aggregate; append it
+                // directly to the same outbox so it commits in the same
+                // transaction as everything else.
+                var loginEvent = new AccountLoggedInEvent(
+                    account.Id, currentOAuthMethod.Id, command.ProviderName, DateTime.UtcNow);
+                var loginHeaders = new Dictionary<string, string> { ["aggregateId"] = account.Id.ToString() };
+                await _outbox.AppendAsync(EventEnvelopeFactory.For(loginEvent, "auth", loginHeaders), cancellationToken);
 
                 return new AuthTokenResponse(newTokens.AccessToken, newTokens.RefreshTokenValue, account.Id, account.Email);
             }

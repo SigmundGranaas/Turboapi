@@ -7,7 +7,7 @@ using Turboapi.Infrastructure.Messaging;
 
 namespace Turboapi.Domain.Aggregates
 {
-    public class Account
+    public class Account : IHasDomainEvents
     {
         public Guid Id { get; private set; }
         public string Email { get; private set; }

@@ -10,18 +10,15 @@ namespace Turboapi.Application.UseCases.Commands.RevokeRefreshToken
     {
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IAccountRepository _accountRepository;
-        private readonly IEventPublisher _eventPublisher;
         private readonly ILogger<RevokeRefreshTokenCommandHandler> _logger;
 
         public RevokeRefreshTokenCommandHandler(
             IRefreshTokenRepository refreshTokenRepository,
             IAccountRepository accountRepository,
-            IEventPublisher eventPublisher,
             ILogger<RevokeRefreshTokenCommandHandler> logger)
         {
             _refreshTokenRepository = refreshTokenRepository;
             _accountRepository = accountRepository;
-            _eventPublisher = eventPublisher;
             _logger = logger;
         }
 
@@ -53,15 +50,10 @@ namespace Turboapi.Application.UseCases.Commands.RevokeRefreshToken
             }
 
             account.RevokeRefreshToken(command.RefreshToken, "User initiated logout");
-            
-            // The UoW decorator will handle saving changes to the Account and its children.
-            // But we still need to publish the events.
-            var eventsToPublish = account.DomainEvents.ToList();
-            account.ClearDomainEvents();
-            foreach (var domainEvent in eventsToPublish)
-            {
-                await _eventPublisher.PublishAsync(domainEvent);
-            }
+
+            // The UoW decorator saves changes; UnitOfWork.SaveChangesAsync drains
+            // the aggregate's domain events into the transactional outbox in the
+            // same database transaction.
 
             _logger.LogInformation("Successfully revoked refresh token for account {AccountId}", account.Id);
             return Result.Success<RefreshTokenError>();
