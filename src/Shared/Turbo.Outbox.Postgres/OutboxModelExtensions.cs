@@ -42,4 +42,24 @@ public static class OutboxModelExtensions
         });
         return modelBuilder;
     }
+
+    /// <summary>
+    /// Map a <see cref="ProcessedEventRow"/> entity into a module's DbContext
+    /// alongside <see cref="OutboxRow"/>. Call from <c>OnModelCreating</c>.
+    /// The schema name is the same one <see cref="MapOutbox"/> uses so each
+    /// module's idempotency table stays in its own namespace.
+    /// </summary>
+    public static ModelBuilder MapProcessedEvents(this ModelBuilder modelBuilder, string? schema = null)
+    {
+        modelBuilder.Entity<ProcessedEventRow>(b =>
+        {
+            if (schema is not null) b.ToTable("processed_events", schema);
+            else b.ToTable("processed_events");
+
+            b.HasKey(x => x.EventId);
+            b.Property(x => x.EventId).HasColumnName("event_id");
+            b.Property(x => x.ProcessedAt).HasColumnName("processed_at");
+        });
+        return modelBuilder;
+    }
 }

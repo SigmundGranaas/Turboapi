@@ -27,6 +27,7 @@ namespace Turboapi.Infrastructure.Persistence
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
             modelBuilder.MapOutbox("auth");
+            modelBuilder.MapProcessedEvents("auth");
         }
     }
 }

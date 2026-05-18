@@ -27,5 +27,6 @@ public class ActivityContext : DbContext
         });
 
         modelBuilder.MapOutbox("activity");
+        modelBuilder.MapProcessedEvents("activity");
     }
 }

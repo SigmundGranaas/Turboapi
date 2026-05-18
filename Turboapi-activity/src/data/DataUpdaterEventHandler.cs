@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Turbo.Messaging;
+using Turbo.Outbox;
 using Turboauth_activity.domain.events;
 using Turboauth_activity.domain.query;
 
@@ -8,14 +9,17 @@ namespace Turboauth_activity.data;
 public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandler<ActivityUpdated>, IEventHandler<ActivityDeleted>
 {
     private readonly IActivityWriteRepository _repo;
+    private readonly IIdempotencyStore<ActivityContext> _idempotency;
     private readonly ILogger<ActivityEventHandler> _logger;
     private readonly ActivitySource _activitySource;
 
     public ActivityEventHandler(
         IActivityWriteRepository repo,
+        IIdempotencyStore<ActivityContext> idempotency,
         ILogger<ActivityEventHandler> logger)
     {
         _repo = repo;
+        _idempotency = idempotency;
         _logger = logger;
         _activitySource = new ActivitySource("ActivityEventHandler");
     }
@@ -24,6 +28,12 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
     {
         using var activity = _activitySource.StartActivity("Handle Activity Created");
         activity?.SetTag("activity.id", @event.activity);
+
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed ActivityCreated {EventId}", @event.Id);
+            return;
+        }
 
         try
         {
@@ -53,6 +63,12 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
         using var activity = _activitySource.StartActivity("Handle Activity Updated");
         activity?.SetTag("activity.id", @event.ActivityId);
 
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed ActivityUpdated {EventId}", @event.Id);
+            return;
+        }
+
       try{
             var entity = await  _repo.GetById(@event.ActivityId);
             if (entity == null)
@@ -80,6 +96,12 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
     {
         using var activity = _activitySource.StartActivity("Handle Activity Created");
         activity?.SetTag("activity.id", @event.activityId);
+
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed ActivityDeleted {EventId}", @event.Id);
+            return;
+        }
 
         try
         {

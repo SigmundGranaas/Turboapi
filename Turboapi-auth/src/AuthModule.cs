@@ -52,6 +52,7 @@ public static class AuthModule
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOutbox<AuthDbContext>, PgOutbox<AuthDbContext>>();
+        services.AddScoped<IIdempotencyStore<AuthDbContext>, PgIdempotencyStore<AuthDbContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<AuthDbContext>>();
 
         services.AddCommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>, RegisterUserWithPasswordCommandHandler>();

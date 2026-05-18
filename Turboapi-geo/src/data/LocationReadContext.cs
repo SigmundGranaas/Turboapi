@@ -17,6 +17,7 @@ public class LocationReadContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.MapOutbox("geo");
+        modelBuilder.MapProcessedEvents("geo");
 
         modelBuilder.Entity<LocationEntity>(entity =>
         {

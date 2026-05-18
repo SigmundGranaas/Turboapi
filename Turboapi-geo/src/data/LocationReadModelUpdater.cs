@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using NetTopologySuite.Geometries;
 using Turbo.Messaging;
+using Turbo.Outbox;
 using Turboapi_geo.data.model;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.query.model;
@@ -12,14 +13,17 @@ public interface ILocationEventHandler<in TEvent> : IEventHandler<TEvent> where 
 public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
 {
     private readonly ILocationWriteRepository _repo;
+    private readonly IIdempotencyStore<LocationReadContext> _idempotency;
     private readonly ILogger<LocationCreatedHandler> _logger;
     private readonly ActivitySource _activitySource;
 
     public LocationCreatedHandler(
         ILocationWriteRepository repo,
+        IIdempotencyStore<LocationReadContext> idempotency,
         ILogger<LocationCreatedHandler> logger)
     {
         _repo = repo;
+        _idempotency = idempotency;
         _logger = logger;
         _activitySource = new ActivitySource("LocationCreatedHandler");
     }
@@ -28,6 +32,12 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
     {
         using var activity = _activitySource.StartActivity("Handle Location Created");
         activity?.SetTag("location.id", @event.LocationId);
+
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed LocationCreated {EventId}", @event.Id);
+            return;
+        }
 
         try
         {
@@ -59,14 +69,17 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
 public class LocationUpdatedHandler : ILocationEventHandler<LocationUpdated>
 {
     private readonly ILocationWriteRepository _repo;
+    private readonly IIdempotencyStore<LocationReadContext> _idempotency;
     private readonly ILogger<LocationUpdatedHandler> _logger;
     private readonly ActivitySource _activitySource;
 
     public LocationUpdatedHandler(
         ILocationWriteRepository repo,
+        IIdempotencyStore<LocationReadContext> idempotency,
         ILogger<LocationUpdatedHandler> logger)
     {
         _repo = repo;
+        _idempotency = idempotency;
         _logger = logger;
         _activitySource = new ActivitySource("LocationUpdatedHandler");
     }
@@ -75,6 +88,12 @@ public class LocationUpdatedHandler : ILocationEventHandler<LocationUpdated>
     {
         using var activity = _activitySource.StartActivity("Handle location updated");
         activity?.SetTag("location.id", @event.LocationId);
+
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed LocationUpdated {EventId}", @event.Id);
+            return;
+        }
 
         try
         {
@@ -98,14 +117,17 @@ public class LocationUpdatedHandler : ILocationEventHandler<LocationUpdated>
 public class LocationDeletedHandler : ILocationEventHandler<LocationDeleted>
 {
     private readonly ILocationWriteRepository _repo;
+    private readonly IIdempotencyStore<LocationReadContext> _idempotency;
     private readonly ILogger<LocationDeletedHandler> _logger;
     private readonly ActivitySource _activitySource;
 
     public LocationDeletedHandler(
         ILocationWriteRepository repo,
+        IIdempotencyStore<LocationReadContext> idempotency,
         ILogger<LocationDeletedHandler> logger)
     {
         _repo = repo;
+        _idempotency = idempotency;
         _logger = logger;
         _activitySource = new ActivitySource("LocationDeletedHandler");
     }
@@ -114,6 +136,12 @@ public class LocationDeletedHandler : ILocationEventHandler<LocationDeleted>
     {
         using var activity = _activitySource.StartActivity("Handle Location Deleted");
         activity?.SetTag("location.id", @event.LocationId);
+
+        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        {
+            _logger.LogDebug("Skipping already-processed LocationDeleted {EventId}", @event.Id);
+            return;
+        }
 
         try
         {
