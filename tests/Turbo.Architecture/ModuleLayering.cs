@@ -26,6 +26,7 @@ public sealed class ModuleLayering
         "Microsoft.AspNetCore",
         "Microsoft.AspNetCore.Mvc",
         "Microsoft.AspNetCore.Authentication.JwtBearer",
+        "System.IdentityModel.Tokens.Jwt",
         "System.Net.Http",
     };
 

@@ -11,11 +11,21 @@ namespace Turbo.Gateway.Behaviour;
 /// The gateway's routing surface is the deploy contract: changing topology
 /// without keeping the routes aligned silently breaks the front door. These
 /// tests probe each topology purely through HTTP — a route the gateway
-/// recognises returns 502 (it tried to forward to an unreachable backend),
-/// a route it does not recognise returns 404.
+/// recognises but whose backend is unreachable returns 502 / 503 / 504
+/// (BadGateway / ServiceUnavailable / GatewayTimeout); a route it does not
+/// recognise returns 404. Asserting on the specific upstream-failure codes,
+/// rather than "anything but 404", catches the case where a misconfigured
+/// gateway returns 500 from its own pipeline.
 /// </summary>
 public sealed class GatewayTopologyBehaviour
 {
+    private static readonly HttpStatusCode[] UpstreamUnreachable =
+    {
+        HttpStatusCode.BadGateway,         // 502 — YARP could not connect
+        HttpStatusCode.ServiceUnavailable, // 503 — cluster has no healthy destinations
+        HttpStatusCode.GatewayTimeout,     // 504 — upstream timed out
+    };
+
     private static WebApplicationFactory<GatewayProgram> BuildGateway(string topology) =>
         new WebApplicationFactory<GatewayProgram>().WithWebHostBuilder(builder =>
         {
@@ -33,8 +43,8 @@ public sealed class GatewayTopologyBehaviour
 
         var response = await client.GetAsync(path);
 
-        response.StatusCode.Should().NotBe(HttpStatusCode.NotFound,
-            "the gateway must register a route for {0} when running as a modulith front", path);
+        response.StatusCode.Should().BeOneOf(UpstreamUnreachable,
+            "the gateway must register a route for {0} under Modulith and forward to an upstream — got {1}", path, response.StatusCode);
     }
 
     [Theory]
@@ -48,8 +58,23 @@ public sealed class GatewayTopologyBehaviour
 
         var response = await client.GetAsync(path);
 
-        response.StatusCode.Should().NotBe(HttpStatusCode.NotFound,
-            "the gateway must register a route for {0} when running as microservices", path);
+        response.StatusCode.Should().BeOneOf(UpstreamUnreachable,
+            "the gateway must register a route for {0} under Microservices and forward to an upstream — got {1}", path, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task healthz_returns_200_without_topology_routing()
+    {
+        foreach (var topology in new[] { "Modulith", "Microservices" })
+        {
+            using var factory = BuildGateway(topology);
+            using var client = factory.CreateClient();
+
+            var response = await client.GetAsync("/healthz");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK,
+                "the gateway must serve its own /healthz directly — topology {0}", topology);
+        }
     }
 
     [Fact]

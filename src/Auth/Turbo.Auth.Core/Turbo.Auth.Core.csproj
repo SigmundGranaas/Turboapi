@@ -9,13 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- ILogger<T> is accepted in core code; the layering test allows
-         Microsoft.Extensions.Logging.Abstractions but blocks heavier infra. -->
+    <!-- ILogger<T> is the one infra-ish abstraction Core depends on; the
+         layering test allows Logging.Abstractions but blocks heavier
+         packages (EF Core, Npgsql, NATS, ASP.NET, JwtBearer). -->
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <!-- System.IdentityModel.Tokens.Jwt leaks into RefreshToken /
-         ValidateSession handlers; a future refactor should hide it behind a
-         core-defined IJwtParser abstraction. For now Core depends on it. -->
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
 
   <ItemGroup>

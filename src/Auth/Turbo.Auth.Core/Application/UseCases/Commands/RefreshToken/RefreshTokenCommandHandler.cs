@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 using Turboapi.Auth.Application.Contracts.V1.Auth;
 using Turboapi.Auth.Application.Interfaces;

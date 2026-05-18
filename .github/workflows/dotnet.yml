@@ -63,3 +63,12 @@ jobs:
 
       - name: Test Gateway topology
         run: dotnet test tests/Turbo.Gateway.Behaviour/Turbo.Gateway.Behaviour.csproj --no-build -c Release --logger "console;verbosity=minimal"
+
+      # Library suites that also live in the .sln — without these in CI,
+      # nothing prevents a regression in the Flyway migration runner or in
+      # TurboAuthentication's standalone unit tests.
+      - name: Test Turbo-pg-data
+        run: dotnet test Turbo-pg-data/Turbo-pg-data.csproj --no-build -c Release --logger "console;verbosity=minimal"
+
+      - name: Test TurboAuthentication
+        run: dotnet test TurboAuthentication/TurboAuthentication.csproj --no-build -c Release --logger "console;verbosity=minimal"

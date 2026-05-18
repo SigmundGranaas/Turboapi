@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
 using Turboapi.Auth.Application.Interfaces;
 using Turboapi.Auth.Application.Results;
 using Turboapi.Auth.Application.Results.Errors;
@@ -40,7 +39,10 @@ namespace Turboapi.Auth.Application.UseCases.Queries.ValidateSession
                 return SessionValidationError.TokenInvalid;
             }
 
-            var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            // "sub" is the standard JWT subject claim (RFC 7519). Using the
+            // literal avoids dragging System.IdentityModel.Tokens.Jwt into
+            // Core just for the constant string.
+            var userIdClaim = principal.FindFirst("sub")?.Value;
             if (!Guid.TryParse(userIdClaim, out var accountId))
             {
                 _logger.LogWarning("Access token contains an invalid subject (sub) claim: {SubjectClaim}", userIdClaim);
