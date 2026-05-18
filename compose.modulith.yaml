@@ -1,0 +1,94 @@
+name: turbo
+
+# Modulith deployment: a single Turbo.Host.Modulith process binding all three
+# modules against a single Postgres (three schemas — auth/geo/activity). The
+# gateway runs in Modulith topology so /api/auth/*, /api/geo/*, /api/activity/*
+# all forward to the one host. No NATS — events flow in-process inside the host.
+#
+# Usage:
+#   docker compose -f compose.yaml -f compose.utils.yaml -f compose.modulith.yaml up
+#
+# (compose.yaml supplies the Postgres + NATS infrastructure containers; the
+#  modulith deploy ignores NATS, but compose.yaml is still the canonical
+#  source for the database containers.)
+
+services:
+  turboapi-modulith:
+    build:
+      context: .
+      dockerfile: ./hosts/Turbo.Host.Modulith/Dockerfile
+    container_name: turboapi_modulith
+    hostname: modulith
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Auth=Host=auth-db;Port=5432;Database=auth;Username=postgres;Password=yourpassword
+      - ConnectionStrings__Geo=Host=geo-db;Port=5435;Database=geo;Username=postgres;Password=yourpassword
+      - ConnectionStrings__Activity=Host=activity-db;Port=5436;Database=activity;Username=postgres;Password=yourpassword
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=turboapi-modulith
+    depends_on:
+      auth-db-migration:
+        condition: service_completed_successfully
+      geo-db-migration:
+        condition: service_completed_successfully
+      activity-db-migration:
+        condition: service_completed_successfully
+      auth-db:
+        condition: service_healthy
+      geo-db:
+        condition: service_healthy
+      activity-db:
+        condition: service_healthy
+    networks:
+      - turbo
+
+  turboapi-gateway:
+    build:
+      context: .
+      dockerfile: ./Turboapi-gateway/Dockerfile
+    container_name: turboapi_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - Topology=Modulith
+    depends_on:
+      - turboapi-modulith
+    networks:
+      - turbo
+
+  auth-db-migration:
+    image: flyway/flyway:latest
+    command: -url=jdbc:postgresql://auth-db:5432/auth -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    volumes:
+      - ./Turboapi-auth/db/migrations:/flyway/sql
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - turbo
+
+  geo-db-migration:
+    image: flyway/flyway:latest
+    command: -url=jdbc:postgresql://geo-db:5435/geo -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    volumes:
+      - ./Turboapi-geo/db/migrations:/flyway/sql
+    depends_on:
+      geo-db:
+        condition: service_healthy
+    networks:
+      - turbo
+
+  activity-db-migration:
+    image: flyway/flyway:latest
+    command: -url=jdbc:postgresql://activity-db:5436/activity -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    volumes:
+      - ./Turboapi-activity/db/migrations:/flyway/sql
+    depends_on:
+      activity-db:
+        condition: service_healthy
+    networks:
+      - turbo

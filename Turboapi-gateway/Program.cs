@@ -1,18 +1,18 @@
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-var proxyBuilder = builder.Services.AddReverseProxy();
-proxyBuilder.LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
-
+// Topology=Microservices (default) routes per-service to auth/geo/activity;
+// Topology=Modulith routes all three controller prefixes to a single host.
+// Each topology lives under ReverseProxy:<Topology> in appsettings.json.
+var topology = builder.Configuration["Topology"] ?? "Microservices";
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection($"ReverseProxy:{topology}"));
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: "Default",
-        policy  =>
+        policy =>
         {
             policy
                 .WithOrigins("http://localhost:8080", "https://kartapi.sandring.no")
@@ -26,7 +26,6 @@ var app = builder.Build();
 
 app.MapReverseProxy();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -37,3 +36,8 @@ app.UseCors("Default");
 
 app.Run();
 
+namespace Turboapi_gateway
+{
+    /// <summary>Marker for WebApplicationFactory in tests.</summary>
+    public class GatewayProgram;
+}

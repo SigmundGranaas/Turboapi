@@ -60,3 +60,6 @@ jobs:
 
       - name: Test Microservices topology
         run: dotnet test tests/Turbo.Microservices.Behaviour/Turbo.Microservices.Behaviour.csproj --no-build -c Release --logger "console;verbosity=minimal"
+
+      - name: Test Gateway topology
+        run: dotnet test tests/Turbo.Gateway.Behaviour/Turbo.Gateway.Behaviour.csproj --no-build -c Release --logger "console;verbosity=minimal"
