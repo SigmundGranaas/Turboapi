@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
 using Turbo_pg_data.db;
@@ -64,6 +65,85 @@ public sealed class ModulithHostFixture : IAsyncLifetime
     {
         _factory?.Dispose();
         await _postgres.DisposeAsync();
+    }
+
+    /// <summary>
+    /// Resolves the running modulith host's in-process bus so a test can
+    /// simulate at-least-once redelivery — publishing the same envelope
+    /// twice to assert the idempotency table dedupes.
+    /// </summary>
+    public Turbo.Messaging.InProcess.InProcessMessageBus Bus
+        => _factory!.Services.GetRequiredService<Turbo.Messaging.InProcess.InProcessMessageBus>();
+
+    /// <summary>
+    /// Reads the most-recent activity-outbox row whose event type ends
+    /// with <paramref name="eventTypeSuffix"/> and republishes it on the
+    /// in-process bus as if the broker had redelivered. Tests use this
+    /// to exercise the idempotency dedup path without synthesising an
+    /// envelope (which would defeat the purpose — dedup is keyed on
+    /// EventId, so a fresh id would always be "new").
+    /// </summary>
+    public async Task RedeliverLatestActivityEnvelopeAsync(string eventTypeSuffix)
+    {
+        var baseConn = _postgres.GetConnectionString();
+        var activityConn = WithDatabase(baseConn, "activity");
+        await using var conn = new NpgsqlConnection(activityConn);
+        await conn.OpenAsync();
+
+        await using var cmd = new NpgsqlCommand(
+            @"SELECT id, event_type, source, data_content_type, payload_json, headers_json, occurred_at
+              FROM activity.outbox
+              WHERE event_type LIKE @suffix
+              ORDER BY position DESC
+              LIMIT 1;", conn);
+        cmd.Parameters.AddWithValue("@suffix", "%" + eventTypeSuffix);
+        await using var reader = await cmd.ExecuteReaderAsync();
+        if (!await reader.ReadAsync())
+            throw new InvalidOperationException(
+                $"No outbox row found matching event_type LIKE %{eventTypeSuffix}");
+
+        var id = reader.GetGuid(0);
+        var type = reader.GetString(1);
+        var source = reader.GetString(2);
+        var contentType = reader.GetString(3);
+        var payload = reader.GetString(4);
+        var headersJson = reader.GetString(5);
+        var occurredAt = reader.GetDateTime(6);
+
+        var headers = System.Text.Json.JsonSerializer
+            .Deserialize<Dictionary<string, string>>(headersJson)
+            ?? new Dictionary<string, string>();
+
+        var envelope = new Turbo.Messaging.EventEnvelope(
+            EventId: id,
+            Type: type,
+            Source: source,
+            Time: occurredAt,
+            DataContentType: contentType,
+            Data: System.Text.Encoding.UTF8.GetBytes(payload),
+            Headers: headers);
+
+        await reader.CloseAsync();
+        await Bus.PublishAsync(envelope, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Counts rows in the activity read model. Used by the idempotency
+    /// test as an authoritative check that a redelivery did not insert
+    /// a duplicate row — the HTTP collection endpoint would only show
+    /// rows owned by a single caller and we want the global count.
+    /// </summary>
+    public async Task<int> CountActivityRowsAsync(Guid activityId)
+    {
+        var baseConn = _postgres.GetConnectionString();
+        var activityConn = WithDatabase(baseConn, "activity");
+        await using var conn = new NpgsqlConnection(activityConn);
+        await conn.OpenAsync();
+        await using var cmd = new NpgsqlCommand(
+            "SELECT COUNT(*) FROM activity_query WHERE activity_id = @id;", conn);
+        cmd.Parameters.AddWithValue("@id", activityId);
+        var result = await cmd.ExecuteScalarAsync();
+        return Convert.ToInt32(result);
     }
 
     /// <summary>
