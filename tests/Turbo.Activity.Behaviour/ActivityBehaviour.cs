@@ -89,7 +89,7 @@ public sealed class ActivityBehaviour
         });
 
         var delete = await client.DeleteAsync($"/api/activity/{created!.ActivityId}");
-        delete.StatusCode.Should().Be(HttpStatusCode.OK);
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         await Eventually.Returns(async () =>
         {

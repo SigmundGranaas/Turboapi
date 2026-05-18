@@ -115,10 +115,9 @@ public class ActivityController: ControllerBase
 
     [Authorize]
     [HttpDelete("{id}")]
-    [ProducesResponseType(typeof(DeletedActivityResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(DeletedActivityResponse), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<DeletedActivityResponse>> DeleteActivityById(
-        [FromRoute] Guid id)
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteActivityById([FromRoute] Guid id)
     {
         var userId = HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (userId == null)
@@ -126,10 +125,8 @@ public class ActivityController: ControllerBase
             return Forbid();
         }
 
-        var guid = await _deleteHandler.Handle(new DeleteActivityCommand { ActivityID = id , UserID = new Guid(userId) });
-
-        var response = new DeletedActivityResponse(guid);
-        return Ok(response);
+        await _deleteHandler.Handle(new DeleteActivityCommand { ActivityID = id, UserID = new Guid(userId) });
+        return NoContent();
     }
     
     public record CreateActivityRequest(
@@ -155,10 +152,6 @@ public class ActivityController: ControllerBase
     );
     
     public record CreateActivityResponse(
-        Guid ActivityId
-    );
-    
-    public record DeletedActivityResponse(
         Guid ActivityId
     );
 }
