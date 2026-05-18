@@ -1,5 +1,4 @@
 using Turbo.Messaging.Nats;
-using Turboapi.Auth.Infrastructure;
 using Turboapi.Geo;
 using TurboAuthentication.Extensions;
 
@@ -22,7 +21,6 @@ builder.Services.AddNatsMessaging(o =>
 builder.Services.AddGeoNatsSubscribers();
 
 var app = builder.Build();
-app.UseMiddleware<ExceptionLoggingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

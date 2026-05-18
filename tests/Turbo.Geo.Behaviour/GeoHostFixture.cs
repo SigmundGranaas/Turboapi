@@ -10,7 +10,7 @@ public sealed class GeoHostFixture : TurboHostFixture<Turbo.Host.Geo.GeoHostProg
 {
     public GeoHostFixture() : base("geo") { }
 
-    protected override string ModuleDirectory => "Turboapi-geo";
+    protected override string ModuleDirectory => "src/Geo";
 
     protected override void ConfigureTestServices(WebHostBuilderContext context, IServiceCollection services)
         => ReplaceDbContext<LocationReadContext>(services,

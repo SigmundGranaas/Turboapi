@@ -114,7 +114,7 @@ jobs:
           - service: auth
             db_dir: ./Turboapi-auth/db
           - service: geo
-            db_dir: ./Turboapi-geo/db
+            db_dir: ./src/Geo/db
           - service: activity
             db_dir: ./src/Activity/db
     steps:

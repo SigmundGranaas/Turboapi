@@ -9,7 +9,10 @@ WORKDIR /src
 
 COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Geo/Turbo.Host.Geo.csproj", "hosts/Turbo.Host.Geo/"]
-COPY ["Turboapi-geo/Turboapi-geo.csproj", "Turboapi-geo/"]
+COPY ["src/Geo/Turbo.Geo.Api/Turbo.Geo.Api.csproj", "src/Geo/Turbo.Geo.Api/"]
+COPY ["src/Geo/Turbo.Geo.Core/Turbo.Geo.Core.csproj", "src/Geo/Turbo.Geo.Core/"]
+COPY ["src/Geo/Turbo.Geo.Contracts/Turbo.Geo.Contracts.csproj", "src/Geo/Turbo.Geo.Contracts/"]
+COPY ["src/Geo/Turbo.Geo.Infrastructure/Turbo.Geo.Infrastructure.csproj", "src/Geo/Turbo.Geo.Infrastructure/"]
 COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]
 COPY ["Turbo-pg-data/Turbo-pg-data.csproj", "Turbo-pg-data/"]
 COPY ["src/Shared/Turbo.Messaging.Abstractions/Turbo.Messaging.Abstractions.csproj", "src/Shared/Turbo.Messaging.Abstractions/"]

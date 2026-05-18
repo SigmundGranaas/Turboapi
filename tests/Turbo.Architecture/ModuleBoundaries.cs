@@ -22,13 +22,26 @@ public sealed class ModuleBoundaries
         "Turbo.Activity.Api",
     ];
 
-    private static readonly string[] GeoAssemblies = ["Turboapi-geo"];
+    private static readonly string[] GeoAssemblies =
+    [
+        "Turbo.Geo.Core",
+        "Turbo.Geo.Contracts",
+        "Turbo.Geo.Infrastructure",
+        "Turbo.Geo.Api",
+    ];
+
     private static readonly string[] AuthAssemblies = ["Turboapi-auth"];
 
     private static IEnumerable<Assembly> Activity =>
         ActivityAssemblies.Select(LoadByName);
-    private static IEnumerable<Assembly> Geo =>
-        new[] { typeof(Turboapi.Geo.GeoScope).Assembly };
+    private static IEnumerable<Assembly> Geo
+    {
+        get
+        {
+            _ = typeof(Turboapi.Geo.GeoScope); // force-load Contracts
+            return GeoAssemblies.Select(LoadByName);
+        }
+    }
     private static IEnumerable<Assembly> Auth =>
         new[] { typeof(Turboapi.Auth.AuthScope).Assembly };
 

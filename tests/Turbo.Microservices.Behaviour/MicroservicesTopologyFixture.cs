@@ -44,7 +44,7 @@ public sealed class MicroservicesTopologyFixture : IAsyncLifetime
 
         await RepoLayout.RunMigrationsAsync(authConn, "Turboapi-auth");
         await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
-        await RepoLayout.RunMigrationsAsync(geoConn, "Turboapi-geo");
+        await RepoLayout.RunMigrationsAsync(geoConn, "src/Geo");
 
         var natsUrl = TurboTestContainers.NatsUrl(_nats);
         _authFactory = BuildFactory<Turbo.Host.Auth.AuthHostProgram>(authConn, natsUrl, "Auth");

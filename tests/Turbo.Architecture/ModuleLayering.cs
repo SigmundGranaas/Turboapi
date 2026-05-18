@@ -51,6 +51,19 @@ public sealed class ModuleLayering
             ForbiddenInContracts.Concat(new[] { "Turbo.Activity.Core" }).ToArray());
     }
 
+    [Fact]
+    public void Geo_Core_does_not_depend_on_infrastructure_packages()
+    {
+        AssertNoForbiddenReferences("Turbo.Geo.Core", ForbiddenInCore);
+    }
+
+    [Fact]
+    public void Geo_Contracts_does_not_depend_on_infrastructure_or_Core()
+    {
+        AssertNoForbiddenReferences("Turbo.Geo.Contracts",
+            ForbiddenInContracts.Concat(new[] { "Turbo.Geo.Core" }).ToArray());
+    }
+
     private static void AssertNoForbiddenReferences(string assemblyName, string[] forbidden)
     {
         var assembly = LoadByName(assemblyName);

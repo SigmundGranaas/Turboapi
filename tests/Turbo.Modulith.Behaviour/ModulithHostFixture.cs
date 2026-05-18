@@ -37,7 +37,7 @@ public sealed class ModulithHostFixture : IAsyncLifetime
 
         await RepoLayout.RunMigrationsAsync(authConn, "Turboapi-auth");
         await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
-        await RepoLayout.RunMigrationsAsync(geoConn, "Turboapi-geo");
+        await RepoLayout.RunMigrationsAsync(geoConn, "src/Geo");
 
         _factory = new WebApplicationFactory<ModulithProgram>().WithWebHostBuilder(builder =>
         {

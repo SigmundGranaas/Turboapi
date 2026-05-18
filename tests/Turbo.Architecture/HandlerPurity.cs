@@ -57,7 +57,7 @@ public sealed class HandlerPurity
     public void Geo_command_handlers_do_not_reference_EF_Core_or_Npgsql()
     {
         _ = typeof(Turboapi.Geo.domain.handler.CreateLocationHandler);
-        var assembly = LoadByName("Turboapi-geo");
+        var assembly = LoadByName("Turbo.Geo.Core");
 
         var result = Types.InAssembly(assembly)
             .That()
