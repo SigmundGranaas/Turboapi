@@ -4,7 +4,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <RootNamespace>Turboapi</RootNamespace>
+        <RootNamespace>Turboapi.Auth</RootNamespace>
         <UserSecretsId>14cfa630-786f-440e-b2c4-3be8576dd847</UserSecretsId>
     </PropertyGroup>
 
