@@ -2,9 +2,9 @@ using System.Diagnostics;
 using NetTopologySuite.Geometries;
 using Turbo.Messaging;
 using Turbo.Outbox;
-using Turboapi_geo.data.model;
-using Turboapi_geo.domain.events;
-using Turboapi_geo.domain.query.model;
+using Turboapi.Geo.data.model;
+using Turboapi.Geo.domain.events;
+using Turboapi.Geo.domain.query.model;
 
 public interface ILocationEventHandler<in TEvent> : IEventHandler<TEvent> where TEvent : DomainEvent, IDomainEvent
 {

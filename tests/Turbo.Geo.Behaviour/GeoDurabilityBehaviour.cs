@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Turboapi_geo.controller.request;
-using Turboapi_geo.controller.response;
+using Turboapi.Geo.controller.request;
+using Turboapi.Geo.controller.response;
 using Xunit;
 
 namespace Turbo.Geo.Behaviour;

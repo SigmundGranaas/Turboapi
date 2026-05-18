@@ -4,14 +4,14 @@ using Turbo.Messaging;
 using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
-using Turboapi_geo.controller;
-using Turboapi_geo.data;
-using Turboapi_geo.domain.events;
-using Turboapi_geo.domain.handler;
-using Turboapi_geo.domain.query;
-using Turboapi_geo.domain.query.model;
+using Turboapi.Geo.controller;
+using Turboapi.Geo.data;
+using Turboapi.Geo.domain.events;
+using Turboapi.Geo.domain.handler;
+using Turboapi.Geo.domain.query;
+using Turboapi.Geo.domain.query.model;
 
-namespace Turboapi_geo;
+namespace Turboapi.Geo;
 
 /// <summary>
 /// Composition entry point for the Geo module. Wires DbContext, repos,

@@ -1,6 +1,6 @@
 using Turbo.Messaging;
 
-namespace Turboapi_geo;
+namespace Turboapi.Geo;
 
 /// <summary>
 /// Module marker for the Geo commit boundary. See

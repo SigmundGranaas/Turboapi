@@ -1,10 +1,10 @@
 using Medo;
 using Turbo.Messaging;
-using Turboapi_geo.domain.events;
-using Turboapi_geo.domain.exception;
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.domain.events;
+using Turboapi.Geo.domain.exception;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.model
+namespace Turboapi.Geo.domain.model
 {
       public class Location
     {

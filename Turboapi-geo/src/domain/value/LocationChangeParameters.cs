@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Turboapi_geo.domain.value;
+namespace Turboapi.Geo.domain.value;
 
 public record LocationUpdateParameters
 {

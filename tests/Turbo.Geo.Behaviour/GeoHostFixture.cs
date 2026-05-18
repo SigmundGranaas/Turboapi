@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Behaviour.Testing;
-using Turboapi_geo.domain.query.model;
+using Turboapi.Geo.domain.query.model;
 
 namespace Turbo.Geo.Behaviour;
 

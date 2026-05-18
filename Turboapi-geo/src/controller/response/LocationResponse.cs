@@ -1,7 +1,7 @@
-using Turboapi_geo.controller.request;
-using Turboapi_geo.domain.queries;
+using Turboapi.Geo.controller.request;
+using Turboapi.Geo.domain.queries;
 
-namespace Turboapi_geo.controller.response;
+namespace Turboapi.Geo.controller.response;
 
 public record LocationResponse
 {

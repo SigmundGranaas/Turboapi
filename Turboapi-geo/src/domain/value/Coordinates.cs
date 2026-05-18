@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using NetTopologySuite.Geometries;
 
-namespace Turboapi_geo.domain.value;
+namespace Turboapi.Geo.domain.value;
 
 /// <summary>
 /// Immutable coordinates record

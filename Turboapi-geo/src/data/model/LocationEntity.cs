@@ -1,7 +1,7 @@
 
 using NetTopologySuite.Geometries;
 
-namespace Turboapi_geo.data.model;
+namespace Turboapi.Geo.data.model;
 
 public class LocationEntity
 {

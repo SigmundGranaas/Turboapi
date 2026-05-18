@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Turboapi_geo.domain.value;
+namespace Turboapi.Geo.domain.value;
 
 /// <summary>
 /// Represents a set of proposed changes for DisplayInformation.

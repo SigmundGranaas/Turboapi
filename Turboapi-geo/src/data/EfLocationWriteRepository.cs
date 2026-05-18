@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
-using Turboapi_geo.data.model;
-using Turboapi_geo.domain.query;
-using Turboapi_geo.domain.query.model;
-using Turboapi_geo.domain.value;
-using Coordinates = Turboapi_geo.domain.value.Coordinates;
-using Location = Turboapi_geo.domain.model.Location;
+using Turboapi.Geo.data.model;
+using Turboapi.Geo.domain.query;
+using Turboapi.Geo.domain.query.model;
+using Turboapi.Geo.domain.value;
+using Coordinates = Turboapi.Geo.domain.value.Coordinates;
+using Location = Turboapi.Geo.domain.model.Location;
 
-namespace Turboapi_geo.data;
+namespace Turboapi.Geo.data;
 
 public class EfLocationWriteRepository : ILocationWriteRepository
 {

@@ -1,9 +1,9 @@
 using Turbo.Outbox;
-using Turboapi_geo.domain.commands;
-using Turboapi_geo.domain.exception;
-using Turboapi_geo.domain.query;
+using Turboapi.Geo.domain.commands;
+using Turboapi.Geo.domain.exception;
+using Turboapi.Geo.domain.query;
 
-namespace Turboapi_geo.domain.handler;
+namespace Turboapi.Geo.domain.handler;
 
 public class DeleteLocationHandler
 {

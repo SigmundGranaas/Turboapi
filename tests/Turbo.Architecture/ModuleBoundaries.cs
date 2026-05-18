@@ -23,7 +23,7 @@ public sealed class ModuleBoundaries
     };
 
     private static Assembly Activity => typeof(Turboapi.Activity.ActivityScope).Assembly;
-    private static Assembly Geo => typeof(Turboapi_geo.GeoScope).Assembly;
+    private static Assembly Geo => typeof(Turboapi.Geo.GeoScope).Assembly;
     private static Assembly Auth => typeof(Turboapi.AuthScope).Assembly;
 
     [Fact]

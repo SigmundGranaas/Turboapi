@@ -1,8 +1,8 @@
 using System.Text.Json.Serialization;
 using Turbo.Messaging;
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.events
+namespace Turboapi.Geo.domain.events
 {
     /// <summary>
     /// Location created event

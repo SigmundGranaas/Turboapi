@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Turboapi_geo.controller.request;
+namespace Turboapi.Geo.controller.request;
 
 public record CreateLocationRequest
 {

@@ -1,16 +1,16 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Turboapi_geo.controller.request;
-using Turboapi_geo.controller.response;
-using Turboapi_geo.domain.commands;
-using Turboapi_geo.domain.exception;
-using Turboapi_geo.domain.handler;
-using Turboapi_geo.domain.queries;
-using Turboapi_geo.domain.query;
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.controller.request;
+using Turboapi.Geo.controller.response;
+using Turboapi.Geo.domain.commands;
+using Turboapi.Geo.domain.exception;
+using Turboapi.Geo.domain.handler;
+using Turboapi.Geo.domain.queries;
+using Turboapi.Geo.domain.query;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.controller;
+namespace Turboapi.Geo.controller;
 
 [ApiController]
 [Route("api/geo/[controller]")]

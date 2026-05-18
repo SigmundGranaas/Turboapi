@@ -1,4 +1,4 @@
-namespace Turboapi_geo.domain.exception;
+namespace Turboapi.Geo.domain.exception;
 
 public class LocationNotFoundException: Exception
 {

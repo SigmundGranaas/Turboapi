@@ -1,6 +1,6 @@
 using Turbo.Messaging.Nats;
 using Turboapi.infrastructure;
-using Turboapi_geo;
+using Turboapi.Geo;
 using TurboAuthentication.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,8 +1,8 @@
 using Turbo.Outbox;
-using Turboapi_geo.domain.commands;
-using Turboapi_geo.domain.model;
+using Turboapi.Geo.domain.commands;
+using Turboapi.Geo.domain.model;
 
-namespace Turboapi_geo.domain.handler;
+namespace Turboapi.Geo.domain.handler;
 
 public class CreateLocationHandler
 {

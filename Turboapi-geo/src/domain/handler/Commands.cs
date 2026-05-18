@@ -1,6 +1,6 @@
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.commands
+namespace Turboapi.Geo.domain.commands
 {
     /// <summary>
     /// Command to create a new location

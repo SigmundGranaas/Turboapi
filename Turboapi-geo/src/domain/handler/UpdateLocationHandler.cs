@@ -1,9 +1,9 @@
 using Turbo.Outbox;
-using Turboapi_geo.domain.commands;
-using Turboapi_geo.domain.exception;
-using Turboapi_geo.domain.query;
+using Turboapi.Geo.domain.commands;
+using Turboapi.Geo.domain.exception;
+using Turboapi.Geo.domain.query;
 
-namespace Turboapi_geo.domain.handler;
+namespace Turboapi.Geo.domain.handler;
 
 public class UpdateLocationHandler
 {
@@ -22,7 +22,7 @@ public class UpdateLocationHandler
         _uow = uow;
     }
 
-    public async Task<Turboapi_geo.domain.model.Location> Handle(UpdateLocationCommand command)
+    public async Task<Turboapi.Geo.domain.model.Location> Handle(UpdateLocationCommand command)
     {
         var location = await _repository.GetById(command.LocationId);
         if (location == null)

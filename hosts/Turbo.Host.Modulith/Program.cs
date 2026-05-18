@@ -1,7 +1,7 @@
 using Turbo.Host.Modulith;
 using Turbo.Messaging.InProcess;
 using Turboapi;
-using Turboapi_geo;
+using Turboapi.Geo;
 using Turboapi.Activity;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,7 +1,7 @@
-using Turboapi_geo.data.model;
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.data.model;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.query.model;
+namespace Turboapi.Geo.domain.query.model;
 
 public interface ILocationWriteRepository
 {

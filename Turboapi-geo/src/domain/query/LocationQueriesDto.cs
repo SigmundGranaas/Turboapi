@@ -1,7 +1,7 @@
 
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.queries
+namespace Turboapi.Geo.domain.queries
 {
     public record GetLocationByIdQuery(Guid LocationId, Guid Owner);
     

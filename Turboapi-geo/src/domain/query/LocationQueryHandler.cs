@@ -1,13 +1,13 @@
-using Turboapi_geo.domain.queries;
+using Turboapi.Geo.domain.queries;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
-using Turboapi_geo.data.model;
-using Turboapi_geo.domain.model;
-using Turboapi_geo.domain.value;
+using Turboapi.Geo.data.model;
+using Turboapi.Geo.domain.model;
+using Turboapi.Geo.domain.value;
 
-namespace Turboapi_geo.domain.query;
+namespace Turboapi.Geo.domain.query;
 
 public class GetLocationByIdHandler
 {

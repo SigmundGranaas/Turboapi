@@ -2,7 +2,7 @@ using System.Text.Json;
 using NetTopologySuite.IO.Converters;
 
 
-namespace Turboapi_geo.geo;
+namespace Turboapi.Geo.geo;
 
 public static class JsonConfig
 {

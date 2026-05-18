@@ -85,13 +85,13 @@ public sealed class SubscriberCoverage
     {
         // Touch a known type from each module's assembly so it's loaded.
         _ = typeof(Turboapi.Activity.domain.events.ActivityCreated);
-        _ = typeof(Turboapi_geo.domain.events.LocationCreated);
+        _ = typeof(Turboapi.Geo.domain.events.LocationCreated);
         _ = typeof(Turboapi.Domain.Events.AccountCreatedEvent);
 
         var moduleAssemblies = new[]
         {
             typeof(Turboapi.Activity.domain.events.ActivityCreated).Assembly,
-            typeof(Turboapi_geo.domain.events.LocationCreated).Assembly,
+            typeof(Turboapi.Geo.domain.events.LocationCreated).Assembly,
             typeof(Turboapi.Domain.Events.AccountCreatedEvent).Assembly,
         };
 

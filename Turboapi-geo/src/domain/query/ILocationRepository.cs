@@ -1,6 +1,6 @@
-using Turboapi_geo.domain.model;
+using Turboapi.Geo.domain.model;
 
-namespace Turboapi_geo.domain.query;
+namespace Turboapi.Geo.domain.query;
 
 public interface ILocationReadRepository
 {

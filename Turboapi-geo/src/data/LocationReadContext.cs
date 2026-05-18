@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Outbox.Postgres;
-using Turboapi_geo.data.model;
+using Turboapi.Geo.data.model;
 
-namespace Turboapi_geo.domain.query.model;
+namespace Turboapi.Geo.domain.query.model;
 
 public class LocationReadContext : DbContext
 {
