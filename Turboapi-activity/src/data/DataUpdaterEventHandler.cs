@@ -29,9 +29,9 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
         using var activity = _activitySource.StartActivity("Handle Activity Created");
         activity?.SetTag("activity.id", @event.activity);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed ActivityCreated {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed ActivityCreated {EventId}", @event.EventId);
             return;
         }
 
@@ -63,9 +63,9 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
         using var activity = _activitySource.StartActivity("Handle Activity Updated");
         activity?.SetTag("activity.id", @event.ActivityId);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed ActivityUpdated {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed ActivityUpdated {EventId}", @event.EventId);
             return;
         }
 
@@ -97,9 +97,9 @@ public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandle
         using var activity = _activitySource.StartActivity("Handle Activity Created");
         activity?.SetTag("activity.id", @event.activityId);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed ActivityDeleted {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed ActivityDeleted {EventId}", @event.EventId);
             return;
         }
 

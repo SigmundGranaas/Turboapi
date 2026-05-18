@@ -33,9 +33,9 @@ public class LocationCreatedHandler : ILocationEventHandler<LocationCreated>
         using var activity = _activitySource.StartActivity("Handle Location Created");
         activity?.SetTag("location.id", @event.LocationId);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed LocationCreated {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed LocationCreated {EventId}", @event.EventId);
             return;
         }
 
@@ -89,9 +89,9 @@ public class LocationUpdatedHandler : ILocationEventHandler<LocationUpdated>
         using var activity = _activitySource.StartActivity("Handle location updated");
         activity?.SetTag("location.id", @event.LocationId);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed LocationUpdated {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed LocationUpdated {EventId}", @event.EventId);
             return;
         }
 
@@ -137,9 +137,9 @@ public class LocationDeletedHandler : ILocationEventHandler<LocationDeleted>
         using var activity = _activitySource.StartActivity("Handle Location Deleted");
         activity?.SetTag("location.id", @event.LocationId);
 
-        if (!await _idempotency.TryMarkProcessedAsync(@event.Id, cancellationToken))
+        if (!await _idempotency.TryMarkProcessedAsync(@event.EventId, cancellationToken))
         {
-            _logger.LogDebug("Skipping already-processed LocationDeleted {EventId}", @event.Id);
+            _logger.LogDebug("Skipping already-processed LocationDeleted {EventId}", @event.EventId);
             return;
         }
 

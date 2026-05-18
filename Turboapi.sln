@@ -36,8 +36,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi-geo", "Turboapi-ge
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi-activity", "Turboapi-activity\Turboapi-activity.csproj", "{F73227A4-B29F-4189-A805-3D5EE840D742}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo-event", "Turbo-event\Turbo-event.csproj", "{7B03E88A-271C-40BD-AE4E-DCC664E0082A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo-pg-data", "Turbo-pg-data\Turbo-pg-data.csproj", "{95224B46-AFB4-4647-B39A-68C8F16C0BBB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turboapi-gateway", "Turboapi-gateway\Turboapi-gateway.csproj", "{05E8D704-969D-440C-8F9B-52A527D0ED04}"
@@ -116,10 +114,6 @@ Global
 		{F73227A4-B29F-4189-A805-3D5EE840D742}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F73227A4-B29F-4189-A805-3D5EE840D742}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F73227A4-B29F-4189-A805-3D5EE840D742}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7B03E88A-271C-40BD-AE4E-DCC664E0082A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7B03E88A-271C-40BD-AE4E-DCC664E0082A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7B03E88A-271C-40BD-AE4E-DCC664E0082A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7B03E88A-271C-40BD-AE4E-DCC664E0082A}.Release|Any CPU.Build.0 = Release|Any CPU
 		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|Any CPU.ActiveCfg = Release|Any CPU

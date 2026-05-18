@@ -1,3 +1,4 @@
+using Turbo.Messaging;
 using Turboapi.Application.Results;
 using Turboapi.Application.Results.Errors;
 using Turboapi.Domain.Events;
@@ -241,10 +242,4 @@ namespace Turboapi.Domain.Aggregates
             AddDomainEvent(new RefreshTokenRevokedEvent(Id, refreshToken.Id, refreshToken.RevokedReason, refreshToken.RevokedAt!.Value));
         }
     }
-
-    public record SuspiciousRefreshTokenAttemptEvent(
-        Guid AccountId,
-        string TokenAttempted,
-        string Reason
-    ) : IDomainEvent, IAccountAssociatedEvent;
 }

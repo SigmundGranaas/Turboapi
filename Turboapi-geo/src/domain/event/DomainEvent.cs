@@ -1,26 +1,9 @@
 using System.Text.Json.Serialization;
-using Medo;
 using Turbo.Messaging;
 using Turboapi_geo.domain.value;
 
 namespace Turboapi_geo.domain.events
 {
-    /// <summary>
-    /// Base event properties
-    /// </summary>
-    public abstract record DomainEvent : IDomainEvent
-    {
-        [JsonPropertyName("id")]
-        public Guid Id { get; init; } = Uuid7.NewUuid7();
-
-        [JsonPropertyName("occurredAt")]
-        public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
-
-        // EventType is derived. If you want to ensure its serialized name and presence:
-        [JsonPropertyName("eventType")]
-        public string EventType => GetType().Name;
-    }
-
     /// <summary>
     /// Location created event
     /// </summary>

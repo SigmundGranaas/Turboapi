@@ -1,4 +1,5 @@
 using Medo;
+using Turbo.Messaging;
 using Turboapi_geo.domain.events;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.value;

@@ -18,7 +18,6 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="9.0.4" />
         <PackageReference Include="Npgsql.NetTopologySuite" Version="9.0.3" />
         <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.10.0-beta.1" />
-        <ProjectReference Include="../Turbo-event/Turbo-event.csproj" />
         <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj" />

@@ -45,13 +45,6 @@ public static class SubscriberWiring
         typeof(Turboapi.Domain.Events.RefreshTokenGeneratedEvent),
         typeof(Turboapi.Domain.Events.RefreshTokenRevokedEvent),
         typeof(Turboapi.Domain.Events.SuspiciousRefreshTokenAttemptEvent),
-        // NOTE: there is a second SuspiciousRefreshTokenAttemptEvent type
-        // declared inside Account.cs (Turboapi.Domain.Aggregates namespace)
-        // that pre-dates the events directory. The two records have the
-        // same shape; until Auth is cleaned up to keep only one, the
-        // allowlist tolerates both so the SubscriberCoverage test stays
-        // green.
-        typeof(Turboapi.Domain.Aggregates.SuspiciousRefreshTokenAttemptEvent),
     };
 
     public static IServiceCollection AddTurboInProcessSubscribers(this IServiceCollection services)

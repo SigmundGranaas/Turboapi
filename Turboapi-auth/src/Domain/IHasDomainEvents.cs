@@ -1,4 +1,4 @@
-using Turboapi.Domain.Events;
+using Turbo.Messaging;
 
 namespace Turboapi.Domain;
 

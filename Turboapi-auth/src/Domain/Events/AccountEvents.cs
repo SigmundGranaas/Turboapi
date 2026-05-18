@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Turbo.Messaging;
 
 namespace Turboapi.Domain.Events
 {
@@ -7,24 +8,24 @@ namespace Turboapi.Domain.Events
         [property: JsonPropertyName("email")] string Email,
         [property: JsonPropertyName("createdAt")] DateTime CreatedAt,
         [property: JsonPropertyName("initialRoles")] IEnumerable<string> InitialRoles
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record AccountLastLoginUpdatedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("lastLoginAt")] DateTime LastLoginAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record RoleAddedToAccountEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("roleName")] string RoleName,
         [property: JsonPropertyName("addedAt")] DateTime AddedAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record PasswordAuthMethodAddedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("authMethodId")] Guid AuthMethodId,
         [property: JsonPropertyName("addedAt")] DateTime AddedAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record OAuthAuthMethodAddedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
@@ -32,34 +33,33 @@ namespace Turboapi.Domain.Events
         [property: JsonPropertyName("providerName")] string ProviderName,
         [property: JsonPropertyName("externalUserId")] string ExternalUserId,
         [property: JsonPropertyName("addedAt")] DateTime AddedAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
-  
     public record AccountLoggedInEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("authMethodId")] Guid AuthMethodId,
         [property: JsonPropertyName("providerName")] string ProviderName,
         [property: JsonPropertyName("loggedInAt")] DateTime LoggedInAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record RefreshTokenGeneratedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("refreshTokenId")] Guid RefreshTokenId,
-        [property: JsonPropertyName("tokenIdentifier")] string TokenIdentifier, 
+        [property: JsonPropertyName("tokenIdentifier")] string TokenIdentifier,
         [property: JsonPropertyName("expiresAt")] DateTime ExpiresAt,
         [property: JsonPropertyName("generatedAt")] DateTime GeneratedAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
+    ) : DomainEvent, IAccountAssociatedEvent;
 
     public record RefreshTokenRevokedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("refreshTokenId")] Guid RefreshTokenId,
         [property: JsonPropertyName("revocationReason")] string? RevocationReason,
         [property: JsonPropertyName("revokedAt")] DateTime RevokedAt
-    ) : IDomainEvent, IAccountAssociatedEvent;
-    
+    ) : DomainEvent, IAccountAssociatedEvent;
+
     public record SuspiciousRefreshTokenAttemptEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,
         [property: JsonPropertyName("tokenAttempted")] string TokenAttempted,
-        [property: JsonPropertyName("reason")]string Reason
-    ) : IDomainEvent, IAccountAssociatedEvent;
+        [property: JsonPropertyName("reason")] string Reason
+    ) : DomainEvent, IAccountAssociatedEvent;
 }
