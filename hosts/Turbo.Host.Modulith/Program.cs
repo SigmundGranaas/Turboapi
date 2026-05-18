@@ -1,9 +1,8 @@
+using Turbo.Host.Modulith;
 using Turbo.Messaging.InProcess;
 using Turboapi;
 using Turboapi_geo;
-using Turboapi_geo.domain.events;
 using Turboauth_activity;
-using Turboauth_activity.domain.events;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -21,12 +20,10 @@ builder.Services.AddGeoModule(builder.Configuration);
 // drains the channel and resolves IEventHandler<T> in a fresh DI scope. No
 // NATS, no broker — the read-model projection is end-to-end in-process.
 builder.Services.AddInProcessMessaging();
-builder.Services.AddInProcessSubscriber<ActivityCreated>("turbo.activity.ActivityCreated");
-builder.Services.AddInProcessSubscriber<ActivityUpdated>("turbo.activity.ActivityUpdated");
-builder.Services.AddInProcessSubscriber<ActivityDeleted>("turbo.activity.ActivityDeleted");
-builder.Services.AddInProcessSubscriber<LocationCreated>("turbo.geo.LocationCreated");
-builder.Services.AddInProcessSubscriber<LocationUpdated>("turbo.geo.LocationUpdated");
-builder.Services.AddInProcessSubscriber<LocationDeleted>("turbo.geo.LocationDeleted");
+// Subscriber registrations live in SubscriberWiring so the
+// SubscriberCoverage architecture test can compare them against the
+// set of IDomainEvent types in the modules.
+builder.Services.AddTurboInProcessSubscribers();
 
 var app = builder.Build();
 

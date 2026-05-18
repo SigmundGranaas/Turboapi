@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\Turboapi-activity\Turboapi-activity.csproj" />
     <ProjectReference Include="..\..\Turboapi-geo\Turboapi-geo.csproj" />
     <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
+    <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />
   </ItemGroup>
 
 </Project>
