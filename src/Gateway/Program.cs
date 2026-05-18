@@ -37,7 +37,7 @@ app.UseCors("Default");
 
 app.Run();
 
-namespace Turboapi_gateway
+namespace Turbo.Gateway
 {
     /// <summary>Marker for WebApplicationFactory in tests.</summary>
     public class GatewayProgram;

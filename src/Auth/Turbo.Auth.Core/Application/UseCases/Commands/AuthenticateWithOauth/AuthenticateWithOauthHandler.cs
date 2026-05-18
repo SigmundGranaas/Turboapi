@@ -1,4 +1,3 @@
-// ==== FILE: /home/sigmund/development/turboapi/Turboapi/Turboapi-auth/src/Application/UseCases/Commands/AuthenticateWithOauth/AuthenticateWithOauthHandler.cs ====
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Auth.Application.Contracts.V1.Auth;

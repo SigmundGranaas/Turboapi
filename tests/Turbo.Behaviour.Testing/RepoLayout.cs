@@ -13,9 +13,10 @@ public static class RepoLayout
 {
     /// <summary>
     /// Walks parents from the test assembly's bin directory until it
-    /// finds a directory containing <paramref name="moduleDirectory"/>
-    /// (e.g. <c>Turboapi-activity</c>) at the repo root, then joins the
-    /// subsequent <paramref name="segments"/> onto it.
+    /// finds <paramref name="moduleDirectory"/> at (or below) the repo
+    /// root, then joins the subsequent <paramref name="segments"/> onto
+    /// it. Module callers pass repo-relative paths like
+    /// <c>"src/Activity"</c>, <c>"src/Geo"</c>, <c>"src/Auth"</c>.
     /// </summary>
     public static string LocateModulePath(string moduleDirectory, params string[] segments)
     {

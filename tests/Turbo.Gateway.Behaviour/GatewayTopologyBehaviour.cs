@@ -2,7 +2,7 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Turboapi_gateway;
+using Turbo.Gateway;
 using Xunit;
 
 namespace Turbo.Gateway.Behaviour;

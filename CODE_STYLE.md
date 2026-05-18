@@ -2,20 +2,48 @@
 
 ## System Architecture
 
-Turboapi is a microservices-based application built with .NET 9, consisting of:
+Turboapi is a .NET 10 system that can be deployed either as a modulith
+(`Turbo.Host.Modulith`, one process binding all three modules) or as
+three independent microservices behind a YARP gateway. The same module
+code runs under both topologies.
 
-- **Turboapi-auth**: Authentication service (user registration, login, tokens)
-- **Turboapi-geo**: Location service with geospatial capabilities
-- **Turboapi-activity**: Activity management service
-- **Turbo-event**: Shared event handling library
-- **Turbo-pg-data**: Shared PostgreSQL operations library
+Each module ships as four assemblies (`Core` / `Contracts` /
+`Infrastructure` / `Api`):
+
+- **`src/Auth/`** — authentication (registration, login, tokens, OAuth).
+- **`src/Geo/`** — location service with PostGIS geospatial capabilities.
+- **`src/Activity/`** — activity management.
+
+Cross-cutting libraries:
+
+- **`src/Shared/Turbo.Messaging.*`** — `IDomainEvent` + transport
+  abstractions; NATS JetStream and in-process implementations.
+- **`src/Shared/Turbo.Outbox.*`** — transactional outbox abstractions
+  plus the Postgres dispatcher.
+- **`src/Gateway/`** — YARP reverse proxy that swaps between
+  microservice and modulith routing via a `Topology` env var.
+- **`Turbo-pg-data/`** — Flyway runner used by all modules' DB
+  initialisation.
+- **`TurboAuthentication/`** — shared JWT/cookie scheme used by Geo and
+  Activity to validate Auth-issued tokens.
 
 ### Key Architecture Patterns
 
-- **Domain-Driven Design**: Bounded contexts per microservice
-- **CQRS**: Command/Query Responsibility Segregation
-- **Event Sourcing**: Domain events as source of truth
-- **Microservices**: Independent deployment and scaling
+- **Hexagonal / Ports-and-Adapters**: Core depends only on
+  Messaging.Abstractions and Outbox.Abstractions; EF Core, Npgsql,
+  NATS, ASP.NET live in Infrastructure / Api. `tests/Turbo.Architecture/`
+  enforces this with NetArchTest.
+- **Domain-Driven Design**: each module is a bounded context.
+- **CQRS**: command handlers (write side) drain aggregate domain events
+  into the transactional outbox; query handlers read from a read-model
+  projection populated by subscriber handlers.
+- **Transactional outbox + at-least-once delivery**: events flow through
+  the outbox in the same DB transaction as the aggregate write; an
+  `OutboxDispatcherHostedService` publishes to the active transport
+  (NATS or in-process).
+- **Symmetric deploy topology**: dedicated DBs (default) or shared
+  Postgres, dedicated microservices or modulith — chosen at deploy time
+  via compose / k8s overlays, never via app code.
 
 ### Infrastructure
 

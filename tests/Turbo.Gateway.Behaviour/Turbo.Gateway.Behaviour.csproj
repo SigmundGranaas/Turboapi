@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Turboapi-gateway\Turboapi-gateway.csproj" />
+    <ProjectReference Include="..\..\src\Gateway\Turbo.Gateway.csproj" />
   </ItemGroup>
 
 </Project>

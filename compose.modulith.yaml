@@ -48,7 +48,7 @@ services:
   turboapi-gateway:
     build:
       context: .
-      dockerfile: ./Turboapi-gateway/Dockerfile
+      dockerfile: ./src/Gateway/Dockerfile
     container_name: turboapi_gateway
     ports:
       - "8080:8080"

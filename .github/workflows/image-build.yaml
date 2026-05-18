@@ -34,8 +34,8 @@ jobs:
             dockerfile: ./hosts/Turbo.Host.Modulith/Dockerfile
             context: ./
           - service: gateway
-            project_path: ./Turboapi-gateway/Turboapi-gateway.csproj
-            dockerfile: ./Turboapi-gateway/Dockerfile
+            project_path: ./src/Gateway/Turbo.Gateway.csproj
+            dockerfile: ./src/Gateway/Dockerfile
             context: ./
     steps:
       - name: Checkout code

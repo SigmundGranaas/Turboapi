@@ -14,8 +14,6 @@ COPY ["src/Auth/Turbo.Auth.Api/Turbo.Auth.Api.csproj", "src/Auth/Turbo.Auth.Api/
 COPY ["src/Auth/Turbo.Auth.Core/Turbo.Auth.Core.csproj", "src/Auth/Turbo.Auth.Core/"]
 COPY ["src/Auth/Turbo.Auth.Contracts/Turbo.Auth.Contracts.csproj", "src/Auth/Turbo.Auth.Contracts/"]
 COPY ["src/Auth/Turbo.Auth.Infrastructure/Turbo.Auth.Infrastructure.csproj", "src/Auth/Turbo.Auth.Infrastructure/"]
-COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]
-COPY ["Turbo-pg-data/Turbo-pg-data.csproj", "Turbo-pg-data/"]
 COPY ["src/Shared/Turbo.Messaging.Abstractions/Turbo.Messaging.Abstractions.csproj", "src/Shared/Turbo.Messaging.Abstractions/"]
 COPY ["src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj", "src/Shared/Turbo.Messaging.Nats/"]
 COPY ["src/Shared/Turbo.Outbox.Abstractions/Turbo.Outbox.Abstractions.csproj", "src/Shared/Turbo.Outbox.Abstractions/"]

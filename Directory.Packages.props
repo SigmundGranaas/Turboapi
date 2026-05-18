@@ -43,6 +43,10 @@
     <PackageVersion Include="Medo.Uuid7" Version="3.0.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.10.0-beta.1" />
+    <!-- OpenTelemetry.Api 1.10.0 (transitively from the EF Core
+         instrumentation) trips NU1902 with two moderate-severity advisories.
+         Pin to the patched version so CPM's transitive pinning lifts it. -->
+    <PackageVersion Include="OpenTelemetry.Api" Version="1.15.3" />
 
     <!-- Test stack -->
     <PackageVersion Include="FluentAssertions" Version="8.0.1" />
