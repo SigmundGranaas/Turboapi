@@ -10,9 +10,9 @@ namespace Turbo.Messaging;
 public static class EventEnvelopeFactory
 {
     /// <summary>
-    /// Default serializer options. Property names are left as-is (PascalCase) so
-    /// the on-wire JSON matches what existing Kafka consumers expect via
-    /// System.Text.Json default deserialization — which is case-sensitive.
+    /// Default serializer options. Property names are left as-is (PascalCase)
+    /// so the on-wire JSON round-trips through System.Text.Json's
+    /// case-sensitive default deserialization without per-event configuration.
     /// </summary>
     private static readonly JsonSerializerOptions DefaultOptions = new();
 
