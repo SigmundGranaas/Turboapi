@@ -116,7 +116,7 @@ jobs:
           - service: geo
             db_dir: ./Turboapi-geo/db
           - service: activity
-            db_dir: ./Turboapi-activity/db
+            db_dir: ./src/Activity/db
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

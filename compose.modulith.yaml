@@ -86,7 +86,7 @@ services:
     image: flyway/flyway:latest
     command: -url=jdbc:postgresql://activity-db:5436/activity -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
     volumes:
-      - ./Turboapi-activity/db/migrations:/flyway/sql
+      - ./src/Activity/db/migrations:/flyway/sql
     depends_on:
       activity-db:
         condition: service_healthy

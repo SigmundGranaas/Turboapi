@@ -26,7 +26,10 @@
     <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.Nats\Turbo.Messaging.Nats.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Outbox.Abstractions\Turbo.Outbox.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Outbox.Postgres\Turbo.Outbox.Postgres.csproj" />
-    <ProjectReference Include="..\..\Turboapi-activity\Turboapi-activity.csproj" />
+    <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Api\Turbo.Activity.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Core\Turbo.Activity.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Contracts\Turbo.Activity.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Infrastructure\Turbo.Activity.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Turboapi-geo\Turboapi-geo.csproj" />
     <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
     <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />

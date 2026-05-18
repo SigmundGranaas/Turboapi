@@ -7,9 +7,13 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Modulith/Turbo.Host.Modulith.csproj", "hosts/Turbo.Host.Modulith/"]
 COPY ["Turboapi-auth/Turboapi-auth.csproj", "Turboapi-auth/"]
-COPY ["Turboapi-activity/Turboapi-activity.csproj", "Turboapi-activity/"]
+COPY ["src/Activity/Turbo.Activity.Api/Turbo.Activity.Api.csproj", "src/Activity/Turbo.Activity.Api/"]
+COPY ["src/Activity/Turbo.Activity.Core/Turbo.Activity.Core.csproj", "src/Activity/Turbo.Activity.Core/"]
+COPY ["src/Activity/Turbo.Activity.Contracts/Turbo.Activity.Contracts.csproj", "src/Activity/Turbo.Activity.Contracts/"]
+COPY ["src/Activity/Turbo.Activity.Infrastructure/Turbo.Activity.Infrastructure.csproj", "src/Activity/Turbo.Activity.Infrastructure/"]
 COPY ["Turboapi-geo/Turboapi-geo.csproj", "Turboapi-geo/"]
 COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]
 COPY ["Turbo-pg-data/Turbo-pg-data.csproj", "Turbo-pg-data/"]

@@ -8,6 +8,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy only the csprojs first so the restore layer caches when source changes.
+COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Auth/Turbo.Host.Auth.csproj", "hosts/Turbo.Host.Auth/"]
 COPY ["Turboapi-auth/Turboapi-auth.csproj", "Turboapi-auth/"]
 COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]

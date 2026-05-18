@@ -9,7 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
-    <ProjectReference Include="..\..\Turboapi-activity\Turboapi-activity.csproj" />
+    <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Api\Turbo.Activity.Api.csproj" />
     <ProjectReference Include="..\..\Turboapi-geo\Turboapi-geo.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.InProcess\Turbo.Messaging.InProcess.csproj" />
   </ItemGroup>

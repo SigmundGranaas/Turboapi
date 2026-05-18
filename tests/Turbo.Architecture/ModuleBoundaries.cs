@@ -5,43 +5,61 @@ using Xunit;
 namespace Turbo.Architecture;
 
 /// <summary>
-/// Closes review gap #5: the three modules must not have direct
-/// references to one another. If Activity ever depended on Geo (or
-/// vice versa) the "messages only" contract would silently degrade
-/// to "messages plus a sneaky compile-time call." The shared
-/// abstraction packages (Turbo.Messaging.*, Turbo.Outbox.*,
-/// Turbo.Messaging.Nats / InProcess) are the only legal way for one
-/// module to reach another.
+/// The three modules must not have direct references to one another. If
+/// Activity ever depended on Geo (or vice versa) the "messages only"
+/// contract would silently degrade to "messages plus a sneaky compile-time
+/// call." The shared abstraction packages (Turbo.Messaging.*,
+/// Turbo.Outbox.*, Turbo.Messaging.Nats / InProcess) are the only legal way
+/// for one module to reach another.
 /// </summary>
 public sealed class ModuleBoundaries
 {
-    private static readonly string[] ModuleAssemblyNames =
-    {
-        "Turboapi-activity",
-        "Turboapi-geo",
-        "Turboapi-auth",
-    };
+    private static readonly string[] ActivityAssemblies =
+    [
+        "Turbo.Activity.Core",
+        "Turbo.Activity.Contracts",
+        "Turbo.Activity.Infrastructure",
+        "Turbo.Activity.Api",
+    ];
 
-    private static Assembly Activity => typeof(Turboapi.Activity.ActivityScope).Assembly;
-    private static Assembly Geo => typeof(Turboapi.Geo.GeoScope).Assembly;
-    private static Assembly Auth => typeof(Turboapi.Auth.AuthScope).Assembly;
+    private static readonly string[] GeoAssemblies = ["Turboapi-geo"];
+    private static readonly string[] AuthAssemblies = ["Turboapi-auth"];
+
+    private static IEnumerable<Assembly> Activity =>
+        ActivityAssemblies.Select(LoadByName);
+    private static IEnumerable<Assembly> Geo =>
+        new[] { typeof(Turboapi.Geo.GeoScope).Assembly };
+    private static IEnumerable<Assembly> Auth =>
+        new[] { typeof(Turboapi.Auth.AuthScope).Assembly };
 
     [Fact]
     public void Activity_does_not_reference_Geo_or_Auth_assemblies()
     {
-        AssertNoCrossModuleReference(Activity, forbidden: ["Turboapi-geo", "Turboapi-auth"]);
+        _ = typeof(Turboapi.Activity.ActivityScope); // force-load
+        foreach (var module in Activity)
+            AssertNoCrossModuleReference(module, forbidden: GeoAssemblies.Concat(AuthAssemblies).ToArray());
     }
 
     [Fact]
     public void Geo_does_not_reference_Activity_or_Auth_assemblies()
     {
-        AssertNoCrossModuleReference(Geo, forbidden: ["Turboapi-activity", "Turboapi-auth"]);
+        foreach (var module in Geo)
+            AssertNoCrossModuleReference(module, forbidden: ActivityAssemblies.Concat(AuthAssemblies).ToArray());
     }
 
     [Fact]
     public void Auth_does_not_reference_Activity_or_Geo_assemblies()
     {
-        AssertNoCrossModuleReference(Auth, forbidden: ["Turboapi-activity", "Turboapi-geo"]);
+        foreach (var module in Auth)
+            AssertNoCrossModuleReference(module, forbidden: ActivityAssemblies.Concat(GeoAssemblies).ToArray());
+    }
+
+    private static Assembly LoadByName(string assemblyName)
+    {
+        var loaded = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == assemblyName);
+        if (loaded is not null) return loaded;
+        return Assembly.Load(assemblyName);
     }
 
     private static void AssertNoCrossModuleReference(Assembly module, string[] forbidden)

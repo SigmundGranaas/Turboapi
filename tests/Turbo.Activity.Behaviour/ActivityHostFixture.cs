@@ -10,7 +10,7 @@ public sealed class ActivityHostFixture : TurboHostFixture<Turbo.Host.Activity.A
 {
     public ActivityHostFixture() : base("activity") { }
 
-    protected override string ModuleDirectory => "Turboapi-activity";
+    protected override string ModuleDirectory => "src/Activity";
 
     protected override void ConfigureTestServices(WebHostBuilderContext context, IServiceCollection services)
         => ReplaceDbContext<ActivityContext>(services, o => o.UseNpgsql(ConnectionString));

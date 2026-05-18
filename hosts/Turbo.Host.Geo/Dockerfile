@@ -7,6 +7,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
+COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Geo/Turbo.Host.Geo.csproj", "hosts/Turbo.Host.Geo/"]
 COPY ["Turboapi-geo/Turboapi-geo.csproj", "Turboapi-geo/"]
 COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]

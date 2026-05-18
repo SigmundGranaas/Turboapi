@@ -43,7 +43,7 @@ public sealed class MicroservicesTopologyFixture : IAsyncLifetime
         var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
 
         await RepoLayout.RunMigrationsAsync(authConn, "Turboapi-auth");
-        await RepoLayout.RunMigrationsAsync(activityConn, "Turboapi-activity");
+        await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
         await RepoLayout.RunMigrationsAsync(geoConn, "Turboapi-geo");
 
         var natsUrl = TurboTestContainers.NatsUrl(_nats);

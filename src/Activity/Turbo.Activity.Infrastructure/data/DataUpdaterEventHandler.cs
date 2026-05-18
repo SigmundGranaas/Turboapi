@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Activity.domain.events;

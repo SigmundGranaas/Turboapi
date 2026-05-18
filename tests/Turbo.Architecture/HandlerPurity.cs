@@ -40,7 +40,7 @@ public sealed class HandlerPurity
     {
         // Touch a type from the assembly so it loads.
         _ = typeof(Turboapi.Activity.domain.handler.CreateActivityHandler);
-        var assembly = LoadByName("Turboapi-activity");
+        var assembly = LoadByName("Turbo.Activity.Core");
 
         var result = Types.InAssembly(assembly)
             .That()
