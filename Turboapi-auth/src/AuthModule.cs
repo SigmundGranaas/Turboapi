@@ -50,10 +50,12 @@ public static class AuthModule
 
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOutbox<AuthDbContext>, PgOutbox<AuthDbContext>>();
         services.AddScoped<IOutbox<IAuthScope>, PgOutbox<AuthDbContext, IAuthScope>>();
-        services.AddScoped<IUnitOfWork<IAuthScope>, PgUnitOfWork<AuthDbContext, IAuthScope>>();
+        // Auth's UoW does the aggregate-event drain in addition to the
+        // execution-strategy SaveChanges that PgUnitOfWork would do
+        // generically; it owns the IUnitOfWork<IAuthScope> binding.
+        services.AddScoped<IUnitOfWork<IAuthScope>, AuthUnitOfWork>();
         services.AddScoped<IIdempotencyStore<AuthDbContext>, PgIdempotencyStore<AuthDbContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<AuthDbContext>>();
 
@@ -170,7 +172,7 @@ public static class CommandHandlerServiceCollectionExtensions
         services.AddScoped<ICommandHandler<TCommand, TResponse>>(provider =>
             new UnitOfWorkCommandHandlerDecorator<TCommand, TResponse>(
                 provider.GetRequiredService<THandler>(),
-                provider.GetRequiredService<IUnitOfWork>())
+                provider.GetRequiredService<IUnitOfWork<IAuthScope>>())
         );
         return services;
     }

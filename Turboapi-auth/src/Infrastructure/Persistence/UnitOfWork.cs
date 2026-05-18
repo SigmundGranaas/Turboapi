@@ -1,44 +1,38 @@
-using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
-using Turboapi.Application.Interfaces;
 using Turboapi.Domain;
 
 namespace Turboapi.Infrastructure.Persistence
 {
-    public sealed class UnitOfWork : IUnitOfWork
+    /// <summary>
+    /// Auth's <see cref="IUnitOfWork{TScope}"/>. Wraps the DbContext's
+    /// SaveChanges in the configured execution strategy AND drains
+    /// every tracked aggregate's <see cref="IHasDomainEvents.DomainEvents"/>
+    /// into the outbox atomically with the aggregate save. The decorator
+    /// pattern in <c>UnitOfWorkCommandHandlerDecorator</c> invokes this
+    /// with an empty work delegate after a successful handler call —
+    /// handlers stage changes through repositories, this commits them.
+    /// </summary>
+    public sealed class AuthUnitOfWork : IUnitOfWork<IAuthScope>
     {
         private const string Source = "auth";
 
         private readonly AuthDbContext _dbContext;
         private readonly IOutbox<IAuthScope> _outbox;
 
-        public UnitOfWork(AuthDbContext dbContext, IOutbox<IAuthScope> outbox)
+        public AuthUnitOfWork(AuthDbContext dbContext, IOutbox<IAuthScope> outbox)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
         }
 
-        public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            // Wrapping in the execution strategy makes the drain+save unit
-            // compose with EnableRetryOnFailure. A transient retry re-drains
-            // the aggregate (its DomainEvents collection is the source of
-            // truth) so the outbox row count stays idempotent.
-            var rows = 0;
-            await _dbContext.SaveChangesWithRetryAsync(async ct =>
+        public Task SaveChangesAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken = default)
+            => _dbContext.SaveChangesWithRetryAsync(async ct =>
             {
+                await work(ct);
                 await DrainDomainEventsToOutboxAsync(ct);
             }, cancellationToken);
-            // SaveChangesWithRetryAsync calls SaveChangesAsync internally,
-            // but does not surface the row count; query the context for the
-            // affected row count once the unit committed. SaveChangesAsync's
-            // return value is only used by the legacy decorator for
-            // success-detection, so a positive int is sufficient.
-            rows = 1;
-            return rows;
-        }
 
         private async Task DrainDomainEventsToOutboxAsync(CancellationToken cancellationToken)
         {
