@@ -9,15 +9,15 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="Medo.Uuid7" Version="3.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.5" />
-        <PackageReference Include="nettopologysuite" Version="2.5.0" />
-        <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="9.0.4" />
-        <PackageReference Include="Npgsql.NetTopologySuite" Version="9.0.3" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.10.0-beta.1" />
+        <PackageReference Include="Medo.Uuid7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" />
+        <PackageReference Include="NetTopologySuite" />
+        <PackageReference Include="NetTopologySuite.IO.GeoJSON" />
+        <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" />
+        <PackageReference Include="Npgsql.NetTopologySuite" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
         <ProjectReference Include="../TurboAuthentication/TurboAuthentication.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj" />

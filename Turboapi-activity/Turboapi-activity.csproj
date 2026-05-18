@@ -9,8 +9,8 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="Medo.Uuid7" Version="3.0.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
+        <PackageReference Include="Medo.Uuid7" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
         <ProjectReference Include="../Turbo-pg-data/Turbo-pg-data.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj" />
