@@ -1,23 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <Version>1.0.0</Version>
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Turboauth_activity</RootNamespace>
-        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
         <PackageReference Include="Medo.Uuid7" Version="3.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.1" />
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.0"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-        <PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.10.0-beta.1" />
-        <PackageReference Include="Scalar.AspNetCore" Version="2.0.9" />
-        <PackageReference Include="Testcontainers.PostgreSql" Version="4.1.0" />
-        <PackageReference Include="xunit" Version="2.9.3" />
         <ProjectReference Include="../Turbo-event/Turbo-event.csproj" />
         <ProjectReference Include="../Turbo-pg-data/Turbo-pg-data.csproj" />
         <ProjectReference Include="../src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj" />
@@ -25,9 +18,17 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+        <!-- The Microsoft.NET.Sdk.Web SDK adds these implicit usings; this is a
+             class library that hosts ASP.NET MVC controllers and DI extensions
+             so we re-declare them here. -->
+        <Using Include="Microsoft.AspNetCore.Builder" />
+        <Using Include="Microsoft.AspNetCore.Hosting" />
+        <Using Include="Microsoft.AspNetCore.Http" />
+        <Using Include="Microsoft.AspNetCore.Routing" />
+        <Using Include="Microsoft.Extensions.Configuration" />
+        <Using Include="Microsoft.Extensions.DependencyInjection" />
+        <Using Include="Microsoft.Extensions.Hosting" />
+        <Using Include="Microsoft.Extensions.Logging" />
     </ItemGroup>
 
 </Project>

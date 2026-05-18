@@ -32,7 +32,7 @@ public sealed class ActivityHostFixture : IAsyncLifetime
         .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
-    private WebApplicationFactory<Program>? _factory;
+    private WebApplicationFactory<Turbo.Host.Activity.ActivityHostProgram>? _factory;
     private string _jwtSecret = string.Empty;
 
     public HttpClient CreateClient() => _factory!.CreateClient();
@@ -55,9 +55,15 @@ public sealed class ActivityHostFixture : IAsyncLifetime
 
         var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
 
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        // The marker type's assembly is the host (Turbo.Host.Activity).
+        // Anchor the content root there so appsettings.Test.json is picked up.
+        var hostBin = Path.GetDirectoryName(
+            typeof(Turbo.Host.Activity.ActivityHostProgram).Assembly.Location)!;
+
+        _factory = new WebApplicationFactory<Turbo.Host.Activity.ActivityHostProgram>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseContentRoot(hostBin);
             builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {

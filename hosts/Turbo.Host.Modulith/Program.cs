@@ -8,7 +8,6 @@ using Turboauth_activity.domain.events;
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
 // All three modules in one process. AuthModule owns the Cookie+JwtBearer

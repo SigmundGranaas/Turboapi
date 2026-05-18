@@ -1,18 +1,16 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Scalar.AspNetCore;
 using Turbo.Messaging.Nats;
 using Turboauth_activity;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddEnvironmentVariables();
-builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
-// Activity validates JWTs that Auth issues. In a microservice deployment
-// Activity does not need the cookie scheme, only JwtBearer.
+// Activity validates JWTs that the Auth module issues. In a microservice
+// deployment Activity does not need the cookie scheme, only JwtBearer.
 builder.Services.AddAuthentication(opt =>
 {
     opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -42,12 +40,14 @@ builder.Services.AddActivityNatsSubscribers();
 
 var app = builder.Build();
 
-app.MapOpenApi();
-app.MapScalarApiReference();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-public partial class Program { }
+namespace Turbo.Host.Activity
+{
+    /// <summary>Marker for WebApplicationFactory in tests.</summary>
+    public class ActivityHostProgram;
+}

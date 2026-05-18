@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\hosts\Turbo.Host.Auth\Turbo.Host.Auth.csproj" />
     <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
     <ProjectReference Include="..\..\Turbo-pg-data\Turbo-pg-data.csproj" />
   </ItemGroup>

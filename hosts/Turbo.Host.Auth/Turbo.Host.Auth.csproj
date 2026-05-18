@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Turbo.Host.Auth</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\Turboapi-auth\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.json')" />
+    <Content Include="..\..\Turboapi-auth\appsettings.Development.json" Link="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.Development.json')" />
+    <Content Include="..\..\Turboapi-auth\appsettings.Test.json" Link="appsettings.Test.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.Test.json')" />
+  </ItemGroup>
+
+</Project>

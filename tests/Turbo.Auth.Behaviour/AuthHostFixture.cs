@@ -27,7 +27,7 @@ public sealed class AuthHostFixture : IAsyncLifetime
         .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
-    private WebApplicationFactory<Program>? _factory;
+    private WebApplicationFactory<Turbo.Host.Auth.AuthHostProgram>? _factory;
 
     public HttpClient CreateClient() => _factory!.CreateClient();
 
@@ -41,9 +41,13 @@ public sealed class AuthHostFixture : IAsyncLifetime
 
         var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
 
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        var hostBin = Path.GetDirectoryName(
+            typeof(Turbo.Host.Auth.AuthHostProgram).Assembly.Location)!;
+
+        _factory = new WebApplicationFactory<Turbo.Host.Auth.AuthHostProgram>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseContentRoot(hostBin);
             builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {

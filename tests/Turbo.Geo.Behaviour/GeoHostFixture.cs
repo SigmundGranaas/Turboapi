@@ -33,7 +33,7 @@ public sealed class GeoHostFixture : IAsyncLifetime
         .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(4222))
         .Build();
 
-    private WebApplicationFactory<Program>? _factory;
+    private WebApplicationFactory<Turbo.Host.Geo.GeoHostProgram>? _factory;
     private string _jwtSecret = string.Empty;
 
     public HttpClient CreateClient() => _factory!.CreateClient();
@@ -56,9 +56,13 @@ public sealed class GeoHostFixture : IAsyncLifetime
 
         var natsUrl = $"nats://{_nats.Hostname}:{_nats.GetMappedPublicPort(4222)}";
 
-        _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        var hostBin = Path.GetDirectoryName(
+            typeof(Turbo.Host.Geo.GeoHostProgram).Assembly.Location)!;
+
+        _factory = new WebApplicationFactory<Turbo.Host.Geo.GeoHostProgram>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
+            builder.UseContentRoot(hostBin);
             builder.UseSetting("Nats:Url", natsUrl);
             builder.ConfigureServices((context, services) =>
             {
