@@ -1,10 +1,9 @@
-using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using Turbo_pg_data.db;
+using Turbo.Behaviour.Testing;
 using Turbo.Host.Modulith;
 using Xunit;
 
@@ -17,12 +16,7 @@ namespace Turbo.Modulith.Behaviour;
 /// </summary>
 public sealed class ModulithHostFixture : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgis/postgis:17-3.5-alpine")
-        .WithDatabase("postgres")
-        .WithUsername("postgres")
-        .WithPassword("postgres")
-        .Build();
+    private readonly PostgreSqlContainer _postgres = TurboTestContainers.PostgresWithPostGis();
 
     private WebApplicationFactory<ModulithProgram>? _factory;
 
@@ -31,19 +25,19 @@ public sealed class ModulithHostFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _postgres.StartAsync();
+        var baseConn = _postgres.GetConnectionString();
 
-        var baseConnString = _postgres.GetConnectionString();
-        await CreateDatabaseAsync(baseConnString, "auth");
-        await CreateDatabaseAsync(baseConnString, "activity");
-        await CreateDatabaseAsync(baseConnString, "geo");
+        await RepoLayout.CreateDatabaseAsync(baseConn, "auth");
+        await RepoLayout.CreateDatabaseAsync(baseConn, "activity");
+        await RepoLayout.CreateDatabaseAsync(baseConn, "geo");
 
-        var authConn = WithDatabase(baseConnString, "auth");
-        var activityConn = WithDatabase(baseConnString, "activity");
-        var geoConn = WithDatabase(baseConnString, "geo");
+        var authConn = RepoLayout.WithDatabase(baseConn, "auth");
+        var activityConn = RepoLayout.WithDatabase(baseConn, "activity");
+        var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
 
-        await RunMigrationsAsync(authConn, "Turboapi-auth");
-        await RunMigrationsAsync(activityConn, "Turboapi-activity");
-        await RunMigrationsAsync(geoConn, "Turboapi-geo");
+        await RepoLayout.RunMigrationsAsync(authConn, "Turboapi-auth");
+        await RepoLayout.RunMigrationsAsync(activityConn, "Turboapi-activity");
+        await RepoLayout.RunMigrationsAsync(geoConn, "Turboapi-geo");
 
         _factory = new WebApplicationFactory<ModulithProgram>().WithWebHostBuilder(builder =>
         {
@@ -51,13 +45,6 @@ public sealed class ModulithHostFixture : IAsyncLifetime
             builder.UseSetting("ConnectionStrings:Auth", authConn);
             builder.UseSetting("ConnectionStrings:Activity", activityConn);
             builder.UseSetting("ConnectionStrings:Geo", geoConn);
-
-            // No ConfigureServices override: the module extensions read the
-            // connection strings via configuration.GetConnectionString(...),
-            // and UseSetting above feeds them in. Re-registering the
-            // DbContexts here would duplicate the providers and confuse the
-            // outbox dispatcher (it would resolve a different DbContext than
-            // the one the command handler wrote through).
         });
     }
 
@@ -78,15 +65,11 @@ public sealed class ModulithHostFixture : IAsyncLifetime
     /// <summary>
     /// Reads the most-recent activity-outbox row whose event type ends
     /// with <paramref name="eventTypeSuffix"/> and republishes it on the
-    /// in-process bus as if the broker had redelivered. Tests use this
-    /// to exercise the idempotency dedup path without synthesising an
-    /// envelope (which would defeat the purpose — dedup is keyed on
-    /// EventId, so a fresh id would always be "new").
+    /// in-process bus as if the broker had redelivered.
     /// </summary>
     public async Task RedeliverLatestActivityEnvelopeAsync(string eventTypeSuffix)
     {
-        var baseConn = _postgres.GetConnectionString();
-        var activityConn = WithDatabase(baseConn, "activity");
+        var activityConn = RepoLayout.WithDatabase(_postgres.GetConnectionString(), "activity");
         await using var conn = new NpgsqlConnection(activityConn);
         await conn.OpenAsync();
 
@@ -99,29 +82,17 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         cmd.Parameters.AddWithValue("@suffix", "%" + eventTypeSuffix);
         await using var reader = await cmd.ExecuteReaderAsync();
         if (!await reader.ReadAsync())
-            throw new InvalidOperationException(
-                $"No outbox row found matching event_type LIKE %{eventTypeSuffix}");
-
-        var id = reader.GetGuid(0);
-        var type = reader.GetString(1);
-        var source = reader.GetString(2);
-        var contentType = reader.GetString(3);
-        var payload = reader.GetString(4);
-        var headersJson = reader.GetString(5);
-        var occurredAt = reader.GetDateTime(6);
-
-        var headers = System.Text.Json.JsonSerializer
-            .Deserialize<Dictionary<string, string>>(headersJson)
-            ?? new Dictionary<string, string>();
+            throw new InvalidOperationException($"No outbox row found matching event_type LIKE %{eventTypeSuffix}");
 
         var envelope = new Turbo.Messaging.EventEnvelope(
-            EventId: id,
-            Type: type,
-            Source: source,
-            Time: occurredAt,
-            DataContentType: contentType,
-            Data: System.Text.Encoding.UTF8.GetBytes(payload),
-            Headers: headers);
+            EventId: reader.GetGuid(0),
+            Type: reader.GetString(1),
+            Source: reader.GetString(2),
+            Time: reader.GetDateTime(6),
+            DataContentType: reader.GetString(3),
+            Data: System.Text.Encoding.UTF8.GetBytes(reader.GetString(4)),
+            Headers: System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(reader.GetString(5))
+                     ?? new Dictionary<string, string>());
 
         await reader.CloseAsync();
         await Bus.PublishAsync(envelope, CancellationToken.None);
@@ -130,13 +101,11 @@ public sealed class ModulithHostFixture : IAsyncLifetime
     /// <summary>
     /// Counts rows in the activity read model. Used by the idempotency
     /// test as an authoritative check that a redelivery did not insert
-    /// a duplicate row — the HTTP collection endpoint would only show
-    /// rows owned by a single caller and we want the global count.
+    /// a duplicate row.
     /// </summary>
     public async Task<int> CountActivityRowsAsync(Guid activityId)
     {
-        var baseConn = _postgres.GetConnectionString();
-        var activityConn = WithDatabase(baseConn, "activity");
+        var activityConn = RepoLayout.WithDatabase(_postgres.GetConnectionString(), "activity");
         await using var conn = new NpgsqlConnection(activityConn);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
@@ -149,16 +118,11 @@ public sealed class ModulithHostFixture : IAsyncLifetime
     /// <summary>
     /// Test-only simulation of the operator rebuild SOP: truncate the
     /// activity read model + the activity dedup table, then mark every
-    /// activity outbox row as undispatched. The outbox dispatcher will
-    /// re-publish from position 0 the next time it polls; the in-process
-    /// subscriber re-projects each event into the freshly-empty read
-    /// model. Asserts the outbox is sufficient to rebuild the read model
-    /// from zero — i.e. event sourcing actually works.
+    /// activity outbox row as undispatched.
     /// </summary>
     public async Task ResetActivityReadModelForReplayAsync()
     {
-        var baseConn = _postgres.GetConnectionString();
-        var activityConn = WithDatabase(baseConn, "activity");
+        var activityConn = RepoLayout.WithDatabase(_postgres.GetConnectionString(), "activity");
         await using var conn = new NpgsqlConnection(activityConn);
         await conn.OpenAsync();
 
@@ -172,38 +136,6 @@ public sealed class ModulithHostFixture : IAsyncLifetime
             "UPDATE activity.outbox SET dispatched_at = NULL, attempts = 0, last_error = NULL;", conn);
         await resetOutbox.ExecuteNonQueryAsync();
     }
-
-    private static async Task CreateDatabaseAsync(string baseConnString, string dbName)
-    {
-        await using var conn = new NpgsqlConnection(baseConnString);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand($"CREATE DATABASE \"{dbName}\";", conn);
-        await cmd.ExecuteNonQueryAsync();
-    }
-
-    private static async Task RunMigrationsAsync(string connectionString, string moduleDirectory)
-    {
-        var migrationsRoot = LocateRepoPath(moduleDirectory, "db");
-        var setup = new DatabaseSetupService(connectionString, migrationsRoot);
-        await setup.RunMigrationsAsync();
-    }
-
-    private static string LocateRepoPath(params string[] segments)
-    {
-        var dir = new DirectoryInfo(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, segments[0])))
-            dir = dir.Parent;
-        if (dir is null)
-            throw new InvalidOperationException($"Could not locate {segments[0]} from test assembly location");
-        return Path.Combine(new[] { dir.FullName }.Concat(segments).ToArray());
-    }
-
-    private static string WithDatabase(string baseConnString, string databaseName)
-    {
-        var b = new NpgsqlConnectionStringBuilder(baseConnString) { Database = databaseName };
-        return b.ConnectionString;
-    }
-
 }
 
 [CollectionDefinition("ModulithHost")]
