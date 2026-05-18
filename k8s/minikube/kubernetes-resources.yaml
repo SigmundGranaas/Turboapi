@@ -78,7 +78,10 @@ data:
   postgres-password: "yourpassword"
   postgres-user: "postgres"
 ---
-# Secrets (in a real environment, use proper secrets management)
+# Secrets (in a real environment, use proper secrets management).
+# postgres-password is still consumed by the per-DB Postgres pods + the
+# init/migration containers that need raw credentials; the application
+# containers consume the per-module connection-string entries.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -86,6 +89,9 @@ metadata:
 type: Opaque
 stringData:
   postgres-password: "yourpassword"
+  connectionstring-auth: "Host=auth-db;Port=5432;Database=auth;Username=postgres;Password=yourpassword"
+  connectionstring-geo: "Host=geo-db;Port=5435;Database=geo;Username=postgres;Password=yourpassword"
+  connectionstring-activity: "Host=activity-db;Port=5436;Database=activity;Username=postgres;Password=yourpassword"
 ---
 # NATS JetStream deployment — replaces the previous Kafka broker.
 apiVersion: apps/v1

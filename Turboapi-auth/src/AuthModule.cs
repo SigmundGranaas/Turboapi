@@ -147,19 +147,10 @@ public static class AuthModule
         return services;
     }
 
-    private static string ResolveConnectionString(IConfiguration configuration)
-    {
-        var fromConnectionStrings = configuration.GetConnectionString(ConnectionStringName);
-        if (!string.IsNullOrEmpty(fromConnectionStrings))
-            return fromConnectionStrings;
-
-        var host = Environment.GetEnvironmentVariable("DB_HOST") ?? "localhost";
-        var port = Environment.GetEnvironmentVariable("DB_PORT") ?? "5432";
-        var database = Environment.GetEnvironmentVariable("DB_NAME") ?? "auth";
-        var user = Environment.GetEnvironmentVariable("DB_USER") ?? "postgres";
-        var password = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? "yourpassword";
-        return $"Host={host};Port={port};Database={database};Username={user};Password={password}";
-    }
+    private static string ResolveConnectionString(IConfiguration configuration) =>
+        configuration.GetConnectionString(ConnectionStringName)
+            ?? throw new InvalidOperationException(
+                $"ConnectionStrings:{ConnectionStringName} is not configured");
 }
 
 public static class CommandHandlerServiceCollectionExtensions

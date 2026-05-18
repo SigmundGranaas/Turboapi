@@ -78,22 +78,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: DB_HOST
-              value: "auth-db"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: "auth"
-            - name: DB_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config
-                  key: postgres-user
-            - name: DB_PASSWORD
+            - name: ConnectionStrings__Auth
               valueFrom:
                 secretKeyRef:
                   name: db-secrets
-                  key: postgres-password
+                  key: connectionstring-auth
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector:4317"
             - name: OTEL_SERVICE_NAME
@@ -184,22 +173,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: DB_HOST
-              value: "geo-db"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: "geo"
-            - name: DB_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config
-                  key: postgres-user
-            - name: DB_PASSWORD
+            - name: ConnectionStrings__Geo
               valueFrom:
                 secretKeyRef:
                   name: db-secrets
-                  key: postgres-password
+                  key: connectionstring-geo
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector:4317"
             - name: OTEL_SERVICE_NAME
@@ -290,22 +268,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: ASPNETCORE_ENVIRONMENT
-            - name: DB_HOST
-              value: "activity-db"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: "activity"
-            - name: DB_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: db-config
-                  key: postgres-user
-            - name: DB_PASSWORD
+            - name: ConnectionStrings__Activity
               valueFrom:
                 secretKeyRef:
                   name: db-secrets
-                  key: postgres-password
+                  key: connectionstring-activity
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: "http://otel-collector:4317"
             - name: OTEL_SERVICE_NAME
