@@ -22,7 +22,7 @@ replicas:
     count: 1
   - name: turboapi-activity
     count: 1
-  - name: kafka
+  - name: nats
     count: 1
 
 images:

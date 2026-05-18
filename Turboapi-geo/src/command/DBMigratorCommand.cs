@@ -18,7 +18,7 @@ public class DatabaseInitializationCommand
 
         try
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var connectionString = configuration.GetConnectionString("Geo");
             var projectRoot = Directory.GetCurrentDirectory();
             var migrationsPath = Path.Combine(projectRoot, "db", "migrations");
 

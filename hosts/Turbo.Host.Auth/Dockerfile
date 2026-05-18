@@ -1,0 +1,28 @@
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+USER $APP_UID
+WORKDIR /app
+EXPOSE 8080
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+
+# Copy only the csprojs first so the restore layer caches when source changes.
+COPY ["hosts/Turbo.Host.Auth/Turbo.Host.Auth.csproj", "hosts/Turbo.Host.Auth/"]
+COPY ["Turboapi-auth/Turboapi-auth.csproj", "Turboapi-auth/"]
+COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]
+COPY ["Turbo-pg-data/Turbo-pg-data.csproj", "Turbo-pg-data/"]
+COPY ["src/Shared/Turbo.Messaging.Abstractions/Turbo.Messaging.Abstractions.csproj", "src/Shared/Turbo.Messaging.Abstractions/"]
+COPY ["src/Shared/Turbo.Messaging.Nats/Turbo.Messaging.Nats.csproj", "src/Shared/Turbo.Messaging.Nats/"]
+COPY ["src/Shared/Turbo.Outbox.Abstractions/Turbo.Outbox.Abstractions.csproj", "src/Shared/Turbo.Outbox.Abstractions/"]
+COPY ["src/Shared/Turbo.Outbox.Postgres/Turbo.Outbox.Postgres.csproj", "src/Shared/Turbo.Outbox.Postgres/"]
+RUN dotnet restore "hosts/Turbo.Host.Auth/Turbo.Host.Auth.csproj"
+
+COPY . .
+WORKDIR /src/hosts/Turbo.Host.Auth
+RUN dotnet publish "Turbo.Host.Auth.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "Turbo.Host.Auth.dll"]

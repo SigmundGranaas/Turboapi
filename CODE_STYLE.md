@@ -20,7 +20,7 @@ Turboapi is a microservices-based application built with .NET 9, consisting of:
 ### Infrastructure
 
 - **Docker**: Containerized services
-- **Kafka**: Event streaming backbone
+- **NATS JetStream**: Event streaming backbone (with transactional outbox)
 - **PostgreSQL**: Database with extensions (PostGIS)
 - **Flyway**: Database migrations
 - **OpenTelemetry/Prometheus/Grafana**: Monitoring stack
@@ -42,7 +42,7 @@ Turboapi is a microservices-based application built with .NET 9, consisting of:
 
 2. **Integration Tests**
    - Database integration with Testcontainers
-   - Kafka integration for event handling
+   - NATS JetStream integration for event handling (via outbox)
    - API endpoint testing
 
 3. **Performance Tests (k6)**
