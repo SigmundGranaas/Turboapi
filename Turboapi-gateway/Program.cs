@@ -24,6 +24,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.MapGet("/healthz", () => Results.Ok("ok"));
 app.MapReverseProxy();
 
 if (app.Environment.IsDevelopment())

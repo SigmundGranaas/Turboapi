@@ -1,9 +1,11 @@
 FROM flyway/flyway:latest
 
-ARG SERVICE_NAME
-
-# Copy SQL scripts based on SERVICE_NAME argument
-COPY ./Turboapi-${SERVICE_NAME}/db/migrations/ /flyway/sql/
+# Source directory containing this module's SQL migrations, relative to the
+# build context. The image-build workflow passes the per-module path
+# (e.g. src/Auth/db/migrations) so the Dockerfile stays decoupled from
+# the on-disk module layout.
+ARG MIGRATIONS_DIR
+COPY ${MIGRATIONS_DIR}/ /flyway/sql/
 
 # Copy the entrypoint script
 COPY migrations/entrypoint.sh /entrypoint.sh

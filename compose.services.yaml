@@ -1,26 +1,38 @@
 name: turbo
 
+# Microservices deployment: three single-module hosts behind the gateway,
+# NATS as the transport between them. Database layout is parameterised so
+# the same compose file works against either the default per-service
+# Postgres containers (compose.yaml) or a single shared Postgres
+# (compose.databases.shared.yaml + .env.shared).
+
 services:
   turboapi-auth:
     build:
       context: .
       dockerfile: ./hosts/Turbo.Host.Auth/Dockerfile
     container_name: turboapi_auth
+    hostname: auth
     ports:
       - "5001:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Auth=Host=auth-db;Port=5432;Database=auth;Username=postgres;Password=yourpassword
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Auth=Host=${AUTH_DB_HOST:-auth-db};Port=${AUTH_DB_PORT:-5432};Database=${AUTH_DB_NAME:-auth};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-auth
       - Nats__Url=nats://nats:4222
     depends_on:
       auth-db-migration:
         condition: service_completed_successfully
-      auth-db:
-        condition: service_healthy
       nats:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /healthz HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
     networks:
       - turbo
 
@@ -29,21 +41,27 @@ services:
       context: .
       dockerfile: ./hosts/Turbo.Host.Geo/Dockerfile
     container_name: turboapi_geo
+    hostname: geo
     ports:
       - "5002:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Geo=Host=geo-db;Port=5435;Database=geo;Username=postgres;Password=yourpassword
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Geo=Host=${GEO_DB_HOST:-geo-db};Port=${GEO_DB_PORT:-5435};Database=${GEO_DB_NAME:-geo};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-geo
       - Nats__Url=nats://nats:4222
     depends_on:
       geo-db-migration:
         condition: service_completed_successfully
-      geo-db:
-        condition: service_healthy
       nats:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /healthz HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
     networks:
       - turbo
 
@@ -52,53 +70,81 @@ services:
       context: .
       dockerfile: ./hosts/Turbo.Host.Activity/Dockerfile
     container_name: turboapi_activity
+    hostname: activity
     ports:
       - "5003:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__Activity=Host=activity-db;Port=5436;Database=activity;Username=postgres;Password=yourpassword
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__Activity=Host=${ACTIVITY_DB_HOST:-activity-db};Port=${ACTIVITY_DB_PORT:-5436};Database=${ACTIVITY_DB_NAME:-activity};Username=${DB_USER:-postgres};Password=${DB_PASSWORD:-yourpassword}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_SERVICE_NAME=turboapi-activity
       - Nats__Url=nats://nats:4222
     depends_on:
       activity-db-migration:
         condition: service_completed_successfully
-      activity-db:
-        condition: service_healthy
       nats:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /healthz HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - turbo
+
+  turboapi-gateway:
+    build:
+      context: .
+      dockerfile: ./Turboapi-gateway/Dockerfile
+    container_name: turboapi_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - Topology=Microservices
+    depends_on:
+      turboapi-auth:
+        condition: service_healthy
+      turboapi-geo:
+        condition: service_healthy
+      turboapi-activity:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /healthz HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - turbo
         
+  # Flyway's -connectRetries handles waiting for Postgres without forcing
+  # a depends_on:service_healthy on a specific DB container — the same
+  # migration definition works against per-service DBs (compose.yaml) or
+  # the shared-db variant (compose.databases.shared.yaml).
   auth-db-migration:
     image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://auth-db:5432/auth -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    command: -url=jdbc:postgresql://${AUTH_DB_HOST:-auth-db}:${AUTH_DB_PORT:-5432}/${AUTH_DB_NAME:-auth} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
     volumes:
       - ./src/Auth/db/migrations:/flyway/sql
-    depends_on:
-      auth-db:
-        condition: service_healthy
     networks:
       - turbo
 
   geo-db-migration:
     image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://geo-db:5435/geo -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    command: -url=jdbc:postgresql://${GEO_DB_HOST:-geo-db}:${GEO_DB_PORT:-5435}/${GEO_DB_NAME:-geo} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
     volumes:
       - ./src/Geo/db/migrations:/flyway/sql
-    depends_on:
-      geo-db:
-        condition: service_healthy
     networks:
       - turbo
 
   activity-db-migration:
     image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://activity-db:5436/activity -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
+    command: -url=jdbc:postgresql://${ACTIVITY_DB_HOST:-activity-db}:${ACTIVITY_DB_PORT:-5436}/${ACTIVITY_DB_NAME:-activity} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
     volumes:
       - ./src/Activity/db/migrations:/flyway/sql
-    depends_on:
-      activity-db:
-        condition: service_healthy
     networks:
       - turbo

@@ -25,6 +25,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/healthz", () => Results.Ok("ok")).AllowAnonymous();
 app.Run();
 
 namespace Turbo.Host.Geo

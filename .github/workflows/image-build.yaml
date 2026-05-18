@@ -113,10 +113,13 @@ jobs:
         include:
           - service: auth
             db_dir: ./src/Auth/db
+            migrations_dir: src/Auth/db/migrations
           - service: geo
             db_dir: ./src/Geo/db
+            migrations_dir: src/Geo/db/migrations
           - service: activity
             db_dir: ./src/Activity/db
+            migrations_dir: src/Activity/db/migrations
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -170,7 +173,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            SERVICE_NAME=${{ matrix.service }}
+            MIGRATIONS_DIR=${{ matrix.migrations_dir }}
 
       - name: Migration image already exists
         if: steps.check_image.outputs.exists == 'true'

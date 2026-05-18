@@ -31,6 +31,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/healthz", () => Results.Ok("ok")).AllowAnonymous();
 app.Run();
 
 public partial class Program { }
