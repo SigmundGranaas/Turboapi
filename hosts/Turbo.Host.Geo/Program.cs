@@ -1,5 +1,7 @@
+using Turbo.Hosting.Postgres;
 using Turbo.Messaging.Nats;
 using Turboapi.Geo;
+using Turboapi.Geo.domain.query.model;
 using TurboAuthentication.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,6 +23,9 @@ builder.Services.AddNatsMessaging(o =>
 builder.Services.AddGeoNatsSubscribers();
 
 var app = builder.Build();
+await app.Services.MigrateModuleDatabaseAsync<LocationReadContext>(
+    builder.Configuration.GetConnectionString("Geo")
+        ?? throw new InvalidOperationException("ConnectionStrings:Geo is not configured"));
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

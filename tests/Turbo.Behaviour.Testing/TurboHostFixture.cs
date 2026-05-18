@@ -12,7 +12,7 @@ namespace Turbo.Behaviour.Testing;
 /// <summary>
 /// Common Postgres + NATS + WebApplicationFactory wiring for a single-module
 /// host. Subclass per host (Auth/Activity/Geo) and override
-/// <see cref="ModuleDirectory"/> + <see cref="ConfigureTestServices"/>.
+/// <see cref="ConfigureTestServices"/> + <see cref="MigrateAsync"/>.
 /// </summary>
 public abstract class TurboHostFixture<THost> : IAsyncLifetime where THost : class
 {
@@ -26,14 +26,28 @@ public abstract class TurboHostFixture<THost> : IAsyncLifetime where THost : cla
         _postgres = TurboTestContainers.PostgresWithPostGis(databaseName);
     }
 
-    /// <summary>Repo-relative directory whose db/migrations/ Flyway runs against.</summary>
-    protected abstract string ModuleDirectory { get; }
-
     /// <summary>
     /// Hook for replacing the module's DbContext registration with one that
     /// points at the Testcontainers Postgres. Use <see cref="ReplaceDbContext"/>.
     /// </summary>
     protected abstract void ConfigureTestServices(WebHostBuilderContext context, IServiceCollection services);
+
+    /// <summary>
+    /// The <c>ConnectionStrings:&lt;Key&gt;</c> name the host reads at
+    /// startup (e.g. "Auth", "Geo", "Activity"). The fixture overrides this
+    /// configuration entry to point at the Testcontainers Postgres so the
+    /// host's <c>MigrateModuleDatabaseAsync</c> call at <c>Program.cs</c>
+    /// uses the test database.
+    /// </summary>
+    protected abstract string ConnectionStringKey { get; }
+
+    /// <summary>
+    /// Runs the module's EF Core migrations against the Testcontainers
+    /// Postgres after the host's <see cref="WebApplicationFactory{THost}"/>
+    /// has built its service provider. Typical implementation:
+    /// <c>await services.MigrateModuleDatabaseAsync&lt;MyDbContext&gt;(ConnectionString)</c>.
+    /// </summary>
+    protected abstract Task MigrateAsync(IServiceProvider services);
 
     protected string ConnectionString => _postgres.GetConnectionString();
 
@@ -50,13 +64,15 @@ public abstract class TurboHostFixture<THost> : IAsyncLifetime where THost : cla
     public async Task InitializeAsync()
     {
         await Task.WhenAll(_postgres.StartAsync(), _nats.StartAsync());
-        await RepoLayout.RunMigrationsAsync(_postgres.GetConnectionString(), ModuleDirectory);
 
         _factory = new WebApplicationFactory<THost>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Test");
             builder.UseContentRoot(RepoLayout.HostContentRoot<THost>());
             builder.UseSetting("Nats:Url", TurboTestContainers.NatsUrl(_nats));
+            // Override the connection string the host's Program.cs reads
+            // when it calls MigrateModuleDatabaseAsync at startup.
+            builder.UseSetting($"ConnectionStrings:{ConnectionStringKey}", _postgres.GetConnectionString());
             builder.ConfigureServices((context, services) =>
             {
                 _jwt = new TurboJwtIssuer(context.Configuration["Jwt:Key"]
@@ -64,6 +80,12 @@ public abstract class TurboHostFixture<THost> : IAsyncLifetime where THost : cla
                 ConfigureTestServices(context, services);
             });
         });
+
+        // Force the host to build its service provider; then migrate. Tests
+        // run against the same provider the request pipeline sees, so the
+        // DbContext registration we just swapped in is the one MigrateAsync
+        // operates on.
+        await MigrateAsync(_factory.Services);
     }
 
     public async Task DisposeAsync()

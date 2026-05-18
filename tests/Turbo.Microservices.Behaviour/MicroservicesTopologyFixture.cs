@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.PostgreSql;
 using DotNet.Testcontainers.Containers;
 using Turbo.Behaviour.Testing;
+using Turbo.Hosting.Postgres;
+using Turboapi.Activity.data;
+using Turboapi.Auth.Infrastructure.Persistence;
+using Turboapi.Geo.domain.query.model;
 using Xunit;
 
 namespace Turbo.Microservices.Behaviour;
@@ -34,22 +38,22 @@ public sealed class MicroservicesTopologyFixture : IAsyncLifetime
         await Task.WhenAll(_postgres.StartAsync(), _nats.StartAsync());
 
         var baseConn = _postgres.GetConnectionString();
-        await RepoLayout.CreateDatabaseAsync(baseConn, "auth");
-        await RepoLayout.CreateDatabaseAsync(baseConn, "activity");
-        await RepoLayout.CreateDatabaseAsync(baseConn, "geo");
-
         var authConn = RepoLayout.WithDatabase(baseConn, "auth");
         var activityConn = RepoLayout.WithDatabase(baseConn, "activity");
         var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
-
-        await RepoLayout.RunMigrationsAsync(authConn, "src/Auth");
-        await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
-        await RepoLayout.RunMigrationsAsync(geoConn, "src/Geo");
 
         var natsUrl = TurboTestContainers.NatsUrl(_nats);
         _authFactory = BuildFactory<Turbo.Host.Auth.AuthHostProgram>(authConn, natsUrl, "Auth");
         _activityFactory = BuildFactory<Turbo.Host.Activity.ActivityHostProgram>(activityConn, natsUrl, "Activity");
         _geoFactory = BuildFactory<Turbo.Host.Geo.GeoHostProgram>(geoConn, natsUrl, "Geo");
+
+        // EF Core's MigrateAsync needs the target DB to exist; the helper
+        // creates it lazily. Each host's Program.cs migrates at startup
+        // already, but WebApplicationFactory doesn't execute that startup
+        // path, so we run the migrations explicitly here.
+        await _authFactory.Services.MigrateModuleDatabaseAsync<AuthDbContext>(authConn);
+        await _activityFactory.Services.MigrateModuleDatabaseAsync<ActivityContext>(activityConn);
+        await _geoFactory.Services.MigrateModuleDatabaseAsync<LocationReadContext>(geoConn);
     }
 
     public async Task DisposeAsync()

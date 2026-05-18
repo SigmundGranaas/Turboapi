@@ -15,13 +15,12 @@ docker build -t turboapi-modulith:latest  -f ./hosts/Turbo.Host.Modulith/Dockerf
 docker build -t turboapi-gateway:latest   -f ./src/Gateway/Dockerfile .
 ```
 
-Build the per-module Flyway migration images (the Dockerfile takes a
-`MIGRATIONS_DIR` build arg so the on-disk layout is decoupled):
+No separate migration images — each host runs EF Core migrations
+in-process at startup via `MigrateModuleDatabaseAsync`. To evolve the
+schema:
 
 ```bash
-docker build --build-arg MIGRATIONS_DIR=src/Auth/db/migrations     -t turboapi-auth-migration:latest     -f migrations/Dockerfile.migration .
-docker build --build-arg MIGRATIONS_DIR=src/Geo/db/migrations      -t turboapi-geo-migration:latest      -f migrations/Dockerfile.migration .
-docker build --build-arg MIGRATIONS_DIR=src/Activity/db/migrations -t turboapi-activity-migration:latest -f migrations/Dockerfile.migration .
+dotnet ef migrations add <Name> --project src/<Module>/Turbo.<Module>.Infrastructure --context <Context>
 ```
 
 Install the monitoring stack:

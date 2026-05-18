@@ -15,6 +15,9 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
     <PackageReference Include="Testcontainers" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <!-- xunit's IAsyncLifetime is what TurboHostFixture<THost> implements;
+         previously inherited transitively via Turbo-pg-data which is now gone. -->
+    <PackageReference Include="xunit" />
   </ItemGroup>
 
   <ItemGroup>
@@ -22,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Turbo-pg-data\Turbo-pg-data.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Turbo.Hosting.Postgres\Turbo.Hosting.Postgres.csproj" />
   </ItemGroup>
 
 </Project>

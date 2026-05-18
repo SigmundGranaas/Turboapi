@@ -1,8 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Turbo.Hosting.Postgres;
 using Turbo.Messaging.Nats;
 using Turboapi.Activity;
+using Turboapi.Activity.data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +41,9 @@ builder.Services.AddNatsMessaging(o =>
 builder.Services.AddActivityNatsSubscribers();
 
 var app = builder.Build();
+await app.Services.MigrateModuleDatabaseAsync<ActivityContext>(
+    builder.Configuration.GetConnectionString("Activity")
+        ?? throw new InvalidOperationException("ConnectionStrings:Activity is not configured"));
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

@@ -22,8 +22,9 @@ Cross-cutting libraries:
   plus the Postgres dispatcher.
 - **`src/Gateway/`** — YARP reverse proxy that swaps between
   microservice and modulith routing via a `Topology` env var.
-- **`Turbo-pg-data/`** — Flyway runner used by all modules' DB
-  initialisation.
+- **`src/Shared/Turbo.Hosting.Postgres/`** — host-startup helper that
+  creates each module's database if missing and runs EF Core migrations
+  via `MigrateModuleDatabaseAsync<TContext>`.
 - **`TurboAuthentication/`** — shared JWT/cookie scheme used by Geo and
   Activity to validate Auth-issued tokens.
 
@@ -50,7 +51,7 @@ Cross-cutting libraries:
 - **Docker**: Containerized services
 - **NATS JetStream**: Event streaming backbone (with transactional outbox)
 - **PostgreSQL**: Database with extensions (PostGIS)
-- **Flyway**: Database migrations
+- **EF Core Migrations**: per-module, applied in-process at host startup
 - **OpenTelemetry/Prometheus/Grafana**: Monitoring stack
 
 ## Domain Modeling

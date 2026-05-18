@@ -1,4 +1,6 @@
+using Turbo.Hosting.Postgres;
 using Turboapi.Auth;
+using Turboapi.Auth.Infrastructure.Persistence;
 using Turboapi.Auth.Presentation.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +28,9 @@ builder.Services.AddCors(options =>
 builder.Services.AddAuthModule(builder.Configuration);
 
 var app = builder.Build();
+await app.Services.MigrateModuleDatabaseAsync<AuthDbContext>(
+    builder.Configuration.GetConnectionString("Auth")
+        ?? throw new InvalidOperationException("ConnectionStrings:Auth is not configured"));
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseRouting();
 app.UseCors(webAppPolicy);

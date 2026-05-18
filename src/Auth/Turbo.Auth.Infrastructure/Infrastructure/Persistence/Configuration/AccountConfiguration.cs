@@ -18,7 +18,7 @@ namespace Turboapi.Auth.Infrastructure.Persistence.Configuration
             builder.Property(a => a.Email)
                 .HasColumnName("email")
                 .IsRequired()
-                .HasMaxLength(256);
+                .HasMaxLength(320); // RFC 5321 max
 
             builder.HasIndex(a => a.Email).IsUnique();
 

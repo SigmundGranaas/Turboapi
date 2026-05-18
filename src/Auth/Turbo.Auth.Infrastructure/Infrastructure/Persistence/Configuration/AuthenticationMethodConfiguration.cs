@@ -74,7 +74,7 @@ namespace Turboapi.Auth.Infrastructure.Persistence.Configuration
 
             builder.HasIndex(oam => new { oam.ProviderName, oam.ExternalUserId })
                    .IsUnique()
-                   .HasFilter($"\"{nameof(OAuthAuthMethod.ExternalUserId)}\" IS NOT NULL");
+                   .HasFilter("\"external_user_id\" IS NOT NULL");
         }
     }
 }

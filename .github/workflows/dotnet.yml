@@ -1,6 +1,7 @@
 # Builds the solution and runs every behaviour + architecture test
 # against real Postgres + NATS containers (Testcontainers). The runner
-# image ships Docker so Testcontainers Just Works.
+# image ships Docker so Testcontainers Just Works. Migrations run via
+# EF Core in-process; no Flyway / JDK install needed.
 name: .NET Build and test
 
 on:
@@ -15,19 +16,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up JDK (Flyway needs Java)
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install Flyway
-        run: |
-          wget -qO- https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.19.0/flyway-commandline-10.19.0-linux-x64.tar.gz | tar xvz
-          sudo mv flyway-10.19.0 /usr/local/flyway
-          sudo ln -s /usr/local/flyway/flyway /usr/local/bin/flyway
-          flyway --version
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -63,12 +51,6 @@ jobs:
 
       - name: Test Gateway topology
         run: dotnet test tests/Turbo.Gateway.Behaviour/Turbo.Gateway.Behaviour.csproj --no-build -c Release --logger "console;verbosity=minimal"
-
-      # Library suites that also live in the .sln — without these in CI,
-      # nothing prevents a regression in the Flyway migration runner or in
-      # TurboAuthentication's standalone unit tests.
-      - name: Test Turbo-pg-data
-        run: dotnet test Turbo-pg-data/Turbo-pg-data.csproj --no-build -c Release --logger "console;verbosity=minimal"
 
       - name: Test TurboAuthentication
         run: dotnet test TurboAuthentication/TurboAuthentication.csproj --no-build -c Release --logger "console;verbosity=minimal"

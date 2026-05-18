@@ -340,21 +340,7 @@ spec:
       labels:
         app: turboapi-auth
     spec:
-      initContainers:
-        - name: auth-db-migration
-          image: turboapi-auth-migration:latest  # Custom migration image
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: DB_HOST
-              value: "auth-db"
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_NAME
-              value: "auth"
-            - name: DB_USER
-              value: "postgres"
-            - name: DB_PASSWORD
-              value: "yourpassword"
+      # Auth migrates at startup via MigrateModuleDatabaseAsync; no init container.
       containers:
         - name: turboapi-auth
           image: turboapi-auth:latest
@@ -388,21 +374,7 @@ spec:
       labels:
         app: turboapi-geo
     spec:
-      initContainers:
-        - name: geo-db-migration
-          image: turboapi-geo-migration:latest  # Custom migration image
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: DB_HOST
-              value: "geo-db"
-            - name: DB_PORT
-              value: "5435"
-            - name: DB_NAME
-              value: "geo"
-            - name: DB_USER
-              value: "postgres"
-            - name: DB_PASSWORD
-              value: "yourpassword"
+      # Geo migrates at startup; the InitialCreate migration enables PostGIS.
       containers:
         - name: turboapi-geo
           image: turboapi-geo:latest
@@ -436,21 +408,7 @@ spec:
       labels:
         app: turboapi-activity
     spec:
-      initContainers:
-        - name: activity-db-migration
-          image: turboapi-activity-migration:latest  # Custom migration image
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: DB_HOST
-              value: "activity-db"
-            - name: DB_PORT
-              value: "5436"
-            - name: DB_NAME
-              value: "activity"
-            - name: DB_USER
-              value: "postgres"
-            - name: DB_PASSWORD
-              value: "yourpassword"
+      # Activity migrates at startup; no init container.
       containers:
         - name: turboapi-activity
           image: turboapi-activity:latest

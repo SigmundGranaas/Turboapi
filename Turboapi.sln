@@ -32,8 +32,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		compose.monitoring.yaml = compose.monitoring.yaml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo-pg-data", "Turbo-pg-data\Turbo-pg-data.csproj", "{95224B46-AFB4-4647-B39A-68C8F16C0BBB}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurboAuthentication", "TurboAuthentication\TurboAuthentication.csproj", "{9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo.Activity.Behaviour", "tests\Turbo.Activity.Behaviour\Turbo.Activity.Behaviour.csproj", "{B1A11A01-0001-4A0E-B0AC-0E1A7E1A0001}"
@@ -81,6 +79,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gateway", "Gateway", "{6306A8FB-679E-111F-6585-8F70E0EE6013}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo.Gateway", "src\Gateway\Turbo.Gateway.csproj", "{5079098D-89A6-4D2D-86BE-36FC48A01450}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Shared", "Shared", "{C8E42992-5E42-0C2B-DBFE-AA848D06431C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Turbo.Hosting.Postgres", "src\Shared\Turbo.Hosting.Postgres\Turbo.Hosting.Postgres.csproj", "{3B256FF8-27F9-4403-BC47-356606B1FACA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -248,18 +250,6 @@ Global
 		{C2A22A02-000D-4A0E-B0AC-0E1A7E1A001C}.Release|x64.Build.0 = Release|Any CPU
 		{C2A22A02-000D-4A0E-B0AC-0E1A7E1A001C}.Release|x86.ActiveCfg = Release|Any CPU
 		{C2A22A02-000D-4A0E-B0AC-0E1A7E1A001C}.Release|x86.Build.0 = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|x64.Build.0 = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Debug|x86.Build.0 = Debug|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|x64.ActiveCfg = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|x64.Build.0 = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|x86.ActiveCfg = Release|Any CPU
-		{95224B46-AFB4-4647-B39A-68C8F16C0BBB}.Release|x86.Build.0 = Release|Any CPU
 		{9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D4A6F38-AC6D-4CAA-8ADC-4142D8BB1868}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -476,6 +466,18 @@ Global
 		{5079098D-89A6-4D2D-86BE-36FC48A01450}.Release|x64.Build.0 = Release|Any CPU
 		{5079098D-89A6-4D2D-86BE-36FC48A01450}.Release|x86.ActiveCfg = Release|Any CPU
 		{5079098D-89A6-4D2D-86BE-36FC48A01450}.Release|x86.Build.0 = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|x64.Build.0 = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Debug|x86.Build.0 = Debug|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|x64.ActiveCfg = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|x64.Build.0 = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|x86.ActiveCfg = Release|Any CPU
+		{3B256FF8-27F9-4403-BC47-356606B1FACA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -499,5 +501,7 @@ Global
 		{9BD654BF-BC29-4A87-B593-2BB50818F9CC} = {E134C235-D229-4C0D-6747-D71D21D31FBE}
 		{6306A8FB-679E-111F-6585-8F70E0EE6013} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{5079098D-89A6-4D2D-86BE-36FC48A01450} = {6306A8FB-679E-111F-6585-8F70E0EE6013}
+		{C8E42992-5E42-0C2B-DBFE-AA848D06431C} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{3B256FF8-27F9-4403-BC47-356606B1FACA} = {C8E42992-5E42-0C2B-DBFE-AA848D06431C}
 	EndGlobalSection
 EndGlobal

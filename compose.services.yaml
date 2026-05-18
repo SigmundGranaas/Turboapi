@@ -23,8 +23,6 @@ services:
       - OTEL_SERVICE_NAME=turboapi-auth
       - Nats__Url=nats://nats:4222
     depends_on:
-      auth-db-migration:
-        condition: service_completed_successfully
       nats:
         condition: service_healthy
     healthcheck:
@@ -52,8 +50,6 @@ services:
       - OTEL_SERVICE_NAME=turboapi-geo
       - Nats__Url=nats://nats:4222
     depends_on:
-      geo-db-migration:
-        condition: service_completed_successfully
       nats:
         condition: service_healthy
     healthcheck:
@@ -81,8 +77,6 @@ services:
       - OTEL_SERVICE_NAME=turboapi-activity
       - Nats__Url=nats://nats:4222
     depends_on:
-      activity-db-migration:
-        condition: service_completed_successfully
       nats:
         condition: service_healthy
     healthcheck:
@@ -121,30 +115,6 @@ services:
     networks:
       - turbo
         
-  # Flyway's -connectRetries handles waiting for Postgres without forcing
-  # a depends_on:service_healthy on a specific DB container — the same
-  # migration definition works against per-service DBs (compose.yaml) or
-  # the shared-db variant (compose.databases.shared.yaml).
-  auth-db-migration:
-    image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://${AUTH_DB_HOST:-auth-db}:${AUTH_DB_PORT:-5432}/${AUTH_DB_NAME:-auth} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
-    volumes:
-      - ./src/Auth/db/migrations:/flyway/sql
-    networks:
-      - turbo
-
-  geo-db-migration:
-    image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://${GEO_DB_HOST:-geo-db}:${GEO_DB_PORT:-5435}/${GEO_DB_NAME:-geo} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
-    volumes:
-      - ./src/Geo/db/migrations:/flyway/sql
-    networks:
-      - turbo
-
-  activity-db-migration:
-    image: flyway/flyway:latest
-    command: -url=jdbc:postgresql://${ACTIVITY_DB_HOST:-activity-db}:${ACTIVITY_DB_PORT:-5436}/${ACTIVITY_DB_NAME:-activity} -user=${DB_USER:-postgres} -password=${DB_PASSWORD:-yourpassword} -locations=filesystem:/flyway/sql -connectRetries=30 -baselineOnMigrate=true migrate
-    volumes:
-      - ./src/Activity/db/migrations:/flyway/sql
-    networks:
-      - turbo
+  # Migrations run in-process at each host's startup via EF Core
+  # (see MigrateModuleDatabaseAsync in src/Shared/Turbo.Hosting.Postgres).
+  # No separate migration containers needed.

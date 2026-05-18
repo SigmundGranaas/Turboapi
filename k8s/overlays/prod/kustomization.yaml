@@ -35,12 +35,3 @@ images:
   - name: turboapi-activity
     newName: ghcr.io/sigmundgranaas/turboapi-activity
     newTag: latest
-  - name: turboapi-auth-migration
-    newName: ghcr.io/sigmundgranaas/turboapi-auth-migration
-    newTag: latest
-  - name: turboapi-geo-migration
-    newName: ghcr.io/sigmundgranaas/turboapi-geo-migration
-    newTag: latest
-  - name: turboapi-activity-migration
-    newName: ghcr.io/sigmundgranaas/turboapi-activity-migration
-    newTag: latest

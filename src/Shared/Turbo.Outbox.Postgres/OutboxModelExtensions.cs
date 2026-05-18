@@ -58,7 +58,15 @@ public static class OutboxModelExtensions
 
             b.HasKey(x => x.EventId);
             b.Property(x => x.EventId).HasColumnName("event_id");
-            b.Property(x => x.ProcessedAt).HasColumnName("processed_at");
+            // PgIdempotencyStore writes only event_id and relies on the DB
+            // to stamp processed_at via CURRENT_TIMESTAMP, so the column
+            // must have a default. Without this, the INSERT
+            // (event_id) VALUES (...) ON CONFLICT DO NOTHING fails with
+            // a NOT NULL constraint violation on processed_at.
+            b.Property(x => x.ProcessedAt)
+                .HasColumnName("processed_at")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAdd();
         });
         return modelBuilder;
     }

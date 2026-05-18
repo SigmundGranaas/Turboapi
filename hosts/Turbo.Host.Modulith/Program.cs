@@ -1,8 +1,12 @@
 using Turbo.Host.Modulith;
+using Turbo.Hosting.Postgres;
 using Turbo.Messaging.InProcess;
-using Turboapi.Auth;
-using Turboapi.Geo;
 using Turboapi.Activity;
+using Turboapi.Activity.data;
+using Turboapi.Auth;
+using Turboapi.Auth.Infrastructure.Persistence;
+using Turboapi.Geo;
+using Turboapi.Geo.domain.query.model;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -26,6 +30,15 @@ builder.Services.AddInProcessMessaging();
 builder.Services.AddTurboInProcessSubscribers();
 
 var app = builder.Build();
+await app.Services.MigrateModuleDatabaseAsync<AuthDbContext>(
+    builder.Configuration.GetConnectionString("Auth")
+        ?? throw new InvalidOperationException("ConnectionStrings:Auth is not configured"));
+await app.Services.MigrateModuleDatabaseAsync<ActivityContext>(
+    builder.Configuration.GetConnectionString("Activity")
+        ?? throw new InvalidOperationException("ConnectionStrings:Activity is not configured"));
+await app.Services.MigrateModuleDatabaseAsync<LocationReadContext>(
+    builder.Configuration.GetConnectionString("Geo")
+        ?? throw new InvalidOperationException("ConnectionStrings:Geo is not configured"));
 
 app.UseRouting();
 app.UseAuthentication();

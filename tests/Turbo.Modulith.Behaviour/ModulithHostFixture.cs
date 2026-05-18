@@ -5,6 +5,10 @@ using Npgsql;
 using Testcontainers.PostgreSql;
 using Turbo.Behaviour.Testing;
 using Turbo.Host.Modulith;
+using Turbo.Hosting.Postgres;
+using Turboapi.Activity.data;
+using Turboapi.Auth.Infrastructure.Persistence;
+using Turboapi.Geo.domain.query.model;
 using Xunit;
 
 namespace Turbo.Modulith.Behaviour;
@@ -27,17 +31,13 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         await _postgres.StartAsync();
         var baseConn = _postgres.GetConnectionString();
 
-        await RepoLayout.CreateDatabaseAsync(baseConn, "auth");
-        await RepoLayout.CreateDatabaseAsync(baseConn, "activity");
-        await RepoLayout.CreateDatabaseAsync(baseConn, "geo");
-
+        // Modulith hosts three databases on one Postgres. EF Core's
+        // MigrateAsync creates schema but not the database itself; the host
+        // helper handles both at startup once the factory is up. The
+        // databases themselves are created lazily by MigrateModuleDatabaseAsync.
         var authConn = RepoLayout.WithDatabase(baseConn, "auth");
         var activityConn = RepoLayout.WithDatabase(baseConn, "activity");
         var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
-
-        await RepoLayout.RunMigrationsAsync(authConn, "src/Auth");
-        await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
-        await RepoLayout.RunMigrationsAsync(geoConn, "src/Geo");
 
         _factory = new WebApplicationFactory<ModulithProgram>().WithWebHostBuilder(builder =>
         {
@@ -46,6 +46,12 @@ public sealed class ModulithHostFixture : IAsyncLifetime
             builder.UseSetting("ConnectionStrings:Activity", activityConn);
             builder.UseSetting("ConnectionStrings:Geo", geoConn);
         });
+
+        // The test factory doesn't execute Program.cs's top-level await, so
+        // the migrations have to run here against the test-overridden DbContexts.
+        await _factory.Services.MigrateModuleDatabaseAsync<AuthDbContext>(authConn);
+        await _factory.Services.MigrateModuleDatabaseAsync<ActivityContext>(activityConn);
+        await _factory.Services.MigrateModuleDatabaseAsync<LocationReadContext>(geoConn);
     }
 
     public async Task DisposeAsync()

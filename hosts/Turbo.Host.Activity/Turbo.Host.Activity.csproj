@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Activity\Turbo.Activity.Api\Turbo.Activity.Api.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.Nats\Turbo.Messaging.Nats.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Turbo.Hosting.Postgres\Turbo.Hosting.Postgres.csproj" />
   </ItemGroup>
 
   <ItemGroup>
