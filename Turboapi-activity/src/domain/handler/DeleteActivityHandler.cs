@@ -1,4 +1,5 @@
 using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
 using Turboauth_activity.data;
 using Turboauth_activity.domain.command;
 using Turboauth_activity.domain.exception;
@@ -33,8 +34,8 @@ public class DeleteActivityHandler
 
         activity.Delete(command.UserID);
 
-        await _outbox.AppendActivityEventsAsync(activity.Id, activity.Events);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithRetryAsync(ct =>
+            _outbox.AppendActivityEventsAsync(activity.Id, activity.Events, ct));
 
         return activity.Id;
     }

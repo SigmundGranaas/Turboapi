@@ -1,4 +1,5 @@
 using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
 using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.query;
@@ -31,7 +32,7 @@ public class DeleteLocationHandler
 
         location.Delete(command.UserId);
 
-        await _outbox.AppendGeoEventsAsync(location.Id, location.Events);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithRetryAsync(ct =>
+            _outbox.AppendGeoEventsAsync(location.Id, location.Events, ct));
     }
 }

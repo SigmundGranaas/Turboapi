@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
 using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
 using Turboapi.Application.Interfaces;
 using Turboapi.Domain;
 
@@ -21,8 +22,19 @@ namespace Turboapi.Infrastructure.Persistence
 
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
-            await DrainDomainEventsToOutboxAsync(cancellationToken);
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            // Wrapping in the execution strategy makes the drain+save unit
+            // compose with EnableRetryOnFailure. Otherwise a transient
+            // connection error on the second SaveChanges retry would
+            // double-insert outbox rows. The strategy keeps the unit
+            // idempotent across attempts.
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            var rows = 0;
+            await strategy.ExecuteAsync(async ct =>
+            {
+                await DrainDomainEventsToOutboxAsync(ct);
+                rows = await _dbContext.SaveChangesAsync(ct);
+            }, cancellationToken);
+            return rows;
         }
 
         private async Task DrainDomainEventsToOutboxAsync(CancellationToken cancellationToken)

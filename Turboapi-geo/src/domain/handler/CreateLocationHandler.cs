@@ -1,4 +1,5 @@
 using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
 using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.model;
 using Turboapi_geo.domain.query.model;
@@ -26,8 +27,8 @@ public class CreateLocationHandler
             command.Coordinates,
             command.Display);
 
-        await _outbox.AppendGeoEventsAsync(location.Id, location.Events);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesWithRetryAsync(ct =>
+            _outbox.AppendGeoEventsAsync(location.Id, location.Events, ct));
         return location.Id;
     }
 }
