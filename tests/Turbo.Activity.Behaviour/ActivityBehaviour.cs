@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Turboauth_activity.controller;
-using Turboauth_activity.domain;
+using Turboapi.Activity.controller;
+using Turboapi.Activity.domain;
 using Xunit;
 
 namespace Turbo.Activity.Behaviour;

@@ -39,12 +39,12 @@ public sealed class HandlerPurity
     public void Activity_command_handlers_do_not_reference_EF_Core_or_Npgsql()
     {
         // Touch a type from the assembly so it loads.
-        _ = typeof(Turboauth_activity.domain.handler.CreateActivityHandler);
+        _ = typeof(Turboapi.Activity.domain.handler.CreateActivityHandler);
         var assembly = LoadByName("Turboapi-activity");
 
         var result = Types.InAssembly(assembly)
             .That()
-            .ResideInNamespace("Turboauth_activity.domain.handler")
+            .ResideInNamespace("Turboapi.Activity.domain.handler")
             .ShouldNot()
             .HaveDependencyOnAny(ForbiddenInHandlers)
             .GetResult();

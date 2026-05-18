@@ -1,6 +1,6 @@
 using Turbo.Messaging;
 
-namespace Turboauth_activity.domain;
+namespace Turboapi.Activity.domain;
 
 public abstract class AggregateRoot
 {

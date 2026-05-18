@@ -2,8 +2,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Turboapi.Application.Contracts.V1.Auth;
-using Turboauth_activity.controller;
-using Turboauth_activity.domain;
+using Turboapi.Activity.controller;
+using Turboapi.Activity.domain;
 using Xunit;
 
 namespace Turbo.Modulith.Behaviour;
@@ -57,7 +57,7 @@ public sealed class IdempotencyBehaviour
         // the outbox (with the SAME event id) and republish it through
         // the in-process bus. Without dedup the projection would either
         // insert a second row OR throw a PK violation on insert.
-        await _host.RedeliverLatestActivityEnvelopeAsync(nameof(Turboauth_activity.domain.events.ActivityCreated));
+        await _host.RedeliverLatestActivityEnvelopeAsync(nameof(Turboapi.Activity.domain.events.ActivityCreated));
 
         // Give the bus + subscriber time to dispatch the redelivered
         // envelope. 500ms is generous — the bus loop tick is well under

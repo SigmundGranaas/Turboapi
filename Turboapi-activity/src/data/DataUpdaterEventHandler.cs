@@ -1,10 +1,10 @@
 using System.Diagnostics;
 using Turbo.Messaging;
 using Turbo.Outbox;
-using Turboauth_activity.domain.events;
-using Turboauth_activity.domain.query;
+using Turboapi.Activity.domain.events;
+using Turboapi.Activity.domain.query;
 
-namespace Turboauth_activity.data;
+namespace Turboapi.Activity.data;
 
 public class ActivityEventHandler : IEventHandler<ActivityCreated>, IEventHandler<ActivityUpdated>, IEventHandler<ActivityDeleted>
 {

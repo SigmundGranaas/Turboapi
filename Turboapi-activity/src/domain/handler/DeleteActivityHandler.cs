@@ -1,9 +1,9 @@
 using Turbo.Outbox;
-using Turboauth_activity.domain.command;
-using Turboauth_activity.domain.exception;
-using Turboauth_activity.domain.query;
+using Turboapi.Activity.domain.command;
+using Turboapi.Activity.domain.exception;
+using Turboapi.Activity.domain.query;
 
-namespace Turboauth_activity.domain.handler;
+namespace Turboapi.Activity.domain.handler;
 
 public class DeleteActivityHandler
 {

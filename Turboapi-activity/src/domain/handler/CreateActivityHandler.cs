@@ -1,7 +1,7 @@
 using Turbo.Outbox;
-using Turboauth_activity.domain.command;
+using Turboapi.Activity.domain.command;
 
-namespace Turboauth_activity.domain.handler;
+namespace Turboapi.Activity.domain.handler;
 
 public class CreateActivityHandler
 {

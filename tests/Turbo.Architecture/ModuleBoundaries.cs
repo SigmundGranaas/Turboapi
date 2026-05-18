@@ -22,7 +22,7 @@ public sealed class ModuleBoundaries
         "Turboapi-auth",
     };
 
-    private static Assembly Activity => typeof(Turboauth_activity.ActivityScope).Assembly;
+    private static Assembly Activity => typeof(Turboapi.Activity.ActivityScope).Assembly;
     private static Assembly Geo => typeof(Turboapi_geo.GeoScope).Assembly;
     private static Assembly Auth => typeof(Turboapi.AuthScope).Assembly;
 

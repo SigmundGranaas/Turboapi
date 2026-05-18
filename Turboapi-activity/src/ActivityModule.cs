@@ -3,13 +3,13 @@ using Turbo.Messaging;
 using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
-using Turboauth_activity.controller;
-using Turboauth_activity.data;
-using Turboauth_activity.domain.events;
-using Turboauth_activity.domain.handler;
-using Turboauth_activity.domain.query;
+using Turboapi.Activity.controller;
+using Turboapi.Activity.data;
+using Turboapi.Activity.domain.events;
+using Turboapi.Activity.domain.handler;
+using Turboapi.Activity.domain.query;
 
-namespace Turboauth_activity;
+namespace Turboapi.Activity;
 
 /// <summary>
 /// Composition entry point for the Activity module. The extension wires

@@ -2,7 +2,7 @@ using Turbo.Host.Modulith;
 using Turbo.Messaging.InProcess;
 using Turboapi;
 using Turboapi_geo;
-using Turboauth_activity;
+using Turboapi.Activity;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();

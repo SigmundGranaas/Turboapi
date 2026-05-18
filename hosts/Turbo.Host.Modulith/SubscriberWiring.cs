@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
 using Turboapi_geo.domain.events;
-using Turboauth_activity.domain.events;
+using Turboapi.Activity.domain.events;
 
 namespace Turbo.Host.Modulith;
 

@@ -1,7 +1,7 @@
 using Medo;
-using Turboauth_activity.domain.events;
+using Turboapi.Activity.domain.events;
 
-namespace Turboauth_activity.domain;
+namespace Turboapi.Activity.domain;
 
 public class Activity: AggregateRoot
 {

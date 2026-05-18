@@ -1,6 +1,6 @@
-using Turboauth_activity.domain.query;
+using Turboapi.Activity.domain.query;
 
-namespace Turboauth_activity.data;
+namespace Turboapi.Activity.data;
 
 public interface IActivityWriteRepository
 {

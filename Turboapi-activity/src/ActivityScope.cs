@@ -1,6 +1,6 @@
 using Turbo.Messaging;
 
-namespace Turboauth_activity;
+namespace Turboapi.Activity;
 
 /// <summary>
 /// Module marker for the Activity commit boundary. Handlers depend on

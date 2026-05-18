@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Behaviour.Testing;
-using ActivityContext = Turboauth_activity.data.ActivityContext;
+using ActivityContext = Turboapi.Activity.data.ActivityContext;
 
 namespace Turbo.Activity.Behaviour;
 

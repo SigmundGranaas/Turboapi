@@ -4,7 +4,7 @@ namespace Turboapi_geo;
 
 /// <summary>
 /// Module marker for the Geo commit boundary. See
-/// <see cref="Turboauth_activity.ActivityScope"/> for the rationale.
+/// <see cref="Turboapi.Activity.ActivityScope"/> for the rationale.
 /// </summary>
 public sealed class GeoScope : IModuleScope
 {

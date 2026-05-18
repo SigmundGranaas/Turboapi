@@ -1,12 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Turboauth_activity.domain;
-using Turboauth_activity.domain.command;
-using Turboauth_activity.domain.handler;
-using Turboauth_activity.domain.query;
+using Turboapi.Activity.domain;
+using Turboapi.Activity.domain.command;
+using Turboapi.Activity.domain.handler;
+using Turboapi.Activity.domain.query;
 
-namespace Turboauth_activity.controller;
+namespace Turboapi.Activity.controller;
 
 [ApiController]
 [Route("api/[controller]")]

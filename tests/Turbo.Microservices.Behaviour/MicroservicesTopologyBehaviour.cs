@@ -5,8 +5,8 @@ using FluentAssertions;
 using Turboapi.Application.Contracts.V1.Auth;
 using Turboapi_geo.controller.request;
 using Turboapi_geo.controller.response;
-using Turboauth_activity.controller;
-using Turboauth_activity.domain;
+using Turboapi.Activity.controller;
+using Turboapi.Activity.domain;
 using Xunit;
 
 namespace Turbo.Microservices.Behaviour;

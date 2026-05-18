@@ -1,4 +1,4 @@
-namespace Turboauth_activity.domain.exception;
+namespace Turboapi.Activity.domain.exception;
 
 public class ActivityNotFoundException : Exception
 {

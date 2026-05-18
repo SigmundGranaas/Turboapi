@@ -1,4 +1,4 @@
-namespace Turboauth_activity.domain;
+namespace Turboapi.Activity.domain;
 
 public class Position
 {

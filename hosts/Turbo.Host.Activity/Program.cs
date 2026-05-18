@@ -2,7 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Turbo.Messaging.Nats;
-using Turboauth_activity;
+using Turboapi.Activity;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,4 +1,4 @@
-namespace Turboauth_activity.domain.command;
+namespace Turboapi.Activity.domain.command;
 
 public class EditActivityCommand
 {

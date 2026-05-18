@@ -3,8 +3,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using Turboapi.Application.Contracts.V1.Auth;
-using Turboauth_activity.controller;
-using Turboauth_activity.domain;
+using Turboapi.Activity.controller;
+using Turboapi.Activity.domain;
 using Xunit;
 
 namespace Turbo.Modulith.Behaviour;

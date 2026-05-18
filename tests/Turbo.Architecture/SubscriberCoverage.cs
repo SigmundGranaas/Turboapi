@@ -84,13 +84,13 @@ public sealed class SubscriberCoverage
     private static HashSet<Type> ModuleEventInventory()
     {
         // Touch a known type from each module's assembly so it's loaded.
-        _ = typeof(Turboauth_activity.domain.events.ActivityCreated);
+        _ = typeof(Turboapi.Activity.domain.events.ActivityCreated);
         _ = typeof(Turboapi_geo.domain.events.LocationCreated);
         _ = typeof(Turboapi.Domain.Events.AccountCreatedEvent);
 
         var moduleAssemblies = new[]
         {
-            typeof(Turboauth_activity.domain.events.ActivityCreated).Assembly,
+            typeof(Turboapi.Activity.domain.events.ActivityCreated).Assembly,
             typeof(Turboapi_geo.domain.events.LocationCreated).Assembly,
             typeof(Turboapi.Domain.Events.AccountCreatedEvent).Assembly,
         };

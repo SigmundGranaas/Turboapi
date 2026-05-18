@@ -1,7 +1,7 @@
 using Turbo.Messaging;
-using Turboauth_activity.domain;
+using Turboapi.Activity.domain;
 
-namespace Turboauth_activity.domain.events;
+namespace Turboapi.Activity.domain.events;
 
 public record ActivityCreated(
     Guid activity,

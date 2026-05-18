@@ -1,4 +1,4 @@
-namespace Turboauth_activity.domain.query;
+namespace Turboapi.Activity.domain.query;
 
 public class ActivityQuery
 {
