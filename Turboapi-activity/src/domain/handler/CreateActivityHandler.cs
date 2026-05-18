@@ -5,12 +5,11 @@ namespace Turboauth_activity.domain.handler;
 
 public class CreateActivityHandler
 {
-    private const string Source = "activity";
 
-    private readonly IOutbox<IActivityScope> _outbox;
-    private readonly IUnitOfWork<IActivityScope> _uow;
+    private readonly IOutbox<ActivityScope> _outbox;
+    private readonly IUnitOfWork<ActivityScope> _uow;
 
-    public CreateActivityHandler(IOutbox<IActivityScope> outbox, IUnitOfWork<IActivityScope> uow)
+    public CreateActivityHandler(IOutbox<ActivityScope> outbox, IUnitOfWork<ActivityScope> uow)
     {
         _outbox = outbox;
         _uow = uow;
@@ -22,7 +21,7 @@ public class CreateActivityHandler
             command.OwnerId, command.Position, command.Name, command.Description, command.Icon);
 
         await _uow.SaveChangesAsync(ct =>
-            _outbox.AppendEventsAsync(activity.Id, Source, activity.Events, ct));
+            _outbox.AppendEventsAsync(activity.Id, activity.Events, ct));
 
         return activity.Id;
     }

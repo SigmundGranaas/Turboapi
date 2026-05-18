@@ -22,9 +22,9 @@ public sealed class ModuleBoundaries
         "Turboapi-auth",
     };
 
-    private static Assembly Activity => typeof(Turboauth_activity.IActivityScope).Assembly;
-    private static Assembly Geo => typeof(Turboapi_geo.IGeoScope).Assembly;
-    private static Assembly Auth => typeof(Turboapi.IAuthScope).Assembly;
+    private static Assembly Activity => typeof(Turboauth_activity.ActivityScope).Assembly;
+    private static Assembly Geo => typeof(Turboapi_geo.GeoScope).Assembly;
+    private static Assembly Auth => typeof(Turboapi.AuthScope).Assembly;
 
     [Fact]
     public void Activity_does_not_reference_Geo_or_Auth_assemblies()

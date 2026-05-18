@@ -16,6 +16,7 @@ namespace Turbo.Outbox.Postgres;
 /// </summary>
 public sealed class PgOutbox<TDbContext, TScope> : IOutbox<TScope>
     where TDbContext : DbContext
+    where TScope : IModuleScope
 {
     private readonly TDbContext _db;
 
@@ -43,20 +44,4 @@ public sealed class PgOutbox<TDbContext, TScope> : IOutbox<TScope>
             ? g
             : Guid.Empty;
     }
-}
-
-/// <summary>
-/// Backwards-compatible single-parameter form. When a module hasn't yet
-/// defined a scope marker, the DbContext itself acts as the scope, which
-/// is what the original IOutbox&lt;TDbContext&gt; shape did.
-/// </summary>
-public sealed class PgOutbox<TDbContext> : IOutbox<TDbContext>
-    where TDbContext : DbContext
-{
-    private readonly PgOutbox<TDbContext, TDbContext> _inner;
-
-    public PgOutbox(TDbContext db) => _inner = new PgOutbox<TDbContext, TDbContext>(db);
-
-    public Task AppendAsync(EventEnvelope envelope, CancellationToken cancellationToken)
-        => _inner.AppendAsync(envelope, cancellationToken);
 }

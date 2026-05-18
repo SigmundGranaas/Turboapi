@@ -7,15 +7,14 @@ namespace Turboauth_activity.domain.handler;
 
 public class DeleteActivityHandler
 {
-    private const string Source = "activity";
 
-    private readonly IOutbox<IActivityScope> _outbox;
-    private readonly IUnitOfWork<IActivityScope> _uow;
+    private readonly IOutbox<ActivityScope> _outbox;
+    private readonly IUnitOfWork<ActivityScope> _uow;
     private readonly IActivityReadRepository _repo;
 
     public DeleteActivityHandler(
-        IOutbox<IActivityScope> outbox,
-        IUnitOfWork<IActivityScope> uow,
+        IOutbox<ActivityScope> outbox,
+        IUnitOfWork<ActivityScope> uow,
         IActivityReadRepository repo)
     {
         _outbox = outbox;
@@ -34,7 +33,7 @@ public class DeleteActivityHandler
         activity.Delete(command.UserID);
 
         await _uow.SaveChangesAsync(ct =>
-            _outbox.AppendEventsAsync(activity.Id, Source, activity.Events, ct));
+            _outbox.AppendEventsAsync(activity.Id, activity.Events, ct));
 
         return activity.Id;
     }

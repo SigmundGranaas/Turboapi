@@ -11,8 +11,8 @@ namespace Turbo.Architecture;
 /// handlers must reach storage only through the per-module
 /// <see cref="Turbo.Outbox.IUnitOfWork{TScope}"/> and
 /// <see cref="Turbo.Outbox.IOutbox{TScope}"/> abstractions — never via EF
-/// Core's DbContext, never via Npgsql. The marker types (IActivityScope,
-/// IGeoScope, IAuthScope) keep handlers free of any EF type names.
+/// Core's DbContext, never via Npgsql. The marker types (ActivityScope,
+/// GeoScope, AuthScope) keep handlers free of any EF type names.
 /// </summary>
 public sealed class HandlerPurity
 {
@@ -50,7 +50,7 @@ public sealed class HandlerPurity
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            $"Activity command handlers must talk to storage only through IUnitOfWork<IActivityScope> / IOutbox<IActivityScope>; offending: {Describe(result.FailingTypes)}");
+            $"Activity command handlers must talk to storage only through IUnitOfWork<ActivityScope> / IOutbox<ActivityScope>; offending: {Describe(result.FailingTypes)}");
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class HandlerPurity
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            $"Geo command handlers must talk to storage only through IUnitOfWork<IGeoScope> / IOutbox<IGeoScope>; offending: {Describe(result.FailingTypes)}");
+            $"Geo command handlers must talk to storage only through IUnitOfWork<GeoScope> / IOutbox<GeoScope>; offending: {Describe(result.FailingTypes)}");
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public sealed class HandlerPurity
             .GetResult();
 
         result.IsSuccessful.Should().BeTrue(
-            $"Auth command/query handlers must talk to storage only through IUnitOfWork / IOutbox<IAuthScope>; offending: {Describe(result.FailingTypes)}");
+            $"Auth command/query handlers must talk to storage only through IUnitOfWork / IOutbox<AuthScope>; offending: {Describe(result.FailingTypes)}");
     }
 
     private static string Describe(IEnumerable<Type>? failing)

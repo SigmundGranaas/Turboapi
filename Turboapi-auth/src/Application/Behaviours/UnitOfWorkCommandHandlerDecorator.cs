@@ -16,11 +16,11 @@ namespace Turboapi.Application.Behaviors
     public class UnitOfWorkCommandHandlerDecorator<TCommand, TResponse> : ICommandHandler<TCommand, TResponse>
     {
         private readonly ICommandHandler<TCommand, TResponse> _decorated;
-        private readonly IUnitOfWork<IAuthScope> _unitOfWork;
+        private readonly IUnitOfWork<AuthScope> _unitOfWork;
 
         public UnitOfWorkCommandHandlerDecorator(
             ICommandHandler<TCommand, TResponse> decorated,
-            IUnitOfWork<IAuthScope> unitOfWork)
+            IUnitOfWork<AuthScope> unitOfWork)
         {
             _decorated = decorated;
             _unitOfWork = unitOfWork;

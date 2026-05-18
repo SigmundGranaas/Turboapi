@@ -6,12 +6,11 @@ namespace Turboapi_geo.domain.handler;
 
 public class CreateLocationHandler
 {
-    private const string Source = "geo";
 
-    private readonly IOutbox<IGeoScope> _outbox;
-    private readonly IUnitOfWork<IGeoScope> _uow;
+    private readonly IOutbox<GeoScope> _outbox;
+    private readonly IUnitOfWork<GeoScope> _uow;
 
-    public CreateLocationHandler(IOutbox<IGeoScope> outbox, IUnitOfWork<IGeoScope> uow)
+    public CreateLocationHandler(IOutbox<GeoScope> outbox, IUnitOfWork<GeoScope> uow)
     {
         _outbox = outbox;
         _uow = uow;
@@ -25,7 +24,7 @@ public class CreateLocationHandler
             command.Display);
 
         await _uow.SaveChangesAsync(ct =>
-            _outbox.AppendEventsAsync(location.Id, Source, location.Events, ct));
+            _outbox.AppendEventsAsync(location.Id, location.Events, ct));
         return location.Id;
     }
 }

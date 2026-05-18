@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Turbo.Messaging;
 
 namespace Turbo.Outbox.Postgres;
 
@@ -15,6 +16,7 @@ namespace Turbo.Outbox.Postgres;
 /// </summary>
 public sealed class PgUnitOfWork<TDbContext, TScope> : IUnitOfWork<TScope>
     where TDbContext : DbContext
+    where TScope : IModuleScope
 {
     private readonly TDbContext _db;
 

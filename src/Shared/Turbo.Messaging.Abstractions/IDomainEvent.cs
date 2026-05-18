@@ -1,6 +1,19 @@
 namespace Turbo.Messaging;
 
 /// <summary>
+/// Each module declares a single concrete <see cref="IModuleScope"/>
+/// implementation (e.g. <c>ActivityScope</c>) carrying its source name —
+/// the string that ends up on every <see cref="EventEnvelope.Source"/>
+/// field. <c>IOutbox&lt;TScope&gt;</c> and <c>IUnitOfWork&lt;TScope&gt;</c>
+/// take this as their type parameter so handlers never have to pass the
+/// source as a magic string.
+/// </summary>
+public interface IModuleScope
+{
+    static abstract string SourceName { get; }
+}
+
+/// <summary>
 /// Root contract for every domain event produced by a module. The two
 /// required properties exist so subscribers can de-duplicate at-least-once
 /// redeliveries by <see cref="EventId"/> without poking the envelope, and

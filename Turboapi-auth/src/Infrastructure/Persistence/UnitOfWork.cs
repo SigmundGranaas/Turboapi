@@ -14,14 +14,12 @@ namespace Turboapi.Infrastructure.Persistence
     /// with an empty work delegate after a successful handler call —
     /// handlers stage changes through repositories, this commits them.
     /// </summary>
-    public sealed class AuthUnitOfWork : IUnitOfWork<IAuthScope>
+    public sealed class AuthUnitOfWork : IUnitOfWork<AuthScope>
     {
-        private const string Source = "auth";
-
         private readonly AuthDbContext _dbContext;
-        private readonly IOutbox<IAuthScope> _outbox;
+        private readonly IOutbox<AuthScope> _outbox;
 
-        public AuthUnitOfWork(AuthDbContext dbContext, IOutbox<IAuthScope> outbox)
+        public AuthUnitOfWork(AuthDbContext dbContext, IOutbox<AuthScope> outbox)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
@@ -51,7 +49,7 @@ namespace Turboapi.Infrastructure.Persistence
                 aggregate.ClearDomainEvents();
                 foreach (var @event in pending)
                 {
-                    var envelope = EventEnvelopeFactory.For(@event, Source, headers);
+                    var envelope = EventEnvelopeFactory.For(@event, AuthScope.SourceName, headers);
                     await _outbox.AppendAsync(envelope, cancellationToken);
                 }
             }

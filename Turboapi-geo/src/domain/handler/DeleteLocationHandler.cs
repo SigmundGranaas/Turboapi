@@ -7,15 +7,14 @@ namespace Turboapi_geo.domain.handler;
 
 public class DeleteLocationHandler
 {
-    private const string Source = "geo";
 
-    private readonly IOutbox<IGeoScope> _outbox;
-    private readonly IUnitOfWork<IGeoScope> _uow;
+    private readonly IOutbox<GeoScope> _outbox;
+    private readonly IUnitOfWork<GeoScope> _uow;
     private readonly ILocationReadRepository _locationReadRepository;
 
     public DeleteLocationHandler(
-        IOutbox<IGeoScope> outbox,
-        IUnitOfWork<IGeoScope> uow,
+        IOutbox<GeoScope> outbox,
+        IUnitOfWork<GeoScope> uow,
         ILocationReadRepository locationReadRepository)
     {
         _outbox = outbox;
@@ -32,6 +31,6 @@ public class DeleteLocationHandler
         location.Delete(command.UserId);
 
         await _uow.SaveChangesAsync(ct =>
-            _outbox.AppendEventsAsync(location.Id, Source, location.Events, ct));
+            _outbox.AppendEventsAsync(location.Id, location.Events, ct));
     }
 }

@@ -8,16 +8,17 @@ namespace Turbo.Outbox;
 /// database transaction — so committing the aggregate change and committing
 /// the event row happen together or not at all.
 ///
-/// The <typeparamref name="TDbContext"/> type parameter exists so that in a
-/// modulith deployment where three module outboxes share one process, each
-/// module's handlers resolve their own outbox via DI rather than competing
-/// for a single <c>IOutbox</c> registration. The <c>TDbContext</c> is a
-/// marker — the contract does not depend on EF Core's API surface.
+/// The <typeparamref name="TScope"/> module marker carries the module's
+/// source name as a static abstract property (see <see cref="IModuleScope"/>)
+/// so handlers never need to pass it as a magic string, and DI resolution
+/// keeps each module's outbox separate when multiple modules share a
+/// process.
 ///
 /// Modules (or their UnitOfWork) call this; an out-of-band dispatcher
 /// hosted service is responsible for moving the rows to a transport.
 /// </summary>
-public interface IOutbox<TDbContext>
+public interface IOutbox<TScope>
+    where TScope : IModuleScope
 {
     Task AppendAsync(EventEnvelope envelope, CancellationToken cancellationToken);
 }
