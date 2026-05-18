@@ -66,6 +66,33 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         await _postgres.DisposeAsync();
     }
 
+    /// <summary>
+    /// Test-only simulation of the operator rebuild SOP: truncate the
+    /// activity read model + the activity dedup table, then mark every
+    /// activity outbox row as undispatched. The outbox dispatcher will
+    /// re-publish from position 0 the next time it polls; the in-process
+    /// subscriber re-projects each event into the freshly-empty read
+    /// model. Asserts the outbox is sufficient to rebuild the read model
+    /// from zero — i.e. event sourcing actually works.
+    /// </summary>
+    public async Task ResetActivityReadModelForReplayAsync()
+    {
+        var baseConn = _postgres.GetConnectionString();
+        var activityConn = WithDatabase(baseConn, "activity");
+        await using var conn = new NpgsqlConnection(activityConn);
+        await conn.OpenAsync();
+
+        await using var truncateReadModel = new NpgsqlCommand("TRUNCATE TABLE activity_query;", conn);
+        await truncateReadModel.ExecuteNonQueryAsync();
+
+        await using var truncateDedup = new NpgsqlCommand("TRUNCATE TABLE activity.processed_events;", conn);
+        await truncateDedup.ExecuteNonQueryAsync();
+
+        await using var resetOutbox = new NpgsqlCommand(
+            "UPDATE activity.outbox SET dispatched_at = NULL, attempts = 0, last_error = NULL;", conn);
+        await resetOutbox.ExecuteNonQueryAsync();
+    }
+
     private static async Task CreateDatabaseAsync(string baseConnString, string dbName)
     {
         await using var conn = new NpgsqlConnection(baseConnString);
