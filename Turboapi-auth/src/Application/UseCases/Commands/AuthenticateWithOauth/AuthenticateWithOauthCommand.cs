@@ -1,4 +1,4 @@
-namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
+namespace Turboapi.Auth.Application.UseCases.Commands.AuthenticateWithOAuth
 {
     public record AuthenticateWithOAuthCommand(
         string ProviderName,

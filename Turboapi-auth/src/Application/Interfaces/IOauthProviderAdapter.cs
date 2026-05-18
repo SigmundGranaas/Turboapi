@@ -1,9 +1,9 @@
 // src/Application/Interfaces/IOAuthProviderAdapter.cs
-using Turboapi.Application.Contracts.V1.OAuth;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
+using Turboapi.Auth.Application.Contracts.V1.OAuth;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
 
-namespace Turboapi.Application.Interfaces
+namespace Turboapi.Auth.Application.Interfaces
 {
     /// <summary>
     /// Defines a contract for interacting with an external OAuth 2.0 provider.

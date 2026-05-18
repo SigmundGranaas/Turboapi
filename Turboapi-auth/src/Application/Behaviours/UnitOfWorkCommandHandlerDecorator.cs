@@ -1,8 +1,8 @@
 using Turbo.Outbox;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
 
-namespace Turboapi.Application.Behaviors
+namespace Turboapi.Auth.Application.Behaviors
 {
     /// <summary>
     /// Wraps a command handler: on a successful Result, commits the

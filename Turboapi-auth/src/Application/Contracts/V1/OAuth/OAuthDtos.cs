@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Contracts.V1.OAuth
+namespace Turboapi.Auth.Application.Contracts.V1.OAuth
 {
     /// <summary>
     /// Represents tokens received from an OAuth provider after exchanging an authorization code.

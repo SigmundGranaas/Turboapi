@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Turboapi.Domain.Aggregates;
+using Turboapi.Auth.Domain.Aggregates;
 
-namespace Turboapi.Infrastructure.Persistence.Configuration
+namespace Turboapi.Auth.Infrastructure.Persistence.Configuration
 {
     public class AuthenticationMethodConfiguration : IEntityTypeConfiguration<AuthenticationMethod>
     {

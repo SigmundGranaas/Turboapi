@@ -1,8 +1,8 @@
 using System.Net;
 using System.Text.Json;
-using Turboapi.Application.Contracts.V1.Common;
+using Turboapi.Auth.Application.Contracts.V1.Common;
 
-namespace Turboapi.Presentation.Middleware
+namespace Turboapi.Auth.Presentation.Middleware
 {
     public class GlobalExceptionMiddleware
     {

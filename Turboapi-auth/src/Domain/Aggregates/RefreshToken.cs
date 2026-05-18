@@ -1,7 +1,7 @@
 using System;
-using Turboapi.Domain.Exceptions;
+using Turboapi.Auth.Domain.Exceptions;
 
-namespace Turboapi.Domain.Aggregates
+namespace Turboapi.Auth.Domain.Aggregates
 {
     public class RefreshToken
     {

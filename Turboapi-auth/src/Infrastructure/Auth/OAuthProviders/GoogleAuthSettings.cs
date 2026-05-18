@@ -1,4 +1,4 @@
-namespace Turboapi.Infrastructure.Auth.OAuthProviders
+namespace Turboapi.Auth.Infrastructure.Auth.OAuthProviders
 {
     public class GoogleAuthSettings
     {

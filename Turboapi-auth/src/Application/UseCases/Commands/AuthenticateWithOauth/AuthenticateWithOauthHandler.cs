@@ -1,16 +1,16 @@
 // ==== FILE: /home/sigmund/development/turboapi/Turboapi/Turboapi-auth/src/Application/UseCases/Commands/AuthenticateWithOauth/AuthenticateWithOauthHandler.cs ====
 using Turbo.Messaging;
 using Turbo.Outbox;
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Domain.Aggregates;
-using Turboapi.Domain.Events;
-using Turboapi.Domain.Interfaces;
-using Turboapi.Infrastructure.Persistence;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Domain.Aggregates;
+using Turboapi.Auth.Domain.Events;
+using Turboapi.Auth.Domain.Interfaces;
+using Turboapi.Auth.Infrastructure.Persistence;
 
-namespace Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth
+namespace Turboapi.Auth.Application.UseCases.Commands.AuthenticateWithOAuth
 {
     public class AuthenticateWithOAuthCommandHandler : ICommandHandler<AuthenticateWithOAuthCommand, Result<AuthTokenResponse, OAuthLoginError>>
     {

@@ -5,12 +5,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Web; // For HttpUtility
-using Turboapi.Application.Contracts.V1.OAuth;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
+using Turboapi.Auth.Application.Contracts.V1.OAuth;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
 
-namespace Turboapi.Infrastructure.Auth.OAuthProviders
+namespace Turboapi.Auth.Infrastructure.Auth.OAuthProviders
 {
     public class GoogleOAuthAdapter : IOAuthProviderAdapter
     {

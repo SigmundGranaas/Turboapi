@@ -1,5 +1,5 @@
 using Turbo.Messaging.Nats;
-using Turboapi.infrastructure;
+using Turboapi.Auth.Infrastructure;
 using Turboapi.Geo;
 using TurboAuthentication.Extensions;
 

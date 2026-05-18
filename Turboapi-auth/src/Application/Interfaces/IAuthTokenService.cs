@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using Turboapi.Application.Contracts.V1.Tokens;
-using Turboapi.Domain.Aggregates;
+using Turboapi.Auth.Application.Contracts.V1.Tokens;
+using Turboapi.Auth.Domain.Aggregates;
 
-namespace Turboapi.Application.Interfaces
+namespace Turboapi.Auth.Application.Interfaces
 {
     /// <summary>
     /// Represents the raw strings and expiry for a new set of tokens.

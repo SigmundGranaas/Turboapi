@@ -1,4 +1,4 @@
-namespace Turboapi.Domain.Interfaces
+namespace Turboapi.Auth.Domain.Interfaces
 {
     public interface IPasswordHasher
     {

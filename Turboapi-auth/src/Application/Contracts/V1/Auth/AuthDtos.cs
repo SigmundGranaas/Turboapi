@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Contracts.V1.Auth
+namespace Turboapi.Auth.Application.Contracts.V1.Auth
 {
     public record RegisterUserWithPasswordRequest(
         string Email,

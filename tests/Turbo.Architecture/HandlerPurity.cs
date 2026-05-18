@@ -73,12 +73,12 @@ public sealed class HandlerPurity
     [Fact]
     public void Auth_use_case_handlers_do_not_reference_EF_Core_or_Npgsql()
     {
-        _ = typeof(Turboapi.Application.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandler);
+        _ = typeof(Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandler);
         var assembly = LoadByName("Turboapi-auth");
 
         var result = Types.InAssembly(assembly)
             .That()
-            .ResideInNamespaceMatching(@"Turboapi\.Application\.UseCases\..*")
+            .ResideInNamespaceMatching(@"Turboapi\.Auth\.Application\.UseCases\..*")
             .ShouldNot()
             .HaveDependencyOnAny(ForbiddenInHandlers)
             .GetResult();

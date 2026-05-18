@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Interfaces
+namespace Turboapi.Auth.Application.Interfaces
 {
     public interface ICommandHandler<in TCommand, TResponse>
     {

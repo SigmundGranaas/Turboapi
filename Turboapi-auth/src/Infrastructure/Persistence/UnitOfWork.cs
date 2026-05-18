@@ -1,9 +1,9 @@
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
-using Turboapi.Domain;
+using Turboapi.Auth.Domain;
 
-namespace Turboapi.Infrastructure.Persistence
+namespace Turboapi.Auth.Infrastructure.Persistence
 {
     /// <summary>
     /// Auth's <see cref="IUnitOfWork{TScope}"/>. Wraps the DbContext's
@@ -42,7 +42,7 @@ namespace Turboapi.Infrastructure.Persistence
             foreach (var aggregate in aggregates)
             {
                 var headers = new Dictionary<string, string>();
-                if (aggregate is Turboapi.Domain.Aggregates.Account account)
+                if (aggregate is Turboapi.Auth.Domain.Aggregates.Account account)
                     headers["aggregateId"] = account.Id.ToString();
 
                 var pending = aggregate.DomainEvents.ToList();

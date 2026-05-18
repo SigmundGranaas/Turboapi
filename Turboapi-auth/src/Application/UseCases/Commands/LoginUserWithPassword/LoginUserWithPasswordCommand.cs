@@ -1,4 +1,4 @@
-namespace Turboapi.Application.UseCases.Commands.LoginUserWithPassword
+namespace Turboapi.Auth.Application.UseCases.Commands.LoginUserWithPassword
 {
     public record LoginUserWithPasswordCommand(
         string Email,

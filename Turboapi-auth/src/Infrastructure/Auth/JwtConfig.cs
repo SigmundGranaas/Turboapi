@@ -1,4 +1,4 @@
-namespace Turboapi.Infrastructure.Auth
+namespace Turboapi.Auth.Infrastructure.Auth
 {
     public class JwtConfig
     {

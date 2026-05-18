@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using Turboapi.Application.Contracts.V1.Common;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
+using Turboapi.Auth.Application.Contracts.V1.Common;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
 
-namespace Turboapi.Presentation.Controllers
+namespace Turboapi.Auth.Presentation.Controllers
 {
     [ApiController]
     // The base route is removed from here and placed on each specific controller.

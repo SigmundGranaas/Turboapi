@@ -6,27 +6,27 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
-using Turboapi.Application.Behaviors;
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Application.UseCases.Commands.AuthenticateWithOAuth;
-using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
-using Turboapi.Application.UseCases.Commands.RefreshToken;
-using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
-using Turboapi.Application.UseCases.Commands.RevokeRefreshToken;
-using Turboapi.Application.UseCases.Queries.ValidateSession;
-using Turboapi.Domain.Interfaces;
-using Turboapi.Infrastructure.Auth;
-using Turboapi.Infrastructure.Auth.OAuthProviders;
-using Turboapi.Infrastructure.Persistence;
-using Turboapi.Infrastructure.Persistence.Repositories;
-using Turboapi.Presentation.Controllers;
-using Turboapi.Presentation.Cookies;
-using Turboapi.Presentation.Security;
+using Turboapi.Auth.Application.Behaviors;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Application.UseCases.Commands.AuthenticateWithOAuth;
+using Turboapi.Auth.Application.UseCases.Commands.LoginUserWithPassword;
+using Turboapi.Auth.Application.UseCases.Commands.RefreshToken;
+using Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Auth.Application.UseCases.Commands.RevokeRefreshToken;
+using Turboapi.Auth.Application.UseCases.Queries.ValidateSession;
+using Turboapi.Auth.Domain.Interfaces;
+using Turboapi.Auth.Infrastructure.Auth;
+using Turboapi.Auth.Infrastructure.Auth.OAuthProviders;
+using Turboapi.Auth.Infrastructure.Persistence;
+using Turboapi.Auth.Infrastructure.Persistence.Repositories;
+using Turboapi.Auth.Presentation.Controllers;
+using Turboapi.Auth.Presentation.Cookies;
+using Turboapi.Auth.Presentation.Security;
 
-namespace Turboapi;
+namespace Turboapi.Auth;
 
 /// <summary>
 /// Composition entry point for the Auth module. Wires persistence,
@@ -70,7 +70,7 @@ public static class AuthModule
         services.AddScoped<IAuthTokenService, JwtService>();
         services.Configure<JwtConfig>(configuration.GetSection("Jwt"));
         services.Configure<CookieSettings>(configuration.GetSection("Cookie"));
-        services.AddScoped<Turboapi.Presentation.Cookies.ICookieManager, CookieManager>();
+        services.AddScoped<Turboapi.Auth.Presentation.Cookies.ICookieManager, CookieManager>();
         services.Configure<GoogleAuthSettings>(configuration.GetSection("Authentication:Google"));
         services.AddHttpClient<GoogleOAuthAdapter>();
         services.AddScoped<IOAuthProviderAdapter, GoogleOAuthAdapter>();

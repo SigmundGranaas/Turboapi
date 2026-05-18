@@ -1,4 +1,4 @@
-namespace Turboapi.Domain.Constants
+namespace Turboapi.Auth.Domain.Constants
 {
     public static class AuthProviderNames
     {

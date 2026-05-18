@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Cryptography.KeyDerivation;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Infrastructure.Auth
+namespace Turboapi.Auth.Infrastructure.Auth
 {
     public class PasswordHasher : IPasswordHasher
     {

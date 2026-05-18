@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Turboapi.Application.UseCases.Queries.ValidateSession;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Application.UseCases.Queries.ValidateSession;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Presentation.Controllers
+namespace Turboapi.Auth.Presentation.Controllers
 {
     [Route("api/auth/[controller]")]
     [Authorize(AuthenticationSchemes = $"{CookieAuthenticationDefaults.AuthenticationScheme},{JwtBearerDefaults.AuthenticationScheme}")]

@@ -1,11 +1,11 @@
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Interfaces; // Implement ICommandHandler
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Domain.Aggregates;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Interfaces; // Implement ICommandHandler
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Domain.Aggregates;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Application.UseCases.Commands.RegisterUserWithPassword
+namespace Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword
 {
     // Implement the ICommandHandler interface
     public class RegisterUserWithPasswordCommandHandler : ICommandHandler<RegisterUserWithPasswordCommand, Result<AuthTokenResponse, RegistrationError>>

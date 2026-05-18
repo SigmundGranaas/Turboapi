@@ -36,15 +36,15 @@ public static class SubscriberWiring
         // no internal projection subscriber. External consumers attach to
         // turbo.auth.> on the JetStream stream when running as
         // microservices.
-        typeof(Turboapi.Domain.Events.AccountCreatedEvent),
-        typeof(Turboapi.Domain.Events.AccountLoggedInEvent),
-        typeof(Turboapi.Domain.Events.AccountLastLoginUpdatedEvent),
-        typeof(Turboapi.Domain.Events.RoleAddedToAccountEvent),
-        typeof(Turboapi.Domain.Events.PasswordAuthMethodAddedEvent),
-        typeof(Turboapi.Domain.Events.OAuthAuthMethodAddedEvent),
-        typeof(Turboapi.Domain.Events.RefreshTokenGeneratedEvent),
-        typeof(Turboapi.Domain.Events.RefreshTokenRevokedEvent),
-        typeof(Turboapi.Domain.Events.SuspiciousRefreshTokenAttemptEvent),
+        typeof(Turboapi.Auth.Domain.Events.AccountCreatedEvent),
+        typeof(Turboapi.Auth.Domain.Events.AccountLoggedInEvent),
+        typeof(Turboapi.Auth.Domain.Events.AccountLastLoginUpdatedEvent),
+        typeof(Turboapi.Auth.Domain.Events.RoleAddedToAccountEvent),
+        typeof(Turboapi.Auth.Domain.Events.PasswordAuthMethodAddedEvent),
+        typeof(Turboapi.Auth.Domain.Events.OAuthAuthMethodAddedEvent),
+        typeof(Turboapi.Auth.Domain.Events.RefreshTokenGeneratedEvent),
+        typeof(Turboapi.Auth.Domain.Events.RefreshTokenRevokedEvent),
+        typeof(Turboapi.Auth.Domain.Events.SuspiciousRefreshTokenAttemptEvent),
     };
 
     public static IServiceCollection AddTurboInProcessSubscribers(this IServiceCollection services)

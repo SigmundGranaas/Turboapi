@@ -1,5 +1,5 @@
-using Turboapi;
-using Turboapi.Presentation.Middleware;
+using Turboapi.Auth;
+using Turboapi.Auth.Presentation.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 var webAppPolicy = "WebAppPolicy";

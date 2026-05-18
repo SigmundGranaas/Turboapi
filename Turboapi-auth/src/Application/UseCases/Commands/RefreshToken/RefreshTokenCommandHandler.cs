@@ -1,12 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Application.UseCases.Commands.RefreshToken
+namespace Turboapi.Auth.Application.UseCases.Commands.RefreshToken
 {
     public class RefreshTokenCommandHandler : ICommandHandler<RefreshTokenCommand, Result<AuthTokenResponse, RefreshTokenError>>
     {

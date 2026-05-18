@@ -1,8 +1,8 @@
 using System;
-using Turboapi.Domain.Constants;
-using Turboapi.Domain.Exceptions;
+using Turboapi.Auth.Domain.Constants;
+using Turboapi.Auth.Domain.Exceptions;
 
-namespace Turboapi.Domain.Aggregates
+namespace Turboapi.Auth.Domain.Aggregates
 {
     public class PasswordAuthMethod : AuthenticationMethod
     {

@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Turboapi.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
 using Turboapi.Activity.controller;
 using Turboapi.Activity.domain;
 using Xunit;

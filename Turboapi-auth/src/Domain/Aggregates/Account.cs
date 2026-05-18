@@ -1,11 +1,11 @@
 using Turbo.Messaging;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Domain.Events;
-using Turboapi.Domain.Exceptions;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Domain.Events;
+using Turboapi.Auth.Domain.Exceptions;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Domain.Aggregates
+namespace Turboapi.Auth.Domain.Aggregates
 {
     public class Account : IHasDomainEvents
     {

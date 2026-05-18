@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Contracts.V1.Tokens;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Contracts.V1.Tokens;
 using Xunit;
 
 namespace Turbo.Auth.Behaviour;

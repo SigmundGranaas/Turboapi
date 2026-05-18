@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Turboapi.Domain.Aggregates;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Domain.Aggregates;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Infrastructure.Persistence.Repositories
+namespace Turboapi.Auth.Infrastructure.Persistence.Repositories
 {
     public class AccountRepository : IAccountRepository
     {

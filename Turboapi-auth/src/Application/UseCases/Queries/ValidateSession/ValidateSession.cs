@@ -1,4 +1,4 @@
-namespace Turboapi.Application.UseCases.Queries.ValidateSession
+namespace Turboapi.Auth.Application.UseCases.Queries.ValidateSession
 {
     public record ValidateSessionResponse(
         Guid AccountId,

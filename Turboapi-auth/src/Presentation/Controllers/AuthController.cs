@@ -1,15 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Turboapi.Application.Contracts.V1.Auth;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Application.UseCases.Commands.LoginUserWithPassword;
-using Turboapi.Application.UseCases.Commands.RegisterUserWithPassword;
-using Turboapi.Infrastructure.Auth;
-using Turboapi.Presentation.Cookies;
+using Turboapi.Auth.Application.Contracts.V1.Auth;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Application.UseCases.Commands.LoginUserWithPassword;
+using Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword;
+using Turboapi.Auth.Infrastructure.Auth;
+using Turboapi.Auth.Presentation.Cookies;
 
-namespace Turboapi.Presentation.Controllers
+namespace Turboapi.Auth.Presentation.Controllers
 {
     [Route("api/auth/[controller]")] 
     public class AuthController : BaseApiController

@@ -1,4 +1,4 @@
-namespace Turboapi.Presentation.Cookies
+namespace Turboapi.Auth.Presentation.Cookies
 {
     public class CookieSettings
     {

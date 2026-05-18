@@ -1,4 +1,4 @@
-namespace Turboapi.Domain.Events
+namespace Turboapi.Auth.Domain.Events
 {
     /// <summary>
     /// Standardizes pulling an AccountId off a domain event so transport

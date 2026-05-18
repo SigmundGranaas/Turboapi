@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Turbo.Messaging;
 
-namespace Turboapi.Domain.Events
+namespace Turboapi.Auth.Domain.Events
 {
     public record AccountCreatedEvent(
         [property: JsonPropertyName("accountId")] Guid AccountId,

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Behaviour.Testing;
-using Turboapi.Infrastructure.Persistence;
+using Turboapi.Auth.Infrastructure.Persistence;
 
 namespace Turbo.Auth.Behaviour;
 

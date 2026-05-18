@@ -1,6 +1,6 @@
-using Turboapi.Domain.Aggregates;
+using Turboapi.Auth.Domain.Aggregates;
 
-namespace Turboapi.Domain.Interfaces
+namespace Turboapi.Auth.Domain.Interfaces
 {
     public interface IAccountRepository
     {

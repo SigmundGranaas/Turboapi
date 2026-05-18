@@ -1,6 +1,6 @@
 using Turbo.Host.Modulith;
 using Turbo.Messaging.InProcess;
-using Turboapi;
+using Turboapi.Auth;
 using Turboapi.Geo;
 using Turboapi.Activity;
 

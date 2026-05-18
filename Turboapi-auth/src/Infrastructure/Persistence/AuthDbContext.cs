@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 using Turbo.Outbox.Postgres;
-using Turboapi.Domain.Aggregates;
+using Turboapi.Auth.Domain.Aggregates;
 
-namespace Turboapi.Infrastructure.Persistence
+namespace Turboapi.Auth.Infrastructure.Persistence
 {
     public class AuthDbContext : DbContext
     {

@@ -1,6 +1,6 @@
 using Turbo.Messaging;
 
-namespace Turboapi.Domain;
+namespace Turboapi.Auth.Domain;
 
 /// <summary>
 /// Aggregates that emit domain events implement this so the UnitOfWork can

@@ -1,6 +1,6 @@
 using Turbo.Messaging;
 
-namespace Turboapi;
+namespace Turboapi.Auth;
 
 /// <summary>
 /// Module marker for the Auth commit boundary.

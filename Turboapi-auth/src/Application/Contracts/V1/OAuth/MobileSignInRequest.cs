@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Contracts.V1.OAuth;
+namespace Turboapi.Auth.Application.Contracts.V1.OAuth;
 
 /// <summary>
 /// DTO for the mobile-specific sign-in endpoint.

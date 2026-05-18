@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Results
+namespace Turboapi.Auth.Application.Results
 {
     /// <summary>
     /// Base class for results, indicating success or failure with an error.

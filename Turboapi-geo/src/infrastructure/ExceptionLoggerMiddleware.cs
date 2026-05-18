@@ -1,4 +1,4 @@
-namespace Turboapi.infrastructure;
+namespace Turboapi.Auth.Infrastructure;
 
 public class ExceptionLoggingMiddleware
 {

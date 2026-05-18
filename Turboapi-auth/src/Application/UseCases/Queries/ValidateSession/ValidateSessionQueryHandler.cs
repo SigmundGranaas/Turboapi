@@ -1,11 +1,11 @@
 using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
-using Turboapi.Application.Interfaces;
-using Turboapi.Application.Results;
-using Turboapi.Application.Results.Errors;
-using Turboapi.Domain.Interfaces;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Application.Results;
+using Turboapi.Auth.Application.Results.Errors;
+using Turboapi.Auth.Domain.Interfaces;
 
-namespace Turboapi.Application.UseCases.Queries.ValidateSession
+namespace Turboapi.Auth.Application.UseCases.Queries.ValidateSession
 {
     public class ValidateSessionQueryHandler
     {

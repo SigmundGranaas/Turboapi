@@ -1,4 +1,4 @@
-namespace Turboapi.Domain.Exceptions
+namespace Turboapi.Auth.Domain.Exceptions
 {
     public class DomainException : Exception
     {

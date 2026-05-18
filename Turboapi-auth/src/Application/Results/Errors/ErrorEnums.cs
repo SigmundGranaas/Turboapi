@@ -1,4 +1,4 @@
-namespace Turboapi.Application.Results.Errors
+namespace Turboapi.Auth.Application.Results.Errors
 {
     public enum GenericError
     {

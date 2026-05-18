@@ -4,10 +4,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Turboapi.Application.Interfaces;
-using Turboapi.Domain.Aggregates;
+using Turboapi.Auth.Application.Interfaces;
+using Turboapi.Auth.Domain.Aggregates;
 
-namespace Turboapi.Infrastructure.Auth
+namespace Turboapi.Auth.Infrastructure.Auth
 {
     public class JwtService : IAuthTokenService
     {
