@@ -10,7 +10,10 @@ WORKDIR /src
 # Copy only the csprojs first so the restore layer caches when source changes.
 COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Auth/Turbo.Host.Auth.csproj", "hosts/Turbo.Host.Auth/"]
-COPY ["Turboapi-auth/Turboapi-auth.csproj", "Turboapi-auth/"]
+COPY ["src/Auth/Turbo.Auth.Api/Turbo.Auth.Api.csproj", "src/Auth/Turbo.Auth.Api/"]
+COPY ["src/Auth/Turbo.Auth.Core/Turbo.Auth.Core.csproj", "src/Auth/Turbo.Auth.Core/"]
+COPY ["src/Auth/Turbo.Auth.Contracts/Turbo.Auth.Contracts.csproj", "src/Auth/Turbo.Auth.Contracts/"]
+COPY ["src/Auth/Turbo.Auth.Infrastructure/Turbo.Auth.Infrastructure.csproj", "src/Auth/Turbo.Auth.Infrastructure/"]
 COPY ["TurboAuthentication/TurboAuthentication.csproj", "TurboAuthentication/"]
 COPY ["Turbo-pg-data/Turbo-pg-data.csproj", "Turbo-pg-data/"]
 COPY ["src/Shared/Turbo.Messaging.Abstractions/Turbo.Messaging.Abstractions.csproj", "src/Shared/Turbo.Messaging.Abstractions/"]

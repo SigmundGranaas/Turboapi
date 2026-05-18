@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Turboapi.Auth.Application.Contracts.V1.Auth;
 using Turboapi.Auth.Application.Interfaces; // Implement ICommandHandler
 using Turboapi.Auth.Application.Results;

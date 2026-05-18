@@ -9,7 +9,10 @@ WORKDIR /src
 
 COPY ["Directory.Packages.props", "./"]
 COPY ["hosts/Turbo.Host.Modulith/Turbo.Host.Modulith.csproj", "hosts/Turbo.Host.Modulith/"]
-COPY ["Turboapi-auth/Turboapi-auth.csproj", "Turboapi-auth/"]
+COPY ["src/Auth/Turbo.Auth.Api/Turbo.Auth.Api.csproj", "src/Auth/Turbo.Auth.Api/"]
+COPY ["src/Auth/Turbo.Auth.Core/Turbo.Auth.Core.csproj", "src/Auth/Turbo.Auth.Core/"]
+COPY ["src/Auth/Turbo.Auth.Contracts/Turbo.Auth.Contracts.csproj", "src/Auth/Turbo.Auth.Contracts/"]
+COPY ["src/Auth/Turbo.Auth.Infrastructure/Turbo.Auth.Infrastructure.csproj", "src/Auth/Turbo.Auth.Infrastructure/"]
 COPY ["src/Activity/Turbo.Activity.Api/Turbo.Activity.Api.csproj", "src/Activity/Turbo.Activity.Api/"]
 COPY ["src/Activity/Turbo.Activity.Core/Turbo.Activity.Core.csproj", "src/Activity/Turbo.Activity.Core/"]
 COPY ["src/Activity/Turbo.Activity.Contracts/Turbo.Activity.Contracts.csproj", "src/Activity/Turbo.Activity.Contracts/"]

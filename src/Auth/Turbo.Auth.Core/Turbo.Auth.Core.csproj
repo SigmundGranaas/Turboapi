@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Turboapi.Auth</RootNamespace>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ILogger<T> is accepted in core code; the layering test allows
+         Microsoft.Extensions.Logging.Abstractions but blocks heavier infra. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- System.IdentityModel.Tokens.Jwt leaks into RefreshToken /
+         ValidateSession handlers; a future refactor should hide it behind a
+         core-defined IJwtParser abstraction. For now Core depends on it. -->
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Turbo.Auth.Contracts\Turbo.Auth.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\Turbo.Messaging.Abstractions\Turbo.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Shared\Turbo.Outbox.Abstractions\Turbo.Outbox.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

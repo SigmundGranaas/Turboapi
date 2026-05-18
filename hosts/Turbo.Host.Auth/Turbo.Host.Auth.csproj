@@ -8,13 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
+    <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Api\Turbo.Auth.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\Turboapi-auth\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.json')" />
-    <Content Include="..\..\Turboapi-auth\appsettings.Development.json" Link="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.Development.json')" />
-    <Content Include="..\..\Turboapi-auth\appsettings.Test.json" Link="appsettings.Test.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\Turboapi-auth\appsettings.Test.json')" />
+    <Content Include="..\..\src\Auth\Turbo.Auth.Api\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\src\Auth\Turbo.Auth.Api\appsettings.json')" />
+    <Content Include="..\..\src\Auth\Turbo.Auth.Api\appsettings.Development.json" Link="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\src\Auth\Turbo.Auth.Api\appsettings.Development.json')" />
+    <Content Include="..\..\src\Auth\Turbo.Auth.Api\appsettings.Test.json" Link="appsettings.Test.json" CopyToOutputDirectory="PreserveNewest" Condition="Exists('..\..\src\Auth\Turbo.Auth.Api\appsettings.Test.json')" />
   </ItemGroup>
 
 </Project>

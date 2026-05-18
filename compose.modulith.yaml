@@ -64,7 +64,7 @@ services:
     image: flyway/flyway:latest
     command: -url=jdbc:postgresql://auth-db:5432/auth -user=postgres -password=yourpassword -locations=filesystem:/flyway/sql -baselineOnMigrate=true migrate
     volumes:
-      - ./Turboapi-auth/db/migrations:/flyway/sql
+      - ./src/Auth/db/migrations:/flyway/sql
     depends_on:
       auth-db:
         condition: service_healthy

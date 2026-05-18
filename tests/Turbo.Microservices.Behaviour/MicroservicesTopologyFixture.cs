@@ -42,7 +42,7 @@ public sealed class MicroservicesTopologyFixture : IAsyncLifetime
         var activityConn = RepoLayout.WithDatabase(baseConn, "activity");
         var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
 
-        await RepoLayout.RunMigrationsAsync(authConn, "Turboapi-auth");
+        await RepoLayout.RunMigrationsAsync(authConn, "src/Auth");
         await RepoLayout.RunMigrationsAsync(activityConn, "src/Activity");
         await RepoLayout.RunMigrationsAsync(geoConn, "src/Geo");
 

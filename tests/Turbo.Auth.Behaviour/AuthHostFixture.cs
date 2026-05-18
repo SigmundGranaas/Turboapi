@@ -10,7 +10,7 @@ public sealed class AuthHostFixture : TurboHostFixture<Turbo.Host.Auth.AuthHostP
 {
     public AuthHostFixture() : base("auth") { }
 
-    protected override string ModuleDirectory => "Turboapi-auth";
+    protected override string ModuleDirectory => "src/Auth";
 
     protected override void ConfigureTestServices(WebHostBuilderContext context, IServiceCollection services)
         => ReplaceDbContext<AuthDbContext>(services, o => o.UseNpgsql(ConnectionString));

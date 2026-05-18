@@ -112,7 +112,7 @@ jobs:
         service: [auth, geo, activity]
         include:
           - service: auth
-            db_dir: ./Turboapi-auth/db
+            db_dir: ./src/Auth/db
           - service: geo
             db_dir: ./src/Geo/db
           - service: activity

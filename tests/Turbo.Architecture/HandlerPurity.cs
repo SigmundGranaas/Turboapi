@@ -74,7 +74,7 @@ public sealed class HandlerPurity
     public void Auth_use_case_handlers_do_not_reference_EF_Core_or_Npgsql()
     {
         _ = typeof(Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandler);
-        var assembly = LoadByName("Turboapi-auth");
+        var assembly = LoadByName("Turbo.Auth.Core");
 
         var result = Types.InAssembly(assembly)
             .That()

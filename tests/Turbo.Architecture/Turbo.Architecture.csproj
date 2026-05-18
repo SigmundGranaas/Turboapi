@@ -34,7 +34,10 @@
     <ProjectReference Include="..\..\src\Geo\Turbo.Geo.Core\Turbo.Geo.Core.csproj" />
     <ProjectReference Include="..\..\src\Geo\Turbo.Geo.Contracts\Turbo.Geo.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Geo\Turbo.Geo.Infrastructure\Turbo.Geo.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\Turboapi-auth\Turboapi-auth.csproj" />
+    <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Api\Turbo.Auth.Api.csproj" />
+    <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Core\Turbo.Auth.Core.csproj" />
+    <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Contracts\Turbo.Auth.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Infrastructure\Turbo.Auth.Infrastructure.csproj" />
     <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />
   </ItemGroup>
 

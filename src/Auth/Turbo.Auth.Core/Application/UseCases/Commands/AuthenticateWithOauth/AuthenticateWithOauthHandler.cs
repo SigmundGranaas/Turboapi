@@ -7,8 +7,8 @@ using Turboapi.Auth.Application.Results;
 using Turboapi.Auth.Application.Results.Errors;
 using Turboapi.Auth.Domain.Aggregates;
 using Turboapi.Auth.Domain.Events;
+using Microsoft.Extensions.Logging;
 using Turboapi.Auth.Domain.Interfaces;
-using Turboapi.Auth.Infrastructure.Persistence;
 
 namespace Turboapi.Auth.Application.UseCases.Commands.AuthenticateWithOAuth
 {

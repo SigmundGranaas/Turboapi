@@ -30,7 +30,13 @@ public sealed class ModuleBoundaries
         "Turbo.Geo.Api",
     ];
 
-    private static readonly string[] AuthAssemblies = ["Turboapi-auth"];
+    private static readonly string[] AuthAssemblies =
+    [
+        "Turbo.Auth.Core",
+        "Turbo.Auth.Contracts",
+        "Turbo.Auth.Infrastructure",
+        "Turbo.Auth.Api",
+    ];
 
     private static IEnumerable<Assembly> Activity =>
         ActivityAssemblies.Select(LoadByName);
@@ -42,8 +48,14 @@ public sealed class ModuleBoundaries
             return GeoAssemblies.Select(LoadByName);
         }
     }
-    private static IEnumerable<Assembly> Auth =>
-        new[] { typeof(Turboapi.Auth.AuthScope).Assembly };
+    private static IEnumerable<Assembly> Auth
+    {
+        get
+        {
+            _ = typeof(Turboapi.Auth.AuthScope); // force-load Contracts
+            return AuthAssemblies.Select(LoadByName);
+        }
+    }
 
     [Fact]
     public void Activity_does_not_reference_Geo_or_Auth_assemblies()
