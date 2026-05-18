@@ -1,20 +1,19 @@
 using Turbo.Outbox;
-using Turbo.Outbox.Postgres;
-using Turboauth_activity.data;
 using Turboauth_activity.domain.command;
-using Turboauth_activity.infrastructure;
 
 namespace Turboauth_activity.domain.handler;
 
 public class CreateActivityHandler
 {
-    private readonly IOutbox<ActivityContext> _outbox;
-    private readonly ActivityContext _db;
+    private const string Source = "activity";
 
-    public CreateActivityHandler(IOutbox<ActivityContext> outbox, ActivityContext db)
+    private readonly IOutbox<IActivityScope> _outbox;
+    private readonly IUnitOfWork<IActivityScope> _uow;
+
+    public CreateActivityHandler(IOutbox<IActivityScope> outbox, IUnitOfWork<IActivityScope> uow)
     {
         _outbox = outbox;
-        _db = db;
+        _uow = uow;
     }
 
     public async Task<Guid> Handle(CreateActivityCommand command)
@@ -22,8 +21,8 @@ public class CreateActivityHandler
         var activity = Activity.Create(
             command.OwnerId, command.Position, command.Name, command.Description, command.Icon);
 
-        await _db.SaveChangesWithRetryAsync(ct =>
-            _outbox.AppendActivityEventsAsync(activity.Id, activity.Events, ct));
+        await _uow.SaveChangesAsync(ct =>
+            _outbox.AppendEventsAsync(activity.Id, Source, activity.Events, ct));
 
         return activity.Id;
     }

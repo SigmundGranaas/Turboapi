@@ -55,6 +55,8 @@ public static class GeoModule
         services.AddScoped<GeometryFactory>();
 
         services.AddScoped<IOutbox<LocationReadContext>, PgOutbox<LocationReadContext>>();
+        services.AddScoped<IOutbox<IGeoScope>, PgOutbox<LocationReadContext, IGeoScope>>();
+        services.AddScoped<IUnitOfWork<IGeoScope>, PgUnitOfWork<LocationReadContext, IGeoScope>>();
         services.AddScoped<IIdempotencyStore<LocationReadContext>, PgIdempotencyStore<LocationReadContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<LocationReadContext>>();
 

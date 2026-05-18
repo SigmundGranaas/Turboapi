@@ -43,6 +43,8 @@ public static class ActivityModule
         services.AddScoped<IEventHandler<ActivityDeleted>, ActivityEventHandler>();
 
         services.AddScoped<IOutbox<ActivityContext>, PgOutbox<ActivityContext>>();
+        services.AddScoped<IOutbox<IActivityScope>, PgOutbox<ActivityContext, IActivityScope>>();
+        services.AddScoped<IUnitOfWork<IActivityScope>, PgUnitOfWork<ActivityContext, IActivityScope>>();
         services.AddScoped<IIdempotencyStore<ActivityContext>, PgIdempotencyStore<ActivityContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<ActivityContext>>();
 

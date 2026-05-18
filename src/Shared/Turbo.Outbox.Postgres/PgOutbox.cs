@@ -5,12 +5,16 @@ using Turbo.Messaging;
 namespace Turbo.Outbox.Postgres;
 
 /// <summary>
-/// EF Core-backed <see cref="IOutbox{TDbContext}"/>. Inserting an
+/// EF Core-backed <see cref="IOutbox{TScope}"/>. Inserting an
 /// <see cref="OutboxRow"/> through the same <typeparamref name="TDbContext"/>
 /// the aggregate is written against ensures the event row commits
 /// atomically with the domain change.
+///
+/// <typeparamref name="TScope"/> is the module marker the handler injects;
+/// <typeparamref name="TDbContext"/> is the EF context the module owns.
+/// They are decoupled so the handler never has to name the DbContext type.
 /// </summary>
-public sealed class PgOutbox<TDbContext> : IOutbox<TDbContext>
+public sealed class PgOutbox<TDbContext, TScope> : IOutbox<TScope>
     where TDbContext : DbContext
 {
     private readonly TDbContext _db;
@@ -39,4 +43,20 @@ public sealed class PgOutbox<TDbContext> : IOutbox<TDbContext>
             ? g
             : Guid.Empty;
     }
+}
+
+/// <summary>
+/// Backwards-compatible single-parameter form. When a module hasn't yet
+/// defined a scope marker, the DbContext itself acts as the scope, which
+/// is what the original IOutbox&lt;TDbContext&gt; shape did.
+/// </summary>
+public sealed class PgOutbox<TDbContext> : IOutbox<TDbContext>
+    where TDbContext : DbContext
+{
+    private readonly PgOutbox<TDbContext, TDbContext> _inner;
+
+    public PgOutbox(TDbContext db) => _inner = new PgOutbox<TDbContext, TDbContext>(db);
+
+    public Task AppendAsync(EventEnvelope envelope, CancellationToken cancellationToken)
+        => _inner.AppendAsync(envelope, cancellationToken);
 }

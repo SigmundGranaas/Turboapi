@@ -52,6 +52,8 @@ public static class AuthModule
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOutbox<AuthDbContext>, PgOutbox<AuthDbContext>>();
+        services.AddScoped<IOutbox<IAuthScope>, PgOutbox<AuthDbContext, IAuthScope>>();
+        services.AddScoped<IUnitOfWork<IAuthScope>, PgUnitOfWork<AuthDbContext, IAuthScope>>();
         services.AddScoped<IIdempotencyStore<AuthDbContext>, PgIdempotencyStore<AuthDbContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<AuthDbContext>>();
 

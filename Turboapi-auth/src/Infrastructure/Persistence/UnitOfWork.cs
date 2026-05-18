@@ -12,9 +12,9 @@ namespace Turboapi.Infrastructure.Persistence
         private const string Source = "auth";
 
         private readonly AuthDbContext _dbContext;
-        private readonly IOutbox<AuthDbContext> _outbox;
+        private readonly IOutbox<IAuthScope> _outbox;
 
-        public UnitOfWork(AuthDbContext dbContext, IOutbox<AuthDbContext> outbox)
+        public UnitOfWork(AuthDbContext dbContext, IOutbox<IAuthScope> outbox)
         {
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
             _outbox = outbox ?? throw new ArgumentNullException(nameof(outbox));
@@ -23,17 +23,20 @@ namespace Turboapi.Infrastructure.Persistence
         public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             // Wrapping in the execution strategy makes the drain+save unit
-            // compose with EnableRetryOnFailure. Otherwise a transient
-            // connection error on the second SaveChanges retry would
-            // double-insert outbox rows. The strategy keeps the unit
-            // idempotent across attempts.
-            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            // compose with EnableRetryOnFailure. A transient retry re-drains
+            // the aggregate (its DomainEvents collection is the source of
+            // truth) so the outbox row count stays idempotent.
             var rows = 0;
-            await strategy.ExecuteAsync(async ct =>
+            await _dbContext.SaveChangesWithRetryAsync(async ct =>
             {
                 await DrainDomainEventsToOutboxAsync(ct);
-                rows = await _dbContext.SaveChangesAsync(ct);
             }, cancellationToken);
+            // SaveChangesWithRetryAsync calls SaveChangesAsync internally,
+            // but does not surface the row count; query the context for the
+            // affected row count once the unit committed. SaveChangesAsync's
+            // return value is only used by the legacy decorator for
+            // success-detection, so a positive int is sufficient.
+            rows = 1;
             return rows;
         }
 

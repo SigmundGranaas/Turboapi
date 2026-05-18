@@ -1,26 +1,25 @@
 using Turbo.Outbox;
-using Turbo.Outbox.Postgres;
-using Turboauth_activity.data;
 using Turboauth_activity.domain.command;
 using Turboauth_activity.domain.exception;
 using Turboauth_activity.domain.query;
-using Turboauth_activity.infrastructure;
 
 namespace Turboauth_activity.domain.handler;
 
 public class DeleteActivityHandler
 {
-    private readonly IOutbox<ActivityContext> _outbox;
-    private readonly ActivityContext _db;
+    private const string Source = "activity";
+
+    private readonly IOutbox<IActivityScope> _outbox;
+    private readonly IUnitOfWork<IActivityScope> _uow;
     private readonly IActivityReadRepository _repo;
 
     public DeleteActivityHandler(
-        IOutbox<ActivityContext> outbox,
-        ActivityContext db,
+        IOutbox<IActivityScope> outbox,
+        IUnitOfWork<IActivityScope> uow,
         IActivityReadRepository repo)
     {
         _outbox = outbox;
-        _db = db;
+        _uow = uow;
         _repo = repo;
     }
 
@@ -34,8 +33,8 @@ public class DeleteActivityHandler
 
         activity.Delete(command.UserID);
 
-        await _db.SaveChangesWithRetryAsync(ct =>
-            _outbox.AppendActivityEventsAsync(activity.Id, activity.Events, ct));
+        await _uow.SaveChangesAsync(ct =>
+            _outbox.AppendEventsAsync(activity.Id, Source, activity.Events, ct));
 
         return activity.Id;
     }

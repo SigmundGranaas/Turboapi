@@ -1,26 +1,25 @@
 using Turbo.Outbox;
-using Turbo.Outbox.Postgres;
 using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.exception;
 using Turboapi_geo.domain.query;
-using Turboapi_geo.domain.query.model;
-using Turboapi_geo.infrastructure;
 
 namespace Turboapi_geo.domain.handler;
 
 public class DeleteLocationHandler
 {
-    private readonly IOutbox<LocationReadContext> _outbox;
-    private readonly LocationReadContext _db;
+    private const string Source = "geo";
+
+    private readonly IOutbox<IGeoScope> _outbox;
+    private readonly IUnitOfWork<IGeoScope> _uow;
     private readonly ILocationReadRepository _locationReadRepository;
 
     public DeleteLocationHandler(
-        IOutbox<LocationReadContext> outbox,
-        LocationReadContext db,
+        IOutbox<IGeoScope> outbox,
+        IUnitOfWork<IGeoScope> uow,
         ILocationReadRepository locationReadRepository)
     {
         _outbox = outbox;
-        _db = db;
+        _uow = uow;
         _locationReadRepository = locationReadRepository;
     }
 
@@ -32,7 +31,7 @@ public class DeleteLocationHandler
 
         location.Delete(command.UserId);
 
-        await _db.SaveChangesWithRetryAsync(ct =>
-            _outbox.AppendGeoEventsAsync(location.Id, location.Events, ct));
+        await _uow.SaveChangesAsync(ct =>
+            _outbox.AppendEventsAsync(location.Id, Source, location.Events, ct));
     }
 }

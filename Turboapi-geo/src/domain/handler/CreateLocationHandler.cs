@@ -1,23 +1,20 @@
 using Turbo.Outbox;
-using Turbo.Outbox.Postgres;
 using Turboapi_geo.domain.commands;
 using Turboapi_geo.domain.model;
-using Turboapi_geo.domain.query.model;
-using Turboapi_geo.infrastructure;
 
 namespace Turboapi_geo.domain.handler;
 
 public class CreateLocationHandler
 {
-    private readonly IOutbox<LocationReadContext> _outbox;
-    private readonly LocationReadContext _db;
+    private const string Source = "geo";
 
-    public CreateLocationHandler(
-        IOutbox<LocationReadContext> outbox,
-        LocationReadContext db)
+    private readonly IOutbox<IGeoScope> _outbox;
+    private readonly IUnitOfWork<IGeoScope> _uow;
+
+    public CreateLocationHandler(IOutbox<IGeoScope> outbox, IUnitOfWork<IGeoScope> uow)
     {
         _outbox = outbox;
-        _db = db;
+        _uow = uow;
     }
 
     public async Task<Guid> Handle(CreateLocationCommand command)
@@ -27,8 +24,8 @@ public class CreateLocationHandler
             command.Coordinates,
             command.Display);
 
-        await _db.SaveChangesWithRetryAsync(ct =>
-            _outbox.AppendGeoEventsAsync(location.Id, location.Events, ct));
+        await _uow.SaveChangesAsync(ct =>
+            _outbox.AppendEventsAsync(location.Id, Source, location.Events, ct));
         return location.Id;
     }
 }
