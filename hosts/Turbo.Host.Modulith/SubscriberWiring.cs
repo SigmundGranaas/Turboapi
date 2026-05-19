@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
 using Turboapi.Geo.domain.events;
-using Turboapi.Activity.domain.events;
+using Turboapi.Tracks.domain.events;
 
 namespace Turbo.Host.Modulith;
 
@@ -27,11 +27,6 @@ public static class SubscriberWiring
     /// </summary>
     public static readonly IReadOnlySet<Type> AuditOnlyEvents = new HashSet<Type>
     {
-        // Activity's positional event drives no read-model side-effect on
-        // its own; ActivityCreated already carries everything the
-        // projection needs.
-        typeof(ActivityPositionCreated),
-
         // Every Auth event is audit-only inside the modulith — Auth has
         // no internal projection subscriber. External consumers attach to
         // turbo.auth.> on the JetStream stream when running as
@@ -49,12 +44,12 @@ public static class SubscriberWiring
 
     public static IServiceCollection AddTurboInProcessSubscribers(this IServiceCollection services)
     {
-        services.AddInProcessSubscriber<ActivityCreated>("turbo.activity.ActivityCreated");
-        services.AddInProcessSubscriber<ActivityUpdated>("turbo.activity.ActivityUpdated");
-        services.AddInProcessSubscriber<ActivityDeleted>("turbo.activity.ActivityDeleted");
         services.AddInProcessSubscriber<LocationCreated>("turbo.geo.LocationCreated");
         services.AddInProcessSubscriber<LocationUpdated>("turbo.geo.LocationUpdated");
         services.AddInProcessSubscriber<LocationDeleted>("turbo.geo.LocationDeleted");
+        services.AddInProcessSubscriber<TrackCreated>("turbo.tracks.TrackCreated");
+        services.AddInProcessSubscriber<TrackUpdated>("turbo.tracks.TrackUpdated");
+        services.AddInProcessSubscriber<TrackDeleted>("turbo.tracks.TrackDeleted");
         return services;
     }
 }

@@ -6,7 +6,7 @@ namespace Turbo.Architecture;
 
 /// <summary>
 /// The three modules must not have direct references to one another. If
-/// Activity ever depended on Geo (or vice versa) the "messages only"
+/// Tracks ever depended on Geo (or vice versa) the "messages only"
 /// contract would silently degrade to "messages plus a sneaky compile-time
 /// call." The shared abstraction packages (Turbo.Messaging.*,
 /// Turbo.Outbox.*, Turbo.Messaging.Nats / InProcess) are the only legal way
@@ -14,12 +14,12 @@ namespace Turbo.Architecture;
 /// </summary>
 public sealed class ModuleBoundaries
 {
-    private static readonly string[] ActivityAssemblies =
+    private static readonly string[] TracksAssemblies =
     [
-        "Turbo.Activity.Core",
-        "Turbo.Activity.Contracts",
-        "Turbo.Activity.Infrastructure",
-        "Turbo.Activity.Api",
+        "Turbo.Tracks.Core",
+        "Turbo.Tracks.Contracts",
+        "Turbo.Tracks.Infrastructure",
+        "Turbo.Tracks.Api",
     ];
 
     private static readonly string[] GeoAssemblies =
@@ -38,8 +38,14 @@ public sealed class ModuleBoundaries
         "Turbo.Auth.Api",
     ];
 
-    private static IEnumerable<Assembly> Activity =>
-        ActivityAssemblies.Select(LoadByName);
+    private static IEnumerable<Assembly> Tracks
+    {
+        get
+        {
+            _ = typeof(Turboapi.Tracks.TracksScope); // force-load Contracts
+            return TracksAssemblies.Select(LoadByName);
+        }
+    }
     private static IEnumerable<Assembly> Geo
     {
         get
@@ -58,25 +64,24 @@ public sealed class ModuleBoundaries
     }
 
     [Fact]
-    public void Activity_does_not_reference_Geo_or_Auth_assemblies()
+    public void Tracks_does_not_reference_Geo_or_Auth_assemblies()
     {
-        _ = typeof(Turboapi.Activity.ActivityScope); // force-load
-        foreach (var module in Activity)
+        foreach (var module in Tracks)
             AssertNoCrossModuleReference(module, forbidden: GeoAssemblies.Concat(AuthAssemblies).ToArray());
     }
 
     [Fact]
-    public void Geo_does_not_reference_Activity_or_Auth_assemblies()
+    public void Geo_does_not_reference_Tracks_or_Auth_assemblies()
     {
         foreach (var module in Geo)
-            AssertNoCrossModuleReference(module, forbidden: ActivityAssemblies.Concat(AuthAssemblies).ToArray());
+            AssertNoCrossModuleReference(module, forbidden: TracksAssemblies.Concat(AuthAssemblies).ToArray());
     }
 
     [Fact]
-    public void Auth_does_not_reference_Activity_or_Geo_assemblies()
+    public void Auth_does_not_reference_Tracks_or_Geo_assemblies()
     {
         foreach (var module in Auth)
-            AssertNoCrossModuleReference(module, forbidden: ActivityAssemblies.Concat(GeoAssemblies).ToArray());
+            AssertNoCrossModuleReference(module, forbidden: TracksAssemblies.Concat(GeoAssemblies).ToArray());
     }
 
     private static Assembly LoadByName(string assemblyName)
