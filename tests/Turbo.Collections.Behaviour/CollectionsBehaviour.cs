@@ -95,16 +95,28 @@ public sealed class CollectionsBehaviour
         var created = (await create.Content.ReadFromJsonAsync<CollectionResponse>())!;
         var markerUuid = Guid.NewGuid().ToString();
 
-        await client.PostAsJsonAsync(
+        // Wait for the create to project before mutating items — the
+        // add-item command handler reads from the read model and would
+        // otherwise 404 against a freshly-created collection.
+        await Eventually.Returns(async () =>
+        {
+            var r = await client.GetAsync($"/api/collections/Collections/{created.Id}");
+            return r.IsSuccessStatusCode ? (object)created : null;
+        }, description: "create projects before add-item");
+
+        var add = await client.PostAsJsonAsync(
             $"/api/collections/Collections/{created.Id}/items",
             new AddItemRequest { Type = "marker", Uuid = markerUuid });
+        add.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
         await Eventually.Returns<CollectionResponse>(async () =>
         {
             var r = await client.GetAsync($"/api/collections/Collections/{created.Id}");
             if (!r.IsSuccessStatusCode) return null;
             var b = await r.Content.ReadFromJsonAsync<CollectionResponse>();
             return b is { Items: { Count: 1 } } ? b : null;
-        });
+        }, timeout: TimeSpan.FromSeconds(20),
+           description: "add eventually surfaces the item in the read model");
 
         var remove = await client.DeleteAsync(
             $"/api/collections/Collections/{created.Id}/items/marker/{markerUuid}");
@@ -116,7 +128,8 @@ public sealed class CollectionsBehaviour
             if (!r.IsSuccessStatusCode) return null;
             var b = await r.Content.ReadFromJsonAsync<CollectionResponse>();
             return b is { Items: { Count: 0 } } ? b : null;
-        }, description: "remove eventually drops the item from the read model");
+        }, timeout: TimeSpan.FromSeconds(20),
+           description: "remove eventually drops the item from the read model");
     }
 
     [Fact]

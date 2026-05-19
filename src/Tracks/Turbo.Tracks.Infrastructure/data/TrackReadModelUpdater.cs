@@ -6,6 +6,7 @@ using Turbo.Outbox;
 using Turboapi.Tracks.data;
 using Turboapi.Tracks.data.model;
 using Turboapi.Tracks.domain.events;
+using Turboapi.Tracks.domain.query;
 using Turboapi.Tracks.domain.value;
 
 namespace Turboapi.Tracks.data;
