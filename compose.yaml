@@ -60,6 +60,26 @@ services:
     networks:
       - turbo
 
+  collections-db:
+    image: postgres:17-alpine
+    container_name: collections-db
+    ports:
+      - "5438:5438"
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: collections
+      POSTGRES_USER: postgres
+    volumes:
+      - collections_data:/var/lib/postgresql/data
+    command: -p 5438
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d collections -p 5438"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - turbo
+
   nats:
     image: nats:2.10-alpine
     hostname: nats
@@ -83,6 +103,7 @@ volumes:
   auth_data:
   geo_data:
   tracks_data:
+  collections_data:
   nats_data:
 
 networks:

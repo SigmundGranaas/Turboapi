@@ -78,6 +78,19 @@ public sealed class ModuleLayering
             ForbiddenInContracts.Concat(new[] { "Turbo.Auth.Core" }).ToArray());
     }
 
+    [Fact]
+    public void Collections_Core_does_not_depend_on_infrastructure_packages()
+    {
+        AssertNoForbiddenReferences("Turbo.Collections.Core", ForbiddenInCore);
+    }
+
+    [Fact]
+    public void Collections_Contracts_does_not_depend_on_infrastructure_or_Core()
+    {
+        AssertNoForbiddenReferences("Turbo.Collections.Contracts",
+            ForbiddenInContracts.Concat(new[] { "Turbo.Collections.Core" }).ToArray());
+    }
+
     private static void AssertNoForbiddenReferences(string assemblyName, string[] forbidden)
     {
         var assembly = LoadByName(assemblyName);

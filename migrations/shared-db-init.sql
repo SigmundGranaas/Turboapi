@@ -9,6 +9,7 @@
 CREATE DATABASE auth;
 CREATE DATABASE geo;
 CREATE DATABASE tracks;
+CREATE DATABASE collections;
 
 -- PostGIS extension on the two spatial databases.
 \connect geo;

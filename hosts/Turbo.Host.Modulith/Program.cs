@@ -3,6 +3,8 @@ using Turbo.Hosting.Postgres;
 using Turbo.Messaging.InProcess;
 using Turboapi.Auth;
 using Turboapi.Auth.Infrastructure.Persistence;
+using Turboapi.Collections;
+using Turboapi.Collections.data;
 using Turboapi.Geo;
 using Turboapi.Geo.domain.query.model;
 using Turboapi.Tracks;
@@ -13,12 +15,13 @@ builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddEndpointsApiExplorer();
 
-// All three modules in one process. AuthModule owns the Cookie+JwtBearer
-// scheme; Tracks and Geo controllers use it as the default authentication
-// scheme (their [Authorize] attributes don't pin a specific scheme name).
+// All four modules in one process. AuthModule owns the Cookie+JwtBearer
+// scheme; the other modules use it as the default authentication scheme
+// (their [Authorize] attributes don't pin a specific scheme name).
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddGeoModule(builder.Configuration);
 builder.Services.AddTracksModule(builder.Configuration);
+builder.Services.AddCollectionsModule(builder.Configuration);
 
 // In-process transport: outbox dispatchers publish here, the subscriber host
 // drains the channel and resolves IEventHandler<T> in a fresh DI scope. No
@@ -39,6 +42,9 @@ await app.Services.MigrateModuleDatabaseAsync<LocationReadContext>(
 await app.Services.MigrateModuleDatabaseAsync<TrackReadContext>(
     builder.Configuration.GetConnectionString("Tracks")
         ?? throw new InvalidOperationException("ConnectionStrings:Tracks is not configured"));
+await app.Services.MigrateModuleDatabaseAsync<CollectionsReadContext>(
+    builder.Configuration.GetConnectionString("Collections")
+        ?? throw new InvalidOperationException("ConnectionStrings:Collections is not configured"));
 
 app.UseRouting();
 app.UseAuthentication();

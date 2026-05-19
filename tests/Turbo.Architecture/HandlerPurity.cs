@@ -68,6 +68,23 @@ public sealed class HandlerPurity
     }
 
     [Fact]
+    public void Collections_command_handlers_do_not_reference_EF_Core_or_Npgsql()
+    {
+        _ = typeof(Turboapi.Collections.domain.handler.CreateCollectionHandler);
+        var assembly = LoadByName("Turbo.Collections.Core");
+
+        var result = Types.InAssembly(assembly)
+            .That()
+            .ResideInNamespace("Turboapi.Collections.domain.handler")
+            .ShouldNot()
+            .HaveDependencyOnAny(ForbiddenInHandlers)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(
+            $"Collections command handlers must talk to storage only through IUnitOfWork<CollectionsScope> / IOutbox<CollectionsScope>; offending: {Describe(result.FailingTypes)}");
+    }
+
+    [Fact]
     public void Auth_use_case_handlers_do_not_reference_EF_Core_or_Npgsql()
     {
         _ = typeof(Turboapi.Auth.Application.UseCases.Commands.RegisterUserWithPassword.RegisterUserWithPasswordCommandHandler);

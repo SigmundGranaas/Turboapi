@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
+using Turboapi.Collections.domain.events;
 using Turboapi.Geo.domain.events;
 using Turboapi.Tracks.domain.events;
 
@@ -50,6 +51,11 @@ public static class SubscriberWiring
         services.AddInProcessSubscriber<TrackCreated>("turbo.tracks.TrackCreated");
         services.AddInProcessSubscriber<TrackUpdated>("turbo.tracks.TrackUpdated");
         services.AddInProcessSubscriber<TrackDeleted>("turbo.tracks.TrackDeleted");
+        services.AddInProcessSubscriber<CollectionCreated>("turbo.collections.CollectionCreated");
+        services.AddInProcessSubscriber<CollectionUpdated>("turbo.collections.CollectionUpdated");
+        services.AddInProcessSubscriber<CollectionDeleted>("turbo.collections.CollectionDeleted");
+        services.AddInProcessSubscriber<CollectionItemAdded>("turbo.collections.CollectionItemAdded");
+        services.AddInProcessSubscriber<CollectionItemRemoved>("turbo.collections.CollectionItemRemoved");
         return services;
     }
 }

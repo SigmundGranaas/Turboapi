@@ -87,12 +87,14 @@ public sealed class SubscriberCoverage
         _ = typeof(Turboapi.Tracks.domain.events.TrackCreated);
         _ = typeof(Turboapi.Geo.domain.events.LocationCreated);
         _ = typeof(Turboapi.Auth.Domain.Events.AccountCreatedEvent);
+        _ = typeof(Turboapi.Collections.domain.events.CollectionCreated);
 
         var moduleAssemblies = new[]
         {
             typeof(Turboapi.Tracks.domain.events.TrackCreated).Assembly,
             typeof(Turboapi.Geo.domain.events.LocationCreated).Assembly,
             typeof(Turboapi.Auth.Domain.Events.AccountCreatedEvent).Assembly,
+            typeof(Turboapi.Collections.domain.events.CollectionCreated).Assembly,
         };
 
         return moduleAssemblies

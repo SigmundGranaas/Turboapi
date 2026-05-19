@@ -36,6 +36,7 @@ public sealed class GatewayTopologyBehaviour
     [InlineData("/api/auth/login")]
     [InlineData("/api/geo/locations")]
     [InlineData("/api/tracks/Tracks")]
+    [InlineData("/api/collections/Collections")]
     public async Task modulith_topology_routes_every_module_prefix(string path)
     {
         using var factory = BuildGateway("Modulith");
@@ -51,6 +52,7 @@ public sealed class GatewayTopologyBehaviour
     [InlineData("/api/auth/login")]
     [InlineData("/api/geo/locations")]
     [InlineData("/api/tracks/Tracks")]
+    [InlineData("/api/collections/Collections")]
     public async Task microservices_topology_routes_every_module_prefix(string path)
     {
         using var factory = BuildGateway("Microservices");
