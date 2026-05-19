@@ -6,6 +6,7 @@ using Testcontainers.PostgreSql;
 using Turbo.Behaviour.Testing;
 using Turbo.Host.Modulith;
 using Turbo.Hosting.Postgres;
+using Turboapi.Activities.data;
 using Turboapi.Auth.Infrastructure.Persistence;
 using Turboapi.Collections.data;
 using Turboapi.Geo.domain.query.model;
@@ -36,6 +37,7 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         var tracksConn = RepoLayout.WithDatabase(baseConn, "tracks");
         var geoConn = RepoLayout.WithDatabase(baseConn, "geo");
         var collectionsConn = RepoLayout.WithDatabase(baseConn, "collections");
+        var activitiesConn = RepoLayout.WithDatabase(baseConn, "activities");
 
         _factory = new WebApplicationFactory<ModulithProgram>().WithWebHostBuilder(builder =>
         {
@@ -44,12 +46,14 @@ public sealed class ModulithHostFixture : IAsyncLifetime
             builder.UseSetting("ConnectionStrings:Tracks", tracksConn);
             builder.UseSetting("ConnectionStrings:Geo", geoConn);
             builder.UseSetting("ConnectionStrings:Collections", collectionsConn);
+            builder.UseSetting("ConnectionStrings:Activities", activitiesConn);
         });
 
         await _factory.Services.MigrateModuleDatabaseAsync<AuthDbContext>(authConn);
         await _factory.Services.MigrateModuleDatabaseAsync<TrackReadContext>(tracksConn);
         await _factory.Services.MigrateModuleDatabaseAsync<LocationReadContext>(geoConn);
         await _factory.Services.MigrateModuleDatabaseAsync<CollectionsReadContext>(collectionsConn);
+        await _factory.Services.MigrateModuleDatabaseAsync<ActivitySummariesContext>(activitiesConn);
     }
 
     public async Task DisposeAsync()

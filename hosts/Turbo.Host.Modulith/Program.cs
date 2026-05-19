@@ -9,6 +9,8 @@ using Turboapi.Geo;
 using Turboapi.Geo.domain.query.model;
 using Turboapi.Tracks;
 using Turboapi.Tracks.data;
+using Turboapi.Activities;
+using Turboapi.Activities.data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -22,6 +24,7 @@ builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddGeoModule(builder.Configuration);
 builder.Services.AddTracksModule(builder.Configuration);
 builder.Services.AddCollectionsModule(builder.Configuration);
+builder.Services.AddActivitiesSharedModule(builder.Configuration);
 
 // In-process transport: outbox dispatchers publish here, the subscriber host
 // drains the channel and resolves IEventHandler<T> in a fresh DI scope. No
@@ -45,6 +48,9 @@ await app.Services.MigrateModuleDatabaseAsync<TrackReadContext>(
 await app.Services.MigrateModuleDatabaseAsync<CollectionsReadContext>(
     builder.Configuration.GetConnectionString("Collections")
         ?? throw new InvalidOperationException("ConnectionStrings:Collections is not configured"));
+await app.Services.MigrateModuleDatabaseAsync<ActivitySummariesContext>(
+    builder.Configuration.GetConnectionString("Activities")
+        ?? throw new InvalidOperationException("ConnectionStrings:Activities is not configured"));
 
 app.UseRouting();
 app.UseAuthentication();

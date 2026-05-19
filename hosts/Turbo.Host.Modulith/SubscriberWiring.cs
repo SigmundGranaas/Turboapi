@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
+using Turboapi.Activities.events;
 using Turboapi.Collections.domain.events;
 using Turboapi.Geo.domain.events;
 using Turboapi.Tracks.domain.events;
@@ -41,6 +42,15 @@ public static class SubscriberWiring
         typeof(Turboapi.Auth.Domain.Events.RefreshTokenGeneratedEvent),
         typeof(Turboapi.Auth.Domain.Events.RefreshTokenRevokedEvent),
         typeof(Turboapi.Auth.Domain.Events.SuspiciousRefreshTokenAttemptEvent),
+
+        // Activities summary events are defined in
+        // Turbo.Activities.Shared.Contracts but only become live when a
+        // kind module emits them via its outbox (turbo.activities.{kind}.*).
+        // Until the first kind module ships, the events stay on the
+        // audit-only allowlist; each kind registration removes them by
+        // adding an AddInProcessSubscriber line for its specific subject.
+        typeof(ActivitySummaryUpserted),
+        typeof(ActivitySummaryDeleted),
     };
 
     public static IServiceCollection AddTurboInProcessSubscribers(this IServiceCollection services)

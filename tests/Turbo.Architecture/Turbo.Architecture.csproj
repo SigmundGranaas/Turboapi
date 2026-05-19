@@ -42,6 +42,10 @@
     <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Core\Turbo.Auth.Core.csproj" />
     <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Contracts\Turbo.Auth.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Auth\Turbo.Auth.Infrastructure\Turbo.Auth.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Api\Turbo.Activities.Shared.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Core\Turbo.Activities.Shared.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Contracts\Turbo.Activities.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Infrastructure\Turbo.Activities.Shared.Infrastructure.csproj" />
     <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />
   </ItemGroup>
 
