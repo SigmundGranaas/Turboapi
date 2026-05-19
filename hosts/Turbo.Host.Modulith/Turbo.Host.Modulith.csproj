@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\src\Tracks\Turbo.Tracks.Api\Turbo.Tracks.Api.csproj" />
     <ProjectReference Include="..\..\src\Collections\Turbo.Collections.Api\Turbo.Collections.Api.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Api\Turbo.Activities.Shared.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Api\Turbo.Activities.Fishing.Api.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.InProcess\Turbo.Messaging.InProcess.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Hosting.Postgres\Turbo.Hosting.Postgres.csproj" />
   </ItemGroup>

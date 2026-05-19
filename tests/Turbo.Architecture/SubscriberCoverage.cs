@@ -89,6 +89,7 @@ public sealed class SubscriberCoverage
         _ = typeof(Turboapi.Auth.Domain.Events.AccountCreatedEvent);
         _ = typeof(Turboapi.Collections.domain.events.CollectionCreated);
         _ = typeof(Turboapi.Activities.events.ActivitySummaryUpserted);
+        _ = typeof(Turboapi.Activities.Fishing.events.FishingActivityCreated);
 
         var moduleAssemblies = new[]
         {
@@ -97,6 +98,7 @@ public sealed class SubscriberCoverage
             typeof(Turboapi.Auth.Domain.Events.AccountCreatedEvent).Assembly,
             typeof(Turboapi.Collections.domain.events.CollectionCreated).Assembly,
             typeof(Turboapi.Activities.events.ActivitySummaryUpserted).Assembly,
+            typeof(Turboapi.Activities.Fishing.events.FishingActivityCreated).Assembly,
         };
 
         return moduleAssemblies

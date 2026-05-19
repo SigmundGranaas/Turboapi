@@ -11,6 +11,8 @@ using Turboapi.Tracks;
 using Turboapi.Tracks.data;
 using Turboapi.Activities;
 using Turboapi.Activities.data;
+using Turboapi.Activities.Fishing;
+using Turboapi.Activities.Fishing.data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -25,6 +27,7 @@ builder.Services.AddGeoModule(builder.Configuration);
 builder.Services.AddTracksModule(builder.Configuration);
 builder.Services.AddCollectionsModule(builder.Configuration);
 builder.Services.AddActivitiesSharedModule(builder.Configuration);
+builder.Services.AddFishingActivityModule(builder.Configuration);
 
 // In-process transport: outbox dispatchers publish here, the subscriber host
 // drains the channel and resolves IEventHandler<T> in a fresh DI scope. No
@@ -51,6 +54,9 @@ await app.Services.MigrateModuleDatabaseAsync<CollectionsReadContext>(
 await app.Services.MigrateModuleDatabaseAsync<ActivitySummariesContext>(
     builder.Configuration.GetConnectionString("Activities")
         ?? throw new InvalidOperationException("ConnectionStrings:Activities is not configured"));
+await app.Services.MigrateModuleDatabaseAsync<FishingContext>(
+    builder.Configuration.GetConnectionString("ActivitiesFishing")
+        ?? throw new InvalidOperationException("ConnectionStrings:ActivitiesFishing is not configured"));
 
 app.UseRouting();
 app.UseAuthentication();

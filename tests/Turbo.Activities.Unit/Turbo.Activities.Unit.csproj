@@ -23,6 +23,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Core\Turbo.Activities.Shared.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Contracts\Turbo.Activities.Shared.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Core\Turbo.Activities.Fishing.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Contracts\Turbo.Activities.Fishing.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

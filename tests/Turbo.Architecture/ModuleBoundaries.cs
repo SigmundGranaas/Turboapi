@@ -58,6 +58,10 @@ public sealed class ModuleBoundaries
         "Turbo.Activities.Shared.Contracts",
         "Turbo.Activities.Shared.Infrastructure",
         "Turbo.Activities.Shared.Api",
+        "Turbo.Activities.Fishing.Core",
+        "Turbo.Activities.Fishing.Contracts",
+        "Turbo.Activities.Fishing.Infrastructure",
+        "Turbo.Activities.Fishing.Api",
     ];
 
     private static IEnumerable<Assembly> Tracks
@@ -97,6 +101,7 @@ public sealed class ModuleBoundaries
         get
         {
             _ = typeof(Turboapi.Activities.ActivitiesScope);
+            _ = typeof(Turboapi.Activities.Fishing.FishingScope);
             return ActivitiesAssemblies.Select(LoadByName);
         }
     }

@@ -46,6 +46,10 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Core\Turbo.Activities.Shared.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Contracts\Turbo.Activities.Shared.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Infrastructure\Turbo.Activities.Shared.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Api\Turbo.Activities.Fishing.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Core\Turbo.Activities.Fishing.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Contracts\Turbo.Activities.Fishing.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Infrastructure\Turbo.Activities.Fishing.Infrastructure.csproj" />
     <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />
   </ItemGroup>
 

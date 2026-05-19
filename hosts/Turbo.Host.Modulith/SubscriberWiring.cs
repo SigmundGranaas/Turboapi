@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
 using Turboapi.Activities.events;
+using Turboapi.Activities.Fishing.events;
 using Turboapi.Collections.domain.events;
 using Turboapi.Geo.domain.events;
 using Turboapi.Tracks.domain.events;
@@ -42,15 +43,6 @@ public static class SubscriberWiring
         typeof(Turboapi.Auth.Domain.Events.RefreshTokenGeneratedEvent),
         typeof(Turboapi.Auth.Domain.Events.RefreshTokenRevokedEvent),
         typeof(Turboapi.Auth.Domain.Events.SuspiciousRefreshTokenAttemptEvent),
-
-        // Activities summary events are defined in
-        // Turbo.Activities.Shared.Contracts but only become live when a
-        // kind module emits them via its outbox (turbo.activities.{kind}.*).
-        // Until the first kind module ships, the events stay on the
-        // audit-only allowlist; each kind registration removes them by
-        // adding an AddInProcessSubscriber line for its specific subject.
-        typeof(ActivitySummaryUpserted),
-        typeof(ActivitySummaryDeleted),
     };
 
     public static IServiceCollection AddTurboInProcessSubscribers(this IServiceCollection services)
@@ -66,6 +58,17 @@ public static class SubscriberWiring
         services.AddInProcessSubscriber<CollectionDeleted>("turbo.collections.CollectionDeleted");
         services.AddInProcessSubscriber<CollectionItemAdded>("turbo.collections.CollectionItemAdded");
         services.AddInProcessSubscriber<CollectionItemRemoved>("turbo.collections.CollectionItemRemoved");
+
+        // Fishing activity kind. Two consumers per kind: the typed read-model
+        // projector (FishingActivity*Handler) and the shared cross-kind
+        // summaries projector (ActivitySummary*Handler). Both consume events
+        // off the fishing outbox under the turbo.activities.fishing.* subject.
+        services.AddInProcessSubscriber<FishingActivityCreated>("turbo.activities.fishing.FishingActivityCreated");
+        services.AddInProcessSubscriber<FishingActivityUpdated>("turbo.activities.fishing.FishingActivityUpdated");
+        services.AddInProcessSubscriber<FishingActivityDeleted>("turbo.activities.fishing.FishingActivityDeleted");
+        services.AddInProcessSubscriber<ActivitySummaryUpserted>("turbo.activities.fishing.ActivitySummaryUpserted");
+        services.AddInProcessSubscriber<ActivitySummaryDeleted>("turbo.activities.fishing.ActivitySummaryDeleted");
+
         return services;
     }
 }
