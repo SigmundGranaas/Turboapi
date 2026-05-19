@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Turbo.Messaging.InProcess;
+using Turboapi.Activities.BackcountrySki.events;
 using Turboapi.Activities.events;
 using Turboapi.Activities.Fishing.events;
 using Turboapi.Collections.domain.events;
@@ -68,6 +69,15 @@ public static class SubscriberWiring
         services.AddInProcessSubscriber<FishingActivityDeleted>("turbo.activities.fishing.FishingActivityDeleted");
         services.AddInProcessSubscriber<ActivitySummaryUpserted>("turbo.activities.fishing.ActivitySummaryUpserted");
         services.AddInProcessSubscriber<ActivitySummaryDeleted>("turbo.activities.fishing.ActivitySummaryDeleted");
+
+        // Backcountry ski activity kind — same two-consumer shape:
+        // typed projector for backcountry_ski.activities + the shared
+        // summaries projector for the cross-kind read model.
+        services.AddInProcessSubscriber<BackcountrySkiActivityCreated>("turbo.activities.backcountry_ski.BackcountrySkiActivityCreated");
+        services.AddInProcessSubscriber<BackcountrySkiActivityUpdated>("turbo.activities.backcountry_ski.BackcountrySkiActivityUpdated");
+        services.AddInProcessSubscriber<BackcountrySkiActivityDeleted>("turbo.activities.backcountry_ski.BackcountrySkiActivityDeleted");
+        services.AddInProcessSubscriber<ActivitySummaryUpserted>("turbo.activities.backcountry_ski.ActivitySummaryUpserted");
+        services.AddInProcessSubscriber<ActivitySummaryDeleted>("turbo.activities.backcountry_ski.ActivitySummaryDeleted");
 
         return services;
     }

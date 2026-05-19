@@ -62,6 +62,10 @@ public sealed class ModuleBoundaries
         "Turbo.Activities.Fishing.Contracts",
         "Turbo.Activities.Fishing.Infrastructure",
         "Turbo.Activities.Fishing.Api",
+        "Turbo.Activities.BackcountrySki.Core",
+        "Turbo.Activities.BackcountrySki.Contracts",
+        "Turbo.Activities.BackcountrySki.Infrastructure",
+        "Turbo.Activities.BackcountrySki.Api",
     ];
 
     private static IEnumerable<Assembly> Tracks
@@ -102,6 +106,7 @@ public sealed class ModuleBoundaries
         {
             _ = typeof(Turboapi.Activities.ActivitiesScope);
             _ = typeof(Turboapi.Activities.Fishing.FishingScope);
+            _ = typeof(Turboapi.Activities.BackcountrySki.BackcountrySkiScope);
             return ActivitiesAssemblies.Select(LoadByName);
         }
     }

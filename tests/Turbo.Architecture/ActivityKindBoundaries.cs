@@ -23,6 +23,13 @@ public sealed class ActivityKindBoundaries
             "Turbo.Activities.Fishing.Infrastructure",
             "Turbo.Activities.Fishing.Api",
         },
+        ["BackcountrySki"] = new[]
+        {
+            "Turbo.Activities.BackcountrySki.Core",
+            "Turbo.Activities.BackcountrySki.Contracts",
+            "Turbo.Activities.BackcountrySki.Infrastructure",
+            "Turbo.Activities.BackcountrySki.Api",
+        },
     };
 
     [Fact]
@@ -30,6 +37,7 @@ public sealed class ActivityKindBoundaries
     {
         // Touch each kind's scope so the assemblies are loaded.
         _ = typeof(Turboapi.Activities.Fishing.FishingScope);
+        _ = typeof(Turboapi.Activities.BackcountrySki.BackcountrySkiScope);
 
         var kinds = KindAssemblyLists.Keys.ToArray();
         foreach (var kind in kinds)

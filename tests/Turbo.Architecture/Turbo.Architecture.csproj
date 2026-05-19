@@ -50,6 +50,10 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Core\Turbo.Activities.Fishing.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Contracts\Turbo.Activities.Fishing.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Infrastructure\Turbo.Activities.Fishing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Api\Turbo.Activities.BackcountrySki.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Core\Turbo.Activities.BackcountrySki.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Contracts\Turbo.Activities.BackcountrySki.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Infrastructure\Turbo.Activities.BackcountrySki.Infrastructure.csproj" />
     <ProjectReference Include="..\..\hosts\Turbo.Host.Modulith\Turbo.Host.Modulith.csproj" />
   </ItemGroup>
 

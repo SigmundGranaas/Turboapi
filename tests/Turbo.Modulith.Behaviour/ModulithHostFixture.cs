@@ -6,6 +6,7 @@ using Testcontainers.PostgreSql;
 using Turbo.Behaviour.Testing;
 using Turbo.Host.Modulith;
 using Turbo.Hosting.Postgres;
+using Turboapi.Activities.BackcountrySki.data;
 using Turboapi.Activities.data;
 using Turboapi.Activities.Fishing.data;
 using Turboapi.Auth.Infrastructure.Persistence;
@@ -40,6 +41,7 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         var collectionsConn = RepoLayout.WithDatabase(baseConn, "collections");
         var activitiesConn = RepoLayout.WithDatabase(baseConn, "activities");
         var activitiesFishingConn = RepoLayout.WithDatabase(baseConn, "activities_fishing");
+        var activitiesBcSkiConn = RepoLayout.WithDatabase(baseConn, "activities_backcountry_ski");
 
         _factory = new WebApplicationFactory<ModulithProgram>().WithWebHostBuilder(builder =>
         {
@@ -50,6 +52,7 @@ public sealed class ModulithHostFixture : IAsyncLifetime
             builder.UseSetting("ConnectionStrings:Collections", collectionsConn);
             builder.UseSetting("ConnectionStrings:Activities", activitiesConn);
             builder.UseSetting("ConnectionStrings:ActivitiesFishing", activitiesFishingConn);
+            builder.UseSetting("ConnectionStrings:ActivitiesBackcountrySki", activitiesBcSkiConn);
         });
 
         await _factory.Services.MigrateModuleDatabaseAsync<AuthDbContext>(authConn);
@@ -58,6 +61,7 @@ public sealed class ModulithHostFixture : IAsyncLifetime
         await _factory.Services.MigrateModuleDatabaseAsync<CollectionsReadContext>(collectionsConn);
         await _factory.Services.MigrateModuleDatabaseAsync<ActivitySummariesContext>(activitiesConn);
         await _factory.Services.MigrateModuleDatabaseAsync<FishingContext>(activitiesFishingConn);
+        await _factory.Services.MigrateModuleDatabaseAsync<BackcountrySkiContext>(activitiesBcSkiConn);
     }
 
     public async Task DisposeAsync()
