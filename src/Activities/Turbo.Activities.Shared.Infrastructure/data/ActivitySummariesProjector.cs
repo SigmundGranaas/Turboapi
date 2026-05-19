@@ -93,7 +93,7 @@ public sealed class ActivitySummaryUpsertedHandler : IEventHandler<ActivitySumma
 
     private static Geometry ParseWkt(ActivityGeometryWkt wkt)
     {
-        var reader = new WKTReader { DefaultSRID = 4326 };
+        var reader = new WKTReader();
         var g = reader.Read(wkt.Wkt);
         if (g.SRID != 4326) g.SRID = 4326;
         return g;

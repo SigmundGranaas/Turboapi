@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Fishing.controller.request;
 using Turboapi.Activities.Fishing.data;
 using Turboapi.Activities.Fishing.domain.handler;
-using Turboapi.Activities.Fishing.value;
 
 namespace Turboapi.Activities.Fishing.controller;
 
