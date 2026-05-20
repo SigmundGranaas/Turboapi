@@ -7,6 +7,7 @@ namespace Turboapi.Activities.data;
 public class ActivitySummariesContext : DbContext
 {
     public DbSet<ActivitySummaryEntity> Summaries { get; set; } = null!;
+    public DbSet<ConditionsCacheEntity> ConditionsCache { get; set; } = null!;
     public DbSet<OutboxRow> Outbox { get; set; } = null!;
 
     public ActivitySummariesContext(DbContextOptions<ActivitySummariesContext> options) : base(options) { }
@@ -15,6 +16,19 @@ public class ActivitySummariesContext : DbContext
     {
         modelBuilder.MapOutbox("activities");
         modelBuilder.MapProcessedEvents("activities");
+
+        modelBuilder.Entity<ConditionsCacheEntity>(entity =>
+        {
+            entity.ToTable("conditions_cache", "activities");
+            entity.HasKey(e => new { e.ProviderKey, e.GridCell, e.TimeBucket });
+            entity.Property(e => e.ProviderKey).HasColumnName("provider_key").IsRequired();
+            entity.Property(e => e.GridCell).HasColumnName("grid_cell").IsRequired();
+            entity.Property(e => e.TimeBucket).HasColumnName("time_bucket").IsRequired();
+            entity.Property(e => e.Payload).HasColumnName("payload").HasColumnType("bytea").IsRequired();
+            entity.Property(e => e.FetchedAt).HasColumnName("fetched_at").IsRequired();
+            entity.Property(e => e.ExpiresAt).HasColumnName("expires_at").IsRequired();
+            entity.HasIndex(e => e.ExpiresAt).HasDatabaseName("idx_conditions_cache_expires_at");
+        });
 
         modelBuilder.Entity<ActivitySummaryEntity>(entity =>
         {

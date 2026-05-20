@@ -3,6 +3,7 @@ using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Fishing.conditions;
 using Turboapi.Activities.Fishing.controller;
 using Turboapi.Activities.Fishing.data;
 using Turboapi.Activities.Fishing.domain.handler;
@@ -56,6 +57,12 @@ public static class FishingActivityModule
         services.AddScoped<IIdempotencyStore<FishingContext>, PgIdempotencyStore<FishingContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<FishingContext>>();
 
+        // Fishing conditions advisor. Composes the IWeatherProvider that
+        // the shared module registered (synthetic by default, met.no when
+        // MetNo:UserAgent is configured). Tides + river-flow advisors
+        // will compose alongside this in follow-ups.
+        services.AddScoped<IFishingConditionsAdvisor, FishingConditionsAdvisor>();
+
         // Contribute the kind descriptor to the shared catalog. Composition:
         // the catalog discovers kinds via DI rather than a hardcoded enum.
         services.AddSingleton(new ActivityKindDescriptor
@@ -65,7 +72,7 @@ public static class FishingActivityModule
             IconKey = "fishing",
             ColorHex = "#1E6FB8",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.Point },
-            ConditionsAvailable = false, // becomes true when MetNo + tides providers ship
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(FishingActivitiesController).Assembly);

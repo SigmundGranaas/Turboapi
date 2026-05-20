@@ -1,12 +1,15 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
+using Turboapi.Activities.conditions;
 using Turboapi.Activities.controller;
 using Turboapi.Activities.data;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.services;
+using Turboapi.Activities.value;
 
 namespace Turboapi.Activities;
 
@@ -55,6 +58,41 @@ public static class ActivitiesSharedModule
             sp.GetRequiredService<ActivitySummaryDeletedHandler>());
 
         services.AddHostedService<OutboxDispatcherHostedService<ActivitySummariesContext>>();
+
+        // Conditions cache + weather provider chain. Composition: per-kind
+        // advisors take an IWeatherProvider; the registration here picks
+        // SyntheticWeatherProvider out of the box, swapping in
+        // MetNoWeatherProvider when MetNo:UserAgent is set in
+        // configuration. Either way the consumer is wrapped in
+        // CachedWeatherProvider so all kinds share one Postgres-backed
+        // cache.
+        services.AddScoped<IConditionsCache, PgConditionsCache>();
+        services.Configure<MetNoOptions>(configuration.GetSection("MetNo"));
+
+        var metNoUserAgent = configuration["MetNo:UserAgent"];
+        if (!string.IsNullOrWhiteSpace(metNoUserAgent))
+        {
+            services.AddHttpClient(MetNoWeatherProvider.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<MetNoOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent!);
+                http.Timeout = TimeSpan.FromSeconds(10);
+            });
+            services.AddScoped<MetNoWeatherProvider>();
+            services.AddScoped<IWeatherProvider>(sp => new CachedWeatherProvider(
+                sp.GetRequiredService<MetNoWeatherProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedWeatherProvider>>()));
+        }
+        else
+        {
+            services.AddSingleton<SyntheticWeatherProvider>();
+            services.AddScoped<IWeatherProvider>(sp => new CachedWeatherProvider(
+                sp.GetRequiredService<SyntheticWeatherProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedWeatherProvider>>()));
+        }
 
         services.AddControllers().AddApplicationPart(typeof(ActivitySummariesController).Assembly);
 
