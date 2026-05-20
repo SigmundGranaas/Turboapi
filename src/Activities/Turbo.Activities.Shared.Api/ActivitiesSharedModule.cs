@@ -94,6 +94,11 @@ public static class ActivitiesSharedModule
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedWeatherProvider>>()));
         }
 
+        // Optional background warmer for the conditions cache. Off by
+        // default (ConditionsCacheWarmer:Enabled=true to switch on).
+        services.Configure<ConditionsCacheWarmerOptions>(configuration.GetSection("ConditionsCacheWarmer"));
+        services.AddHostedService<ConditionsCacheWarmerHostedService>();
+
         services.AddControllers().AddApplicationPart(typeof(ActivitySummariesController).Assembly);
 
         return services;

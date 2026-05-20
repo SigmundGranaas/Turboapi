@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
+using Turboapi.Activities.BackcountrySki.conditions;
 using Turboapi.Activities.BackcountrySki.controller;
 using Turboapi.Activities.BackcountrySki.data;
 using Turboapi.Activities.BackcountrySki.domain.handler;
@@ -55,6 +56,11 @@ public static class BackcountrySkiActivityModule
         services.AddScoped<IIdempotencyStore<BackcountrySkiContext>, PgIdempotencyStore<BackcountrySkiContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<BackcountrySkiContext>>();
 
+        // Backcountry-ski conditions advisor. Composes the shared
+        // IWeatherProvider; avalanche fields stay null until the
+        // Varsom provider lands.
+        services.AddScoped<IBackcountrySkiConditionsAdvisor, BackcountrySkiConditionsAdvisor>();
+
         services.AddSingleton(new ActivityKindDescriptor
         {
             Key = "backcountry_ski",
@@ -62,7 +68,7 @@ public static class BackcountrySkiActivityModule
             IconKey = "backcountry_ski",
             ColorHex = "#7A3CCB",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.LineString },
-            ConditionsAvailable = false,
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(BackcountrySkiActivitiesController).Assembly);
