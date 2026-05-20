@@ -27,6 +27,14 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Contracts\Turbo.Activities.Fishing.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Core\Turbo.Activities.BackcountrySki.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Contracts\Turbo.Activities.BackcountrySki.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Hiking.Core\Turbo.Activities.Hiking.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Hiking.Contracts\Turbo.Activities.Hiking.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.XcSki.Core\Turbo.Activities.XcSki.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.XcSki.Contracts\Turbo.Activities.XcSki.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Packrafting.Core\Turbo.Activities.Packrafting.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Packrafting.Contracts\Turbo.Activities.Packrafting.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Core\Turbo.Activities.Freediving.Core.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Contracts\Turbo.Activities.Freediving.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

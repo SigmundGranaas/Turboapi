@@ -15,6 +15,10 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Api\Turbo.Activities.Shared.Api.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Api\Turbo.Activities.Fishing.Api.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Api\Turbo.Activities.BackcountrySki.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Hiking.Api\Turbo.Activities.Hiking.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.XcSki.Api\Turbo.Activities.XcSki.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Packrafting.Api\Turbo.Activities.Packrafting.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Api\Turbo.Activities.Freediving.Api.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.InProcess\Turbo.Messaging.InProcess.csproj" />
     <ProjectReference Include="..\..\src\Shared\Turbo.Hosting.Postgres\Turbo.Hosting.Postgres.csproj" />
   </ItemGroup>

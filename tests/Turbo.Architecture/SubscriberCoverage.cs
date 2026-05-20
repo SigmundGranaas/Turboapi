@@ -91,6 +91,10 @@ public sealed class SubscriberCoverage
         _ = typeof(Turboapi.Activities.events.ActivitySummaryUpserted);
         _ = typeof(Turboapi.Activities.Fishing.events.FishingActivityCreated);
         _ = typeof(Turboapi.Activities.BackcountrySki.events.BackcountrySkiActivityCreated);
+        _ = typeof(Turboapi.Activities.Hiking.events.HikingActivityCreated);
+        _ = typeof(Turboapi.Activities.XcSki.events.XcSkiActivityCreated);
+        _ = typeof(Turboapi.Activities.Packrafting.events.PackraftingActivityCreated);
+        _ = typeof(Turboapi.Activities.Freediving.events.FreedivingActivityCreated);
 
         var moduleAssemblies = new[]
         {
@@ -101,6 +105,10 @@ public sealed class SubscriberCoverage
             typeof(Turboapi.Activities.events.ActivitySummaryUpserted).Assembly,
             typeof(Turboapi.Activities.Fishing.events.FishingActivityCreated).Assembly,
             typeof(Turboapi.Activities.BackcountrySki.events.BackcountrySkiActivityCreated).Assembly,
+            typeof(Turboapi.Activities.Hiking.events.HikingActivityCreated).Assembly,
+            typeof(Turboapi.Activities.XcSki.events.XcSkiActivityCreated).Assembly,
+            typeof(Turboapi.Activities.Packrafting.events.PackraftingActivityCreated).Assembly,
+            typeof(Turboapi.Activities.Freediving.events.FreedivingActivityCreated).Assembly,
         };
 
         return moduleAssemblies

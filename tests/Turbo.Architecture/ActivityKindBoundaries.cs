@@ -30,6 +30,34 @@ public sealed class ActivityKindBoundaries
             "Turbo.Activities.BackcountrySki.Infrastructure",
             "Turbo.Activities.BackcountrySki.Api",
         },
+        ["Hiking"] = new[]
+        {
+            "Turbo.Activities.Hiking.Core",
+            "Turbo.Activities.Hiking.Contracts",
+            "Turbo.Activities.Hiking.Infrastructure",
+            "Turbo.Activities.Hiking.Api",
+        },
+        ["XcSki"] = new[]
+        {
+            "Turbo.Activities.XcSki.Core",
+            "Turbo.Activities.XcSki.Contracts",
+            "Turbo.Activities.XcSki.Infrastructure",
+            "Turbo.Activities.XcSki.Api",
+        },
+        ["Packrafting"] = new[]
+        {
+            "Turbo.Activities.Packrafting.Core",
+            "Turbo.Activities.Packrafting.Contracts",
+            "Turbo.Activities.Packrafting.Infrastructure",
+            "Turbo.Activities.Packrafting.Api",
+        },
+        ["Freediving"] = new[]
+        {
+            "Turbo.Activities.Freediving.Core",
+            "Turbo.Activities.Freediving.Contracts",
+            "Turbo.Activities.Freediving.Infrastructure",
+            "Turbo.Activities.Freediving.Api",
+        },
     };
 
     [Fact]
@@ -38,6 +66,10 @@ public sealed class ActivityKindBoundaries
         // Touch each kind's scope so the assemblies are loaded.
         _ = typeof(Turboapi.Activities.Fishing.FishingScope);
         _ = typeof(Turboapi.Activities.BackcountrySki.BackcountrySkiScope);
+        _ = typeof(Turboapi.Activities.Hiking.HikingScope);
+        _ = typeof(Turboapi.Activities.XcSki.XcSkiScope);
+        _ = typeof(Turboapi.Activities.Packrafting.PackraftingScope);
+        _ = typeof(Turboapi.Activities.Freediving.FreedivingScope);
 
         var kinds = KindAssemblyLists.Keys.ToArray();
         foreach (var kind in kinds)

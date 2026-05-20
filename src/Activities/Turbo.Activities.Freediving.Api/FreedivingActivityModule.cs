@@ -1,0 +1,60 @@
+using Microsoft.EntityFrameworkCore;
+using Turbo.Messaging;
+using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
+using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Freediving.controller;
+using Turboapi.Activities.Freediving.data;
+using Turboapi.Activities.Freediving.domain.handler;
+using Turboapi.Activities.Freediving.events;
+using Turboapi.Activities.value;
+
+namespace Turboapi.Activities.Freediving;
+
+public static class FreedivingActivityModule
+{
+    public const string ConnectionStringName = "ActivitiesFreediving";
+
+    public static IServiceCollection AddFreedivingActivityModule(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(ConnectionStringName)
+            ?? throw new InvalidOperationException($"ConnectionStrings:{ConnectionStringName} is not configured");
+
+        services.AddDbContext<FreedivingContext>((sp, options) =>
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.UseNetTopologySuite();
+                npgsql.EnableRetryOnFailure();
+            }));
+
+        services.AddScoped<IFreedivingActivityReader, EfFreedivingActivityReader>();
+        services.AddScoped<CreateFreedivingActivityHandler>();
+        services.AddScoped<UpdateFreedivingActivityHandler>();
+        services.AddScoped<DeleteFreedivingActivityHandler>();
+
+        services.AddScoped<FreedivingActivityCreatedHandler>();
+        services.AddScoped<FreedivingActivityUpdatedHandler>();
+        services.AddScoped<FreedivingActivityDeletedHandler>();
+        services.AddScoped<IEventHandler<FreedivingActivityCreated>>(sp => sp.GetRequiredService<FreedivingActivityCreatedHandler>());
+        services.AddScoped<IEventHandler<FreedivingActivityUpdated>>(sp => sp.GetRequiredService<FreedivingActivityUpdatedHandler>());
+        services.AddScoped<IEventHandler<FreedivingActivityDeleted>>(sp => sp.GetRequiredService<FreedivingActivityDeletedHandler>());
+
+        services.AddScoped<IOutbox<FreedivingScope>, PgOutbox<FreedivingContext, FreedivingScope>>();
+        services.AddScoped<IUnitOfWork<FreedivingScope>, PgUnitOfWork<FreedivingContext, FreedivingScope>>();
+        services.AddScoped<IIdempotencyStore<FreedivingContext>, PgIdempotencyStore<FreedivingContext>>();
+        services.AddHostedService<OutboxDispatcherHostedService<FreedivingContext>>();
+
+        services.AddSingleton(new ActivityKindDescriptor
+        {
+            Key = "freediving",
+            DisplayName = "Freediving",
+            IconKey = "freediving",
+            ColorHex = "#1565C0",
+            AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.Point },
+            ConditionsAvailable = false,
+        });
+
+        services.AddControllers().AddApplicationPart(typeof(FreedivingActivitiesController).Assembly);
+        return services;
+    }
+}

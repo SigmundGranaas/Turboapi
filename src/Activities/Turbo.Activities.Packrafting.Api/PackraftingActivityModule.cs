@@ -1,0 +1,60 @@
+using Microsoft.EntityFrameworkCore;
+using Turbo.Messaging;
+using Turbo.Outbox;
+using Turbo.Outbox.Postgres;
+using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Packrafting.controller;
+using Turboapi.Activities.Packrafting.data;
+using Turboapi.Activities.Packrafting.domain.handler;
+using Turboapi.Activities.Packrafting.events;
+using Turboapi.Activities.value;
+
+namespace Turboapi.Activities.Packrafting;
+
+public static class PackraftingActivityModule
+{
+    public const string ConnectionStringName = "ActivitiesPackrafting";
+
+    public static IServiceCollection AddPackraftingActivityModule(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(ConnectionStringName)
+            ?? throw new InvalidOperationException($"ConnectionStrings:{ConnectionStringName} is not configured");
+
+        services.AddDbContext<PackraftingContext>((sp, options) =>
+            options.UseNpgsql(connectionString, npgsql =>
+            {
+                npgsql.UseNetTopologySuite();
+                npgsql.EnableRetryOnFailure();
+            }));
+
+        services.AddScoped<IPackraftingActivityReader, EfPackraftingActivityReader>();
+        services.AddScoped<CreatePackraftingActivityHandler>();
+        services.AddScoped<UpdatePackraftingActivityHandler>();
+        services.AddScoped<DeletePackraftingActivityHandler>();
+
+        services.AddScoped<PackraftingActivityCreatedHandler>();
+        services.AddScoped<PackraftingActivityUpdatedHandler>();
+        services.AddScoped<PackraftingActivityDeletedHandler>();
+        services.AddScoped<IEventHandler<PackraftingActivityCreated>>(sp => sp.GetRequiredService<PackraftingActivityCreatedHandler>());
+        services.AddScoped<IEventHandler<PackraftingActivityUpdated>>(sp => sp.GetRequiredService<PackraftingActivityUpdatedHandler>());
+        services.AddScoped<IEventHandler<PackraftingActivityDeleted>>(sp => sp.GetRequiredService<PackraftingActivityDeletedHandler>());
+
+        services.AddScoped<IOutbox<PackraftingScope>, PgOutbox<PackraftingContext, PackraftingScope>>();
+        services.AddScoped<IUnitOfWork<PackraftingScope>, PgUnitOfWork<PackraftingContext, PackraftingScope>>();
+        services.AddScoped<IIdempotencyStore<PackraftingContext>, PgIdempotencyStore<PackraftingContext>>();
+        services.AddHostedService<OutboxDispatcherHostedService<PackraftingContext>>();
+
+        services.AddSingleton(new ActivityKindDescriptor
+        {
+            Key = "packrafting",
+            DisplayName = "Packrafting",
+            IconKey = "packrafting",
+            ColorHex = "#EF6C00",
+            AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.LineString },
+            ConditionsAvailable = false,
+        });
+
+        services.AddControllers().AddApplicationPart(typeof(PackraftingActivitiesController).Assembly);
+        return services;
+    }
+}
