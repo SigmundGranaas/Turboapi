@@ -56,10 +56,12 @@ public static class BackcountrySkiActivityModule
         services.AddScoped<IIdempotencyStore<BackcountrySkiContext>, PgIdempotencyStore<BackcountrySkiContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<BackcountrySkiContext>>();
 
-        // Backcountry-ski conditions advisor. Composes the shared
-        // IWeatherProvider; avalanche fields stay null until the
-        // Varsom provider lands.
-        services.AddScoped<IBackcountrySkiConditionsAdvisor, BackcountrySkiConditionsAdvisor>();
+        // Backcountry-ski conditions advisor. Composes weather +
+        // (optional) avalanche provider — synthetic by default, Varsom
+        // when configured.
+        services.AddScoped<IBackcountrySkiConditionsAdvisor>(sp => new BackcountrySkiConditionsAdvisor(
+            sp.GetRequiredService<IWeatherProvider>(),
+            sp.GetService<IAvalancheProvider>()));
 
         services.AddSingleton(new ActivityKindDescriptor
         {

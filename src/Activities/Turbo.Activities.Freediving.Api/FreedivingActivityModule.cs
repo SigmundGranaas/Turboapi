@@ -3,6 +3,7 @@ using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Freediving.conditions;
 using Turboapi.Activities.Freediving.controller;
 using Turboapi.Activities.Freediving.data;
 using Turboapi.Activities.Freediving.domain.handler;
@@ -44,6 +45,11 @@ public static class FreedivingActivityModule
         services.AddScoped<IIdempotencyStore<FreedivingContext>, PgIdempotencyStore<FreedivingContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<FreedivingContext>>();
 
+        // Freediving advisor composes weather + (optional) tides.
+        services.AddScoped<IFreedivingConditionsAdvisor>(sp => new FreedivingConditionsAdvisor(
+            sp.GetRequiredService<IWeatherProvider>(),
+            sp.GetService<ITideProvider>()));
+
         services.AddSingleton(new ActivityKindDescriptor
         {
             Key = "freediving",
@@ -51,7 +57,7 @@ public static class FreedivingActivityModule
             IconKey = "freediving",
             ColorHex = "#1565C0",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.Point },
-            ConditionsAvailable = false,
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(FreedivingActivitiesController).Assembly);

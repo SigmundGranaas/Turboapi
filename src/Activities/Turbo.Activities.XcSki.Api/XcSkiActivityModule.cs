@@ -4,6 +4,7 @@ using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.value;
+using Turboapi.Activities.XcSki.conditions;
 using Turboapi.Activities.XcSki.controller;
 using Turboapi.Activities.XcSki.data;
 using Turboapi.Activities.XcSki.domain.handler;
@@ -44,6 +45,8 @@ public static class XcSkiActivityModule
         services.AddScoped<IIdempotencyStore<XcSkiContext>, PgIdempotencyStore<XcSkiContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<XcSkiContext>>();
 
+        services.AddScoped<IXcSkiConditionsAdvisor, XcSkiConditionsAdvisor>();
+
         services.AddSingleton(new ActivityKindDescriptor
         {
             Key = "xc_ski",
@@ -51,7 +54,7 @@ public static class XcSkiActivityModule
             IconKey = "xc_ski",
             ColorHex = "#00838F",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.LineString },
-            ConditionsAvailable = false,
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(XcSkiActivitiesController).Assembly);

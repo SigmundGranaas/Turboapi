@@ -3,6 +3,7 @@ using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Hiking.conditions;
 using Turboapi.Activities.Hiking.controller;
 using Turboapi.Activities.Hiking.data;
 using Turboapi.Activities.Hiking.domain.handler;
@@ -44,6 +45,8 @@ public static class HikingActivityModule
         services.AddScoped<IIdempotencyStore<HikingContext>, PgIdempotencyStore<HikingContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<HikingContext>>();
 
+        services.AddScoped<IHikingConditionsAdvisor, HikingConditionsAdvisor>();
+
         services.AddSingleton(new ActivityKindDescriptor
         {
             Key = "hiking",
@@ -51,7 +54,7 @@ public static class HikingActivityModule
             IconKey = "hiking",
             ColorHex = "#2E7D32",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.LineString },
-            ConditionsAvailable = false,
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(HikingActivitiesController).Assembly);

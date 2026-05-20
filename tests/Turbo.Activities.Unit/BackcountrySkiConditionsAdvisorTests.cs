@@ -87,10 +87,61 @@ public sealed class BackcountrySkiConditionsAdvisorTests
     [Fact]
     public async Task Complex_terrain_with_low_preferred_max_surfaces_varsom_data_gap_note()
     {
-        var advisor = new BackcountrySkiConditionsAdvisor(new StubWeather(Stable()));
+        // No IAvalancheProvider passed → the advisor falls back to the
+        // "verify Varsom before going" rationale.
+        var advisor = new BackcountrySkiConditionsAdvisor(new StubWeather(Stable()), avalanche: null);
         var report = await advisor.AdviseAsync(
             MakeActivity(ates: AtesRating.Complex, preferredMax: 2),
             DateTimeOffset.UtcNow, CancellationToken.None);
-        report.Rationale.Should().Contain("avalanche level data not yet available");
+        report.Rationale.Should().Contain("avalanche data unavailable");
+    }
+
+    private sealed class StubAvalanche : IAvalancheProvider
+    {
+        private readonly AvalancheSlice _slice;
+        public StubAvalanche(AvalancheSlice slice) => _slice = slice;
+        public string Key => "stub_avalanche";
+        public Task<AvalancheSlice> GetAsync(int varsomRegionId, DateTimeOffset at, CancellationToken cancellationToken)
+            => Task.FromResult(_slice);
+    }
+
+    [Fact]
+    public async Task Level_3_with_complex_ATES_penalises_score()
+    {
+        var avalanche = new AvalancheSlice(DateTimeOffset.UtcNow, dangerLevel: 3,
+            summary: "Considerable", problems: "WindSlab");
+        var advisor = new BackcountrySkiConditionsAdvisor(
+            new StubWeather(Stable()), new StubAvalanche(avalanche));
+        var report = await advisor.AdviseAsync(
+            MakeActivity(ates: AtesRating.Complex),
+            DateTimeOffset.UtcNow, CancellationToken.None);
+        report.AvalancheLevel.Should().Be(3);
+        report.Rationale.Should().Contain("complex ATES");
+        report.Score.Should().NotBeNull().And.BeLessThan(80);
+    }
+
+    [Fact]
+    public async Task Level_5_kills_score_with_avoid_message()
+    {
+        var avalanche = new AvalancheSlice(DateTimeOffset.UtcNow, dangerLevel: 5,
+            summary: "Extreme", problems: "WindSlab,WetSnow");
+        var advisor = new BackcountrySkiConditionsAdvisor(
+            new StubWeather(Stable()), new StubAvalanche(avalanche));
+        var report = await advisor.AdviseAsync(
+            MakeActivity(), DateTimeOffset.UtcNow, CancellationToken.None);
+        report.Rationale.Should().Contain("avoid all avalanche terrain");
+        report.Score.Should().NotBeNull().And.BeLessThan(25);
+    }
+
+    [Fact]
+    public async Task Forecast_above_user_preferred_max_appears_in_rationale()
+    {
+        var avalanche = new AvalancheSlice(DateTimeOffset.UtcNow, dangerLevel: 3,
+            summary: "Considerable", problems: "");
+        var advisor = new BackcountrySkiConditionsAdvisor(
+            new StubWeather(Stable()), new StubAvalanche(avalanche));
+        var report = await advisor.AdviseAsync(
+            MakeActivity(preferredMax: 2), DateTimeOffset.UtcNow, CancellationToken.None);
+        report.Rationale.Should().Contain("exceeds your max");
     }
 }

@@ -3,6 +3,7 @@ using Turbo.Messaging;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.Packrafting.conditions;
 using Turboapi.Activities.Packrafting.controller;
 using Turboapi.Activities.Packrafting.data;
 using Turboapi.Activities.Packrafting.domain.handler;
@@ -44,6 +45,13 @@ public static class PackraftingActivityModule
         services.AddScoped<IIdempotencyStore<PackraftingContext>, PgIdempotencyStore<PackraftingContext>>();
         services.AddHostedService<OutboxDispatcherHostedService<PackraftingContext>>();
 
+        // Packrafting advisor composes weather + (optional) river flow.
+        // IRiverFlowProvider is registered by the shared infrastructure
+        // module when a provider is configured; resolve it as optional.
+        services.AddScoped<IPackraftingConditionsAdvisor>(sp => new PackraftingConditionsAdvisor(
+            sp.GetRequiredService<IWeatherProvider>(),
+            sp.GetService<IRiverFlowProvider>()));
+
         services.AddSingleton(new ActivityKindDescriptor
         {
             Key = "packrafting",
@@ -51,7 +59,7 @@ public static class PackraftingActivityModule
             IconKey = "packrafting",
             ColorHex = "#EF6C00",
             AllowedGeometries = new HashSet<ActivityGeometryKind> { ActivityGeometryKind.LineString },
-            ConditionsAvailable = false,
+            ConditionsAvailable = true,
         });
 
         services.AddControllers().AddApplicationPart(typeof(PackraftingActivitiesController).Assembly);

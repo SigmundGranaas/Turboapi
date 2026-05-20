@@ -94,6 +94,112 @@ public static class ActivitiesSharedModule
                 sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedWeatherProvider>>()));
         }
 
+        // Avalanche provider. Synthetic by default; VarsomAvalancheProvider
+        // takes over when Varsom:Enabled=true is set.
+        services.Configure<VarsomOptions>(configuration.GetSection("Varsom"));
+        if (configuration.GetValue<bool>("Varsom:Enabled"))
+        {
+            services.AddHttpClient(VarsomAvalancheProvider.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<VarsomOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(10);
+            });
+            services.AddScoped<VarsomAvalancheProvider>();
+            services.AddScoped<IAvalancheProvider>(sp => new CachedAvalancheProvider(
+                sp.GetRequiredService<VarsomAvalancheProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedAvalancheProvider>>()));
+        }
+        else
+        {
+            services.AddSingleton<SyntheticAvalancheProvider>();
+            services.AddScoped<IAvalancheProvider>(sp => new CachedAvalancheProvider(
+                sp.GetRequiredService<SyntheticAvalancheProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedAvalancheProvider>>()));
+        }
+
+        // River flow provider. Synthetic by default; NveRiverFlowProvider
+        // takes over when Nve:ApiKey is set.
+        services.Configure<NveOptions>(configuration.GetSection("Nve"));
+        var nveApiKey = configuration["Nve:ApiKey"];
+        if (!string.IsNullOrWhiteSpace(nveApiKey))
+        {
+            services.AddHttpClient(NveRiverFlowProvider.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<NveOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.DefaultRequestHeaders.Add("X-API-Key", opts.ApiKey!);
+                http.Timeout = TimeSpan.FromSeconds(10);
+            });
+            services.AddScoped<NveRiverFlowProvider>();
+            services.AddScoped<IRiverFlowProvider>(sp => new CachedRiverFlowProvider(
+                sp.GetRequiredService<NveRiverFlowProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedRiverFlowProvider>>()));
+        }
+        else
+        {
+            services.AddSingleton<SyntheticRiverFlowProvider>();
+            services.AddScoped<IRiverFlowProvider>(sp => new CachedRiverFlowProvider(
+                sp.GetRequiredService<SyntheticRiverFlowProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedRiverFlowProvider>>()));
+        }
+
+        // Tide provider. Synthetic by default; SehavnivaTideProvider
+        // takes over when Sehavniva:Enabled=true is set.
+        services.Configure<SehavnivaOptions>(configuration.GetSection("Sehavniva"));
+        if (configuration.GetValue<bool>("Sehavniva:Enabled"))
+        {
+            services.AddHttpClient(SehavnivaTideProvider.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<SehavnivaOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(10);
+            });
+            services.AddScoped<SehavnivaTideProvider>();
+            services.AddScoped<ITideProvider>(sp => new CachedTideProvider(
+                sp.GetRequiredService<SehavnivaTideProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedTideProvider>>()));
+        }
+        else
+        {
+            services.AddSingleton<SyntheticTideProvider>();
+            services.AddScoped<ITideProvider>(sp => new CachedTideProvider(
+                sp.GetRequiredService<SyntheticTideProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedTideProvider>>()));
+        }
+
+        // Grooming provider. Synthetic by default; SkisporetGroomingProvider
+        // takes over when Skisporet:Enabled=true is set.
+        services.Configure<SkisporetOptions>(configuration.GetSection("Skisporet"));
+        if (configuration.GetValue<bool>("Skisporet:Enabled"))
+        {
+            services.AddHttpClient(SkisporetGroomingProvider.HttpClientName, (sp, http) =>
+            {
+                var opts = sp.GetRequiredService<IOptions<SkisporetOptions>>().Value;
+                http.BaseAddress = new Uri(opts.BaseUrl);
+                http.Timeout = TimeSpan.FromSeconds(10);
+            });
+            services.AddScoped<SkisporetGroomingProvider>();
+            services.AddScoped<IGroomingProvider>(sp => new CachedGroomingProvider(
+                sp.GetRequiredService<SkisporetGroomingProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedGroomingProvider>>()));
+        }
+        else
+        {
+            services.AddSingleton<SyntheticGroomingProvider>();
+            services.AddScoped<IGroomingProvider>(sp => new CachedGroomingProvider(
+                sp.GetRequiredService<SyntheticGroomingProvider>(),
+                sp.GetRequiredService<IConditionsCache>(),
+                sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<CachedGroomingProvider>>()));
+        }
+
         // Optional background warmer for the conditions cache. Off by
         // default (ConditionsCacheWarmer:Enabled=true to switch on).
         services.Configure<ConditionsCacheWarmerOptions>(configuration.GetSection("ConditionsCacheWarmer"));
