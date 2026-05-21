@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.Packrafting.conditions;
 using Turboapi.Activities.Packrafting.controller;
 using Turboapi.Activities.Packrafting.data;
@@ -63,6 +65,21 @@ public static class PackraftingActivityModule
         });
 
         services.AddControllers().AddApplicationPart(typeof(PackraftingActivitiesController).Assembly);
+        return services;
+    }
+
+    public static IServiceCollection AddPackraftingActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<PackraftingActivityCreated>(
+            "turbo.activities.packrafting.PackraftingActivityCreated", "packrafting-activity-created");
+        services.AddNatsSubscriber<PackraftingActivityUpdated>(
+            "turbo.activities.packrafting.PackraftingActivityUpdated", "packrafting-activity-updated");
+        services.AddNatsSubscriber<PackraftingActivityDeleted>(
+            "turbo.activities.packrafting.PackraftingActivityDeleted", "packrafting-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.packrafting.ActivitySummaryUpserted", "packrafting-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.packrafting.ActivitySummaryDeleted", "packrafting-summary-deleted");
         return services;
     }
 }

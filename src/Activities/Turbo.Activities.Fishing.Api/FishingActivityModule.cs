@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.Fishing.conditions;
 using Turboapi.Activities.Fishing.controller;
 using Turboapi.Activities.Fishing.data;
@@ -77,6 +79,27 @@ public static class FishingActivityModule
 
         services.AddControllers().AddApplicationPart(typeof(FishingActivitiesController).Assembly);
 
+        return services;
+    }
+
+    /// <summary>
+    /// Registers NATS JetStream subscribers for fishing events. Wire this
+    /// from the per-kind microservice host (or from an activities-wide
+    /// host) after <c>AddNatsMessaging</c>. The modulith host uses
+    /// in-process subscribers instead; see <c>SubscriberWiring</c>.
+    /// </summary>
+    public static IServiceCollection AddFishingActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<FishingActivityCreated>(
+            "turbo.activities.fishing.FishingActivityCreated", "fishing-activity-created");
+        services.AddNatsSubscriber<FishingActivityUpdated>(
+            "turbo.activities.fishing.FishingActivityUpdated", "fishing-activity-updated");
+        services.AddNatsSubscriber<FishingActivityDeleted>(
+            "turbo.activities.fishing.FishingActivityDeleted", "fishing-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.fishing.ActivitySummaryUpserted", "fishing-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.fishing.ActivitySummaryDeleted", "fishing-summary-deleted");
         return services;
     }
 

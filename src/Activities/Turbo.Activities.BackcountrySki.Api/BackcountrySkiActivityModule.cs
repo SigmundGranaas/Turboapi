@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.BackcountrySki.conditions;
@@ -8,6 +9,7 @@ using Turboapi.Activities.BackcountrySki.data;
 using Turboapi.Activities.BackcountrySki.domain.handler;
 using Turboapi.Activities.BackcountrySki.events;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.value;
 
 namespace Turboapi.Activities.BackcountrySki;
@@ -75,6 +77,26 @@ public static class BackcountrySkiActivityModule
 
         services.AddControllers().AddApplicationPart(typeof(BackcountrySkiActivitiesController).Assembly);
 
+        return services;
+    }
+
+    /// <summary>
+    /// NATS JetStream subscribers for backcountry-ski events. Same shape
+    /// as <c>AddFishingActivityNatsSubscribers</c>; the modulith host
+    /// uses the in-process equivalent.
+    /// </summary>
+    public static IServiceCollection AddBackcountrySkiActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<BackcountrySkiActivityCreated>(
+            "turbo.activities.backcountry_ski.BackcountrySkiActivityCreated", "backcountry-ski-activity-created");
+        services.AddNatsSubscriber<BackcountrySkiActivityUpdated>(
+            "turbo.activities.backcountry_ski.BackcountrySkiActivityUpdated", "backcountry-ski-activity-updated");
+        services.AddNatsSubscriber<BackcountrySkiActivityDeleted>(
+            "turbo.activities.backcountry_ski.BackcountrySkiActivityDeleted", "backcountry-ski-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.backcountry_ski.ActivitySummaryUpserted", "backcountry-ski-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.backcountry_ski.ActivitySummaryDeleted", "backcountry-ski-summary-deleted");
         return services;
     }
 

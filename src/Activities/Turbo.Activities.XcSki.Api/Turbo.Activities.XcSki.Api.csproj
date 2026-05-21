@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Turbo.Activities.Shared.Core\Turbo.Activities.Shared.Core.csproj" />
     <ProjectReference Include="..\Turbo.Activities.Shared.Contracts\Turbo.Activities.Shared.Contracts.csproj" />
     <ProjectReference Include="..\..\Shared\Turbo.Messaging.Abstractions\Turbo.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Shared\Turbo.Messaging.Nats\Turbo.Messaging.Nats.csproj" />
     <ProjectReference Include="..\..\..\TurboAuthentication\TurboAuthentication.csproj" />
   </ItemGroup>
 

@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.Freediving.conditions;
 using Turboapi.Activities.Freediving.controller;
 using Turboapi.Activities.Freediving.data;
@@ -61,6 +63,21 @@ public static class FreedivingActivityModule
         });
 
         services.AddControllers().AddApplicationPart(typeof(FreedivingActivitiesController).Assembly);
+        return services;
+    }
+
+    public static IServiceCollection AddFreedivingActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<FreedivingActivityCreated>(
+            "turbo.activities.freediving.FreedivingActivityCreated", "freediving-activity-created");
+        services.AddNatsSubscriber<FreedivingActivityUpdated>(
+            "turbo.activities.freediving.FreedivingActivityUpdated", "freediving-activity-updated");
+        services.AddNatsSubscriber<FreedivingActivityDeleted>(
+            "turbo.activities.freediving.FreedivingActivityDeleted", "freediving-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.freediving.ActivitySummaryUpserted", "freediving-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.freediving.ActivitySummaryDeleted", "freediving-summary-deleted");
         return services;
     }
 }

@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.Hiking.conditions;
 using Turboapi.Activities.Hiking.controller;
 using Turboapi.Activities.Hiking.data;
@@ -58,6 +60,21 @@ public static class HikingActivityModule
         });
 
         services.AddControllers().AddApplicationPart(typeof(HikingActivitiesController).Assembly);
+        return services;
+    }
+
+    public static IServiceCollection AddHikingActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<HikingActivityCreated>(
+            "turbo.activities.hiking.HikingActivityCreated", "hiking-activity-created");
+        services.AddNatsSubscriber<HikingActivityUpdated>(
+            "turbo.activities.hiking.HikingActivityUpdated", "hiking-activity-updated");
+        services.AddNatsSubscriber<HikingActivityDeleted>(
+            "turbo.activities.hiking.HikingActivityDeleted", "hiking-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.hiking.ActivitySummaryUpserted", "hiking-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.hiking.ActivitySummaryDeleted", "hiking-summary-deleted");
         return services;
     }
 }

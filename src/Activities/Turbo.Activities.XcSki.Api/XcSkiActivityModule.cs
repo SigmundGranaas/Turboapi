@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Turbo.Messaging;
+using Turbo.Messaging.Nats;
 using Turbo.Outbox;
 using Turbo.Outbox.Postgres;
 using Turboapi.Activities.domain.services;
+using Turboapi.Activities.events;
 using Turboapi.Activities.value;
 using Turboapi.Activities.XcSki.conditions;
 using Turboapi.Activities.XcSki.controller;
@@ -58,6 +60,21 @@ public static class XcSkiActivityModule
         });
 
         services.AddControllers().AddApplicationPart(typeof(XcSkiActivitiesController).Assembly);
+        return services;
+    }
+
+    public static IServiceCollection AddXcSkiActivityNatsSubscribers(this IServiceCollection services)
+    {
+        services.AddNatsSubscriber<XcSkiActivityCreated>(
+            "turbo.activities.xc_ski.XcSkiActivityCreated", "xc-ski-activity-created");
+        services.AddNatsSubscriber<XcSkiActivityUpdated>(
+            "turbo.activities.xc_ski.XcSkiActivityUpdated", "xc-ski-activity-updated");
+        services.AddNatsSubscriber<XcSkiActivityDeleted>(
+            "turbo.activities.xc_ski.XcSkiActivityDeleted", "xc-ski-activity-deleted");
+        services.AddNatsSubscriber<ActivitySummaryUpserted>(
+            "turbo.activities.xc_ski.ActivitySummaryUpserted", "xc-ski-summary-upserted");
+        services.AddNatsSubscriber<ActivitySummaryDeleted>(
+            "turbo.activities.xc_ski.ActivitySummaryDeleted", "xc-ski-summary-deleted");
         return services;
     }
 }
