@@ -256,9 +256,15 @@ public sealed class ActivitiesBehaviour
         var del = await client.DeleteAsync($"/api/activities/fishing/{id}");
         del.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        // Detail endpoint now returns 404.
-        var get = await client.GetAsync($"/api/activities/fishing/{id}");
-        get.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        // Detail endpoint now returns 404. Wrapped in Eventually because the
+        // kind's typed projector consumes FishingActivityDeleted asynchronously
+        // off the outbox — a GET right after the DELETE call can still see the
+        // pre-tombstone row depending on dispatcher timing.
+        await Eventually.UntilAsync(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            return r.StatusCode == HttpStatusCode.NotFound;
+        }, description: "delete propagates to per-kind detail endpoint");
 
         // Bbox projection also drops the item.
         await Eventually.Returns<ActivitySummariesResponse>(async () =>
@@ -286,6 +292,16 @@ public sealed class ActivitiesBehaviour
         });
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        // Wait for the create to project before issuing the 412 attempt —
+        // the DELETE handler reads via the typed reader and a not-yet-
+        // projected row would return 404 (ActivityNotFoundException) instead
+        // of 412.
+        await Eventually.UntilAsync(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            return r.StatusCode == HttpStatusCode.OK;
+        }, description: "create projects before stale-ETag delete attempt");
 
         var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/activities/fishing/{id}");
         request.Headers.IfMatch.Add(new EntityTagHeaderValue("\"99\""));
@@ -318,7 +334,12 @@ public sealed class ActivitiesBehaviour
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
 
-        var get = await client.GetAsync($"/api/activities/fishing/{id}");
+        // Wait for the typed projector to land the row before reading detail.
+        var get = await Eventually.Returns<HttpResponseMessage>(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            return r.StatusCode == HttpStatusCode.OK ? r : null;
+        }, description: "fishing detail projection");
         get.StatusCode.Should().Be(HttpStatusCode.OK);
 
         // ETag header carries the version — clients use this for If-Match.
@@ -372,9 +393,13 @@ public sealed class ActivitiesBehaviour
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
 
-        var conditions = await client.GetAsync($"/api/activities/fishing/{id}/conditions");
-        conditions.StatusCode.Should().Be(HttpStatusCode.OK,
-            $"conditions failed: {await conditions.Content.ReadAsStringAsync()}");
+        // Conditions reads the typed activity via IFishingActivityReader, which
+        // depends on the projector consuming FishingActivityCreated. Poll.
+        var conditions = await Eventually.Returns<HttpResponseMessage>(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}/conditions");
+            return r.StatusCode == HttpStatusCode.OK ? r : null;
+        }, description: "fishing conditions endpoint reaches OK");
 
         var report = await conditions.Content.ReadFromJsonAsync<FishingConditionsReport>();
         report.Should().NotBeNull();
@@ -418,14 +443,28 @@ public sealed class ActivitiesBehaviour
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
 
+        // Wait for the create to project — the UPDATE handler reads the
+        // current version via the typed reader and would 404 if the row
+        // isn't there yet.
+        await Eventually.UntilAsync(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            return r.StatusCode == HttpStatusCode.OK;
+        }, description: "create projects before first update");
+
         // Update once with no precondition.
         var u1 = await client.PutAsJsonAsync($"/api/activities/fishing/{id}",
             new UpdateFishingActivityRequest { Name = "v2" });
         u1.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var afterU1 = await client.GetAsync($"/api/activities/fishing/{id}");
-        var body1 = await afterU1.Content.ReadFromJsonAsync<FishingActivityResponse>();
-        body1!.Version.Should().Be(2);
+        // Wait for the v2 projection to land before reading.
+        var body1 = await Eventually.Returns<FishingActivityResponse>(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            if (r.StatusCode != HttpStatusCode.OK) return null;
+            var body = await r.Content.ReadFromJsonAsync<FishingActivityResponse>();
+            return body?.Version == 2 ? body : null;
+        }, description: "v2 projection lands");
         body1.Name.Should().Be("v2");
 
         // Update again with a matching If-Match.
@@ -437,9 +476,13 @@ public sealed class ActivitiesBehaviour
         var r2 = await client.SendAsync(u2);
         r2.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
-        var afterU2 = await client.GetAsync($"/api/activities/fishing/{id}");
-        var body2 = await afterU2.Content.ReadFromJsonAsync<FishingActivityResponse>();
-        body2!.Version.Should().Be(3);
+        var body2 = await Eventually.Returns<FishingActivityResponse>(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            if (r.StatusCode != HttpStatusCode.OK) return null;
+            var body = await r.Content.ReadFromJsonAsync<FishingActivityResponse>();
+            return body?.Version == 3 ? body : null;
+        }, description: "v3 projection lands");
         body2.Name.Should().Be("v3");
 
         // Projection has the latest name.
