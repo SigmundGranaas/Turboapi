@@ -90,6 +90,15 @@ public sealed class ActivitiesBehaviour
         create.StatusCode.Should().Be(HttpStatusCode.Created);
         var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
 
+        // Wait for the create to project — the UPDATE handler reads the
+        // current version via the typed reader; without the projected row
+        // it would 404 (ActivityNotFoundException) instead of returning 412.
+        await Eventually.UntilAsync(async () =>
+        {
+            var r = await client.GetAsync($"/api/activities/fishing/{id}");
+            return r.StatusCode == HttpStatusCode.OK;
+        }, description: "create projects before stale-ETag update attempt");
+
         // A version that doesn't exist yet — the row's actual version is 1 after create.
         var staleUpdate = new HttpRequestMessage(HttpMethod.Put, $"/api/activities/fishing/{id}")
         {
