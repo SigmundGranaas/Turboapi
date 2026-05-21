@@ -37,6 +37,16 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Packrafting.Contracts\Turbo.Activities.Packrafting.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Core\Turbo.Activities.Freediving.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Contracts\Turbo.Activities.Freediving.Contracts.csproj" />
+    <!-- Kind Api projects pulled in for PerKindNatsSubscriberWiringTests; the
+         tests inspect the Add{Kind}ActivityNatsSubscribers extensions that
+         live in each kind's Api assembly. -->
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Api\Turbo.Activities.Fishing.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Api\Turbo.Activities.BackcountrySki.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Hiking.Api\Turbo.Activities.Hiking.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.XcSki.Api\Turbo.Activities.XcSki.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Packrafting.Api\Turbo.Activities.Packrafting.Api.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Freediving.Api\Turbo.Activities.Freediving.Api.csproj" />
+    <ProjectReference Include="..\..\src\Shared\Turbo.Messaging.Nats\Turbo.Messaging.Nats.csproj" />
   </ItemGroup>
 
 </Project>

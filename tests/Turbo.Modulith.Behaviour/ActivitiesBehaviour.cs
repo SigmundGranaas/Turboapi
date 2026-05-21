@@ -228,6 +228,232 @@ public sealed class ActivitiesBehaviour
         fishOnly.Items.Should().NotContain(i => i.Id == bcskiId);
     }
 
+    [Fact]
+    public async Task deleting_a_fishing_activity_removes_it_from_bbox_and_returns_404_on_get()
+    {
+        var client = await RegisterAsync();
+
+        var create = await client.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "To be deleted",
+            Longitude = 9.0, Latitude = 58.0,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.Lake, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        // The bbox projection picked it up.
+        await Eventually.Returns<ActivitySummariesResponse>(async () =>
+        {
+            var r = await client.GetAsync(
+                "/api/activities/summaries/bbox?minLon=8.9&minLat=57.9&maxLon=9.1&maxLat=58.1");
+            if (!r.IsSuccessStatusCode) return null;
+            var body = await r.Content.ReadFromJsonAsync<ActivitySummariesResponse>();
+            return body?.Items.Any(i => i.Id == id) == true ? body : null;
+        }, description: "create propagates to bbox before delete");
+
+        // Delete.
+        var del = await client.DeleteAsync($"/api/activities/fishing/{id}");
+        del.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Detail endpoint now returns 404.
+        var get = await client.GetAsync($"/api/activities/fishing/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        // Bbox projection also drops the item.
+        await Eventually.Returns<ActivitySummariesResponse>(async () =>
+        {
+            var r = await client.GetAsync(
+                "/api/activities/summaries/bbox?minLon=8.9&minLat=57.9&maxLon=9.1&maxLat=58.1");
+            if (!r.IsSuccessStatusCode) return null;
+            var body = await r.Content.ReadFromJsonAsync<ActivitySummariesResponse>();
+            // Return the body only once it confirms the item is gone — null
+            // otherwise keeps the probe polling until the tombstone projects.
+            return body!.Items.All(i => i.Id != id) ? body : null;
+        }, description: "delete propagates to the bbox projection");
+    }
+
+    [Fact]
+    public async Task deleting_with_stale_if_match_returns_412()
+    {
+        var client = await RegisterAsync();
+
+        var create = await client.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "Delete-concurrency check",
+            Longitude = 7.5, Latitude = 57.5,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.River, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"/api/activities/fishing/{id}");
+        request.Headers.IfMatch.Add(new EntityTagHeaderValue("\"99\""));
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.PreconditionFailed);
+
+        // The actual row should still exist — delete must not have happened.
+        var get = await client.GetAsync($"/api/activities/fishing/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task get_by_id_returns_the_typed_detail_payload_after_create()
+    {
+        var client = await RegisterAsync();
+
+        var create = await client.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "Detail roundtrip",
+            Description = "with description",
+            Longitude = 6.5, Latitude = 57.0,
+            Details = new FishingDetailsDto
+            {
+                WaterKind = WaterKind.Sea,
+                ShoreOrBoat = ShoreOrBoat.Boat,
+                AccessNotes = "harbour access",
+            },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        var get = await client.GetAsync($"/api/activities/fishing/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // ETag header carries the version — clients use this for If-Match.
+        get.Headers.ETag.Should().NotBeNull();
+        get.Headers.ETag!.Tag.Should().Be("\"1\"");
+
+        var body = await get.Content.ReadFromJsonAsync<FishingActivityResponse>();
+        body.Should().NotBeNull();
+        body!.Id.Should().Be(id);
+        body.Name.Should().Be("Detail roundtrip");
+        body.Description.Should().Be("with description");
+        body.Longitude.Should().BeApproximately(6.5, 0.0001);
+        body.Latitude.Should().BeApproximately(57.0, 0.0001);
+        body.Details.WaterKind.Should().Be(WaterKind.Sea);
+        body.Details.ShoreOrBoat.Should().Be(ShoreOrBoat.Boat);
+        body.Details.AccessNotes.Should().Be("harbour access");
+        body.Version.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task get_by_id_returns_404_for_an_id_owned_by_another_user()
+    {
+        var alice = await RegisterAsync();
+        var create = await alice.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "Alice's secret",
+            Longitude = 5.0, Latitude = 60.0,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.Lake, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        var bob = await RegisterAsync();
+        var get = await bob.GetAsync($"/api/activities/fishing/{id}");
+        get.StatusCode.Should().Be(HttpStatusCode.NotFound,
+            "an activity owned by another user must look like it does not exist " +
+            "to a different caller — no enumeration leak through 403");
+    }
+
+    [Fact]
+    public async Task conditions_endpoint_returns_a_typed_report_for_an_owned_activity()
+    {
+        var client = await RegisterAsync();
+
+        var create = await client.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "Conditions check",
+            Longitude = 5.5, Latitude = 60.5,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.Lake, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        var conditions = await client.GetAsync($"/api/activities/fishing/{id}/conditions");
+        conditions.StatusCode.Should().Be(HttpStatusCode.OK,
+            $"conditions failed: {await conditions.Content.ReadAsStringAsync()}");
+
+        var report = await conditions.Content.ReadFromJsonAsync<FishingConditionsReport>();
+        report.Should().NotBeNull();
+        report!.ActivityId.Should().Be(id);
+        report.Weather.Should().NotBeNull();
+        // The synthetic weather provider always returns deterministic values
+        // so we can assert the shape, not the magnitude.
+        report.Weather.WindSpeedMs.Should().BeGreaterThanOrEqualTo(0);
+        report.Rationale.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task conditions_endpoint_returns_404_for_someone_elses_activity()
+    {
+        var alice = await RegisterAsync();
+        var create = await alice.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "Alice's pond",
+            Longitude = 4.0, Latitude = 62.0,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.Lake, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        var bob = await RegisterAsync();
+        var get = await bob.GetAsync($"/api/activities/fishing/{id}/conditions");
+        get.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task update_chain_bumps_version_monotonically_and_projects_each_revision()
+    {
+        var client = await RegisterAsync();
+
+        var create = await client.PostAsJsonAsync("/api/activities/fishing", new CreateFishingActivityRequest
+        {
+            Name = "v1",
+            Longitude = 3.0, Latitude = 63.0,
+            Details = new FishingDetailsDto { WaterKind = WaterKind.River, ShoreOrBoat = ShoreOrBoat.Shore },
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        var id = (await create.Content.ReadFromJsonAsync<CreateFishingActivityResponse>())!.Id;
+
+        // Update once with no precondition.
+        var u1 = await client.PutAsJsonAsync($"/api/activities/fishing/{id}",
+            new UpdateFishingActivityRequest { Name = "v2" });
+        u1.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var afterU1 = await client.GetAsync($"/api/activities/fishing/{id}");
+        var body1 = await afterU1.Content.ReadFromJsonAsync<FishingActivityResponse>();
+        body1!.Version.Should().Be(2);
+        body1.Name.Should().Be("v2");
+
+        // Update again with a matching If-Match.
+        var u2 = new HttpRequestMessage(HttpMethod.Put, $"/api/activities/fishing/{id}")
+        {
+            Content = JsonContent.Create(new UpdateFishingActivityRequest { Name = "v3" }),
+        };
+        u2.Headers.IfMatch.Add(new EntityTagHeaderValue("\"2\""));
+        var r2 = await client.SendAsync(u2);
+        r2.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        var afterU2 = await client.GetAsync($"/api/activities/fishing/{id}");
+        var body2 = await afterU2.Content.ReadFromJsonAsync<FishingActivityResponse>();
+        body2!.Version.Should().Be(3);
+        body2.Name.Should().Be("v3");
+
+        // Projection has the latest name.
+        await Eventually.Returns<ActivitySummariesResponse>(async () =>
+        {
+            var r = await client.GetAsync(
+                "/api/activities/summaries/bbox?minLon=2.9&minLat=62.9&maxLon=3.1&maxLat=63.1");
+            if (!r.IsSuccessStatusCode) return null;
+            var body = await r.Content.ReadFromJsonAsync<ActivitySummariesResponse>();
+            var hit = body?.Items.FirstOrDefault(i => i.Id == id);
+            return hit?.Name == "v3" ? body : null;
+        }, description: "summary projection mirrors the latest name");
+    }
+
     private async Task<HttpClient> RegisterAsync()
     {
         var client = _host.CreateClient();
