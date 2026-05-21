@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.IO;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.Packrafting.data;
 using Turboapi.Activities.Packrafting.data.model;
@@ -73,34 +74,54 @@ public class PackraftingActivitiesController : ControllerBase
 
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePackraftingRequest request)
     {
         try
         {
             var userId = GetUserId();
             await _update.Handle(new UpdatePackraftingActivityCommand(
-                userId, id, request.Name, request.Description, request.RouteWkt, request.Details?.ToValueObject()));
+                userId, id, request.Name, request.Description, request.RouteWkt, request.Details?.ToValueObject())
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (UnauthorizedActivityException) { return Forbid(); }
         catch (ActivityNotFoundException) { return NotFound(new ErrorResponse("Not found", $"Packrafting activity {id} not found")); }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
+        }
         catch (ArgumentException ex) { return BadRequest(new ErrorResponse("Invalid update", ex.Message)); }
     }
 
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Delete(Guid id)
     {
         try
         {
             var userId = GetUserId();
-            await _delete.Handle(new DeletePackraftingActivityCommand(userId, id));
+            await _delete.Handle(new DeletePackraftingActivityCommand(userId, id)
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (UnauthorizedActivityException) { return Forbid(); }
         catch (ActivityNotFoundException) { return NotFound(new ErrorResponse("Not found", $"Packrafting activity {id} not found")); }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
+        }
     }
 }
 

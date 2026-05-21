@@ -3,6 +3,7 @@ using NetTopologySuite.IO;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Activities.domain;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.Packrafting.events;
@@ -15,9 +16,15 @@ public sealed record CreatePackraftingActivityCommand(
     Guid CallerId, string Name, string? Description, string RouteWkt, PackraftingDetails Details);
 
 public sealed record UpdatePackraftingActivityCommand(
-    Guid CallerId, Guid ActivityId, string? Name, string? Description, string? RouteWkt, PackraftingDetails? Details);
+    Guid CallerId, Guid ActivityId, string? Name, string? Description, string? RouteWkt, PackraftingDetails? Details)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
-public sealed record DeletePackraftingActivityCommand(Guid CallerId, Guid ActivityId);
+public sealed record DeletePackraftingActivityCommand(Guid CallerId, Guid ActivityId)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
 public interface IPackraftingActivityReader
 {
@@ -77,6 +84,9 @@ public sealed class UpdatePackraftingActivityHandler
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
 
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
+
         var next = existing;
         var changed = false;
         if (cmd.Name is not null || cmd.Description is not null) { next = next.Rename(cmd.Name, cmd.Description); changed = true; }
@@ -120,6 +130,9 @@ public sealed class DeletePackraftingActivityHandler
         var existing = await _reader.GetByIdAsync(cmd.ActivityId)
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var deleted = new PackraftingActivityDeleted(existing.Core.Id, existing.Core.OwnerId);
         var summaryDelete = new ActivitySummaryDeleted(existing.Core.Id, existing.Core.OwnerId, "packrafting");

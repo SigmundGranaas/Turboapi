@@ -1,6 +1,7 @@
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Activities.BackcountrySki.events;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 
@@ -31,6 +32,9 @@ public sealed class DeleteBackcountrySkiActivityHandler
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
 
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var deleted = new BackcountrySkiActivityDeleted(existing.Core.Id, existing.Core.OwnerId);
         var summaryDelete = new ActivitySummaryDeleted(existing.Core.Id, existing.Core.OwnerId, "backcountry_ski");

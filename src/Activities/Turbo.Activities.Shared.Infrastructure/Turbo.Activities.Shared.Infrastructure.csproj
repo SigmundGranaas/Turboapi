@@ -31,4 +31,8 @@
     <ProjectReference Include="..\..\Shared\Turbo.Outbox.Postgres\Turbo.Outbox.Postgres.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Turbo.Activities.Unit" />
+  </ItemGroup>
+
 </Project>

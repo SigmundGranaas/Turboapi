@@ -1,5 +1,6 @@
 using Turbo.Messaging;
 using Turbo.Outbox;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.Hiking.events;
@@ -25,6 +26,9 @@ public sealed class DeleteHikingActivityHandler
         var existing = await _reader.GetByIdAsync(cmd.ActivityId)
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var deleted = new HikingActivityDeleted(existing.Core.Id, existing.Core.OwnerId);
         var summaryDelete = new ActivitySummaryDeleted(existing.Core.Id, existing.Core.OwnerId, "hiking");

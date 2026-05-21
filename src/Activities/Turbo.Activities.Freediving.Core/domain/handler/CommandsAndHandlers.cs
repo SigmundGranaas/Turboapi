@@ -3,6 +3,7 @@ using NetTopologySuite.IO;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Activities.domain;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.Freediving.events;
@@ -17,9 +18,15 @@ public sealed record CreateFreedivingActivityCommand(
 
 public sealed record UpdateFreedivingActivityCommand(
     Guid CallerId, Guid ActivityId, string? Name, string? Description,
-    double? Longitude, double? Latitude, FreedivingDetails? Details);
+    double? Longitude, double? Latitude, FreedivingDetails? Details)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
-public sealed record DeleteFreedivingActivityCommand(Guid CallerId, Guid ActivityId);
+public sealed record DeleteFreedivingActivityCommand(Guid CallerId, Guid ActivityId)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
 public interface IFreedivingActivityReader
 {
@@ -78,6 +85,9 @@ public sealed class UpdateFreedivingActivityHandler
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
 
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
+
         var next = existing;
         var changed = false;
         if (cmd.Name is not null || cmd.Description is not null) { next = next.Rename(cmd.Name, cmd.Description); changed = true; }
@@ -120,6 +130,9 @@ public sealed class DeleteFreedivingActivityHandler
         var existing = await _reader.GetByIdAsync(cmd.ActivityId)
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var deleted = new FreedivingActivityDeleted(existing.Core.Id, existing.Core.OwnerId);
         var summaryDelete = new ActivitySummaryDeleted(existing.Core.Id, existing.Core.OwnerId, "freediving");

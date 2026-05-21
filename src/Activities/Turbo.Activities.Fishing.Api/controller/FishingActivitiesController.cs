@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.Fishing.controller.request;
 using Turboapi.Activities.Fishing.data;
@@ -96,6 +97,7 @@ public class FishingActivitiesController : ControllerBase
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFishingActivityRequest request)
     {
         try
@@ -105,7 +107,10 @@ public class FishingActivitiesController : ControllerBase
                 userId, id,
                 request.Name, request.Description,
                 request.Longitude, request.Latitude,
-                request.Details?.ToValueObject());
+                request.Details?.ToValueObject())
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            };
             await _update.Handle(cmd);
             return NoContent();
         }
@@ -114,6 +119,12 @@ public class FishingActivitiesController : ControllerBase
         catch (ActivityNotFoundException)
         {
             return NotFound(new ErrorResponse("Not found", $"Fishing activity {id} not found"));
+        }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
         }
         catch (ArgumentException ex)
         {
@@ -124,12 +135,16 @@ public class FishingActivitiesController : ControllerBase
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Delete(Guid id)
     {
         try
         {
             var userId = GetAuthenticatedUserId();
-            await _delete.Handle(new DeleteFishingActivityCommand(userId, id));
+            await _delete.Handle(new DeleteFishingActivityCommand(userId, id)
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
@@ -137,6 +152,12 @@ public class FishingActivitiesController : ControllerBase
         catch (ActivityNotFoundException)
         {
             return NotFound(new ErrorResponse("Not found", $"Fishing activity {id} not found"));
+        }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
         }
     }
 }

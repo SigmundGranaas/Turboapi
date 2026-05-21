@@ -2,6 +2,7 @@ using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using Turbo.Messaging;
 using Turbo.Outbox;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.Fishing.events;
@@ -37,6 +38,9 @@ public sealed class UpdateFishingActivityHandler
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
 
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var next = existing;
         var changed = false;

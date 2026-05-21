@@ -1,5 +1,6 @@
+using System.Globalization;
 using System.Net.Http;
-using System.Text.Json;
+using System.Xml;
 using Microsoft.Extensions.Logging;
 using Turboapi.Activities.value;
 
@@ -10,10 +11,6 @@ namespace Turboapi.Activities.conditions;
 /// short window of observed + forecast water levels around the
 /// requested instant and projects them into the typed
 /// <see cref="TideSlice"/>.
-///
-/// Sehavnivå returns XML; we parse the minimum we need (timeseries
-/// data points) by hand to avoid pulling in an XML schema. If the
-/// upstream contract changes we replace the parser, not the interface.
 ///
 /// Wiring: registered only when <c>Sehavniva:Enabled=true</c>;
 /// otherwise <see cref="SyntheticTideProvider"/> is wired in its
@@ -48,17 +45,22 @@ public sealed class SehavnivaTideProvider : ITideProvider
                   + $"&fromtime={Uri.EscapeDataString(from)}&totime={Uri.EscapeDataString(to)}"
                   + $"&datatype=all&refcode=cd&place=&file=&lang=en&interval=10&dst=0&tzone=&tide_request=locationdata";
 
-        var xml = await client.GetStringAsync(url, cancellationToken);
-        if (string.IsNullOrWhiteSpace(xml))
-            throw new InvalidOperationException("Sehavnivå returned empty body");
-
-        // Parse out the two waterlevel datapoints nearest the requested
-        // instant. Sehavnivå emits <waterlevel value="X" time="Y" .../>
-        // entries; we look for the time + value attributes by string
-        // scan to avoid a heavyweight XML reader.
-        var points = ParseWaterlevels(xml).ToList();
+        List<(DateTimeOffset Time, float Value)> points;
+        try
+        {
+            await using var stream = await client.GetStreamAsync(url, cancellationToken);
+            points = ParseWaterlevels(stream);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ConditionsProviderException("Sehavnivå upstream request failed", ex);
+        }
+        catch (XmlException ex)
+        {
+            throw new ConditionsProviderException("Sehavnivå returned malformed XML", ex);
+        }
         if (points.Count == 0)
-            throw new InvalidOperationException("Sehavnivå returned no waterlevel entries");
+            throw new ConditionsProviderException("Sehavnivå returned no waterlevel entries");
 
         // Closest to `at` for "current", and one ~15min later for trend.
         points.Sort((a, b) => a.Time.CompareTo(b.Time));
@@ -82,39 +84,38 @@ public sealed class SehavnivaTideProvider : ITideProvider
             summary: summary);
     }
 
-    private static IEnumerable<(DateTimeOffset Time, float Value)> ParseWaterlevels(string xml)
+    internal static List<(DateTimeOffset Time, float Value)> ParseWaterlevels(Stream xmlStream)
     {
-        // Tiny string scanner. Each entry looks like:
-        //   <waterlevel value="0.123" time="2026-05-20T12:00:00+02:00" ...
-        // (attribute order may vary; we extract by name).
-        var idx = 0;
-        while ((idx = xml.IndexOf("<waterlevel", idx, StringComparison.Ordinal)) >= 0)
+        var settings = new XmlReaderSettings
         {
-            var end = xml.IndexOf('>', idx);
-            if (end < 0) yield break;
-            var fragment = xml.AsSpan(idx, end - idx);
-            var value = ExtractAttribute(fragment, "value");
-            var time = ExtractAttribute(fragment, "time");
-            if (value is not null && time is not null
-                && float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v)
-                && DateTimeOffset.TryParse(time, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal | System.Globalization.DateTimeStyles.AdjustToUniversal, out var t))
-            {
-                yield return (t, v);
-            }
-            idx = end + 1;
-        }
-    }
+            DtdProcessing = DtdProcessing.Prohibit,
+            XmlResolver = null,
+            IgnoreComments = true,
+            IgnoreWhitespace = true,
+            CloseInput = false,
+        };
+        var points = new List<(DateTimeOffset, float)>();
+        using var reader = XmlReader.Create(xmlStream, settings);
+        while (reader.Read())
+        {
+            if (reader.NodeType != XmlNodeType.Element) continue;
+            if (!reader.Name.Equals("waterlevel", StringComparison.OrdinalIgnoreCase)) continue;
 
-    private static string? ExtractAttribute(ReadOnlySpan<char> fragment, string name)
-    {
-        // Look for `name="..."`
-        var needle = name + "=\"";
-        var start = fragment.IndexOf(needle, StringComparison.Ordinal);
-        if (start < 0) return null;
-        start += needle.Length;
-        var endQuote = fragment.Slice(start).IndexOf('"');
-        if (endQuote < 0) return null;
-        return fragment.Slice(start, endQuote).ToString();
+            var valueAttr = reader.GetAttribute("value");
+            var timeAttr = reader.GetAttribute("time");
+            if (valueAttr is null || timeAttr is null) continue;
+
+            if (!float.TryParse(valueAttr, NumberStyles.Float, CultureInfo.InvariantCulture, out var v))
+                continue;
+            if (!DateTimeOffset.TryParse(
+                    timeAttr, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var t))
+                continue;
+
+            points.Add((t, v));
+        }
+        return points;
     }
 }
 

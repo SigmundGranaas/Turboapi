@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Core\Turbo.Activities.Shared.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Contracts\Turbo.Activities.Shared.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Infrastructure\Turbo.Activities.Shared.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Shared.Api\Turbo.Activities.Shared.Api.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Core\Turbo.Activities.Fishing.Core.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.Fishing.Contracts\Turbo.Activities.Fishing.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Activities\Turbo.Activities.BackcountrySki.Core\Turbo.Activities.BackcountrySki.Core.csproj" />

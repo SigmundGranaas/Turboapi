@@ -3,6 +3,7 @@ using NetTopologySuite.IO;
 using Turbo.Messaging;
 using Turbo.Outbox;
 using Turboapi.Activities.domain;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.events;
 using Turboapi.Activities.value;
@@ -15,9 +16,15 @@ public sealed record CreateXcSkiActivityCommand(
     Guid CallerId, string Name, string? Description, string RouteWkt, XcSkiDetails Details);
 
 public sealed record UpdateXcSkiActivityCommand(
-    Guid CallerId, Guid ActivityId, string? Name, string? Description, string? RouteWkt, XcSkiDetails? Details);
+    Guid CallerId, Guid ActivityId, string? Name, string? Description, string? RouteWkt, XcSkiDetails? Details)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
-public sealed record DeleteXcSkiActivityCommand(Guid CallerId, Guid ActivityId);
+public sealed record DeleteXcSkiActivityCommand(Guid CallerId, Guid ActivityId)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
 public interface IXcSkiActivityReader
 {
@@ -77,6 +84,9 @@ public sealed class UpdateXcSkiActivityHandler
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
 
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
+
         var next = existing;
         var changed = false;
         if (cmd.Name is not null || cmd.Description is not null) { next = next.Rename(cmd.Name, cmd.Description); changed = true; }
@@ -120,6 +130,9 @@ public sealed class DeleteXcSkiActivityHandler
         var existing = await _reader.GetByIdAsync(cmd.ActivityId)
             ?? throw new ActivityNotFoundException(cmd.ActivityId);
         _ownerGuard.RequireOwner(cmd.CallerId, existing.Core.OwnerId);
+
+        if (cmd.IfMatchVersion is { } expected && existing.Core.Version != expected)
+            throw new OptimisticConcurrencyException(expected, existing.Core.Version);
 
         var deleted = new XcSkiActivityDeleted(existing.Core.Id, existing.Core.OwnerId);
         var summaryDelete = new ActivitySummaryDeleted(existing.Core.Id, existing.Core.OwnerId, "xc_ski");

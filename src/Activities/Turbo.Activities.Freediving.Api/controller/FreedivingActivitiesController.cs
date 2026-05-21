@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 using Turboapi.Activities.Freediving.data;
 using Turboapi.Activities.Freediving.data.model;
@@ -72,34 +73,54 @@ public class FreedivingActivitiesController : ControllerBase
 
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateFreedivingRequest request)
     {
         try
         {
             var userId = GetUserId();
             await _update.Handle(new UpdateFreedivingActivityCommand(
-                userId, id, request.Name, request.Description, request.Longitude, request.Latitude, request.Details?.ToValueObject()));
+                userId, id, request.Name, request.Description, request.Longitude, request.Latitude, request.Details?.ToValueObject())
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (UnauthorizedActivityException) { return Forbid(); }
         catch (ActivityNotFoundException) { return NotFound(new ErrorResponse("Not found", $"Freediving activity {id} not found")); }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
+        }
         catch (ArgumentException ex) { return BadRequest(new ErrorResponse("Invalid update", ex.Message)); }
     }
 
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Delete(Guid id)
     {
         try
         {
             var userId = GetUserId();
-            await _delete.Handle(new DeleteFreedivingActivityCommand(userId, id));
+            await _delete.Handle(new DeleteFreedivingActivityCommand(userId, id)
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (UnauthorizedActivityException) { return Forbid(); }
         catch (ActivityNotFoundException) { return NotFound(new ErrorResponse("Not found", $"Freediving activity {id} not found")); }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
+        }
     }
 }
 

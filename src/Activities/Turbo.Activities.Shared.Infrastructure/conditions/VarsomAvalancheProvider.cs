@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Turboapi.Activities.value;
@@ -44,10 +45,23 @@ public sealed class VarsomAvalancheProvider : IAvalancheProvider
         var to = day.AddDays(1).ToString("yyyy-MM-dd");
         var url = $"api/AvalancheWarningByRegion/Simple/{varsomRegionId}/1/{from}/{to}";
 
-        var bulletins = await client.GetFromJsonAsync<List<VarsomBulletin>>(url, cancellationToken)
-                        ?? throw new InvalidOperationException("Varsom returned empty body");
+        List<VarsomBulletin>? bulletins;
+        try
+        {
+            bulletins = await client.GetFromJsonAsync<List<VarsomBulletin>>(url, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ConditionsProviderException("Varsom upstream request failed", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConditionsProviderException("Varsom returned malformed JSON", ex);
+        }
+        if (bulletins is null)
+            throw new ConditionsProviderException("Varsom returned empty body");
         if (bulletins.Count == 0)
-            throw new InvalidOperationException(
+            throw new ConditionsProviderException(
                 $"Varsom returned no bulletins for region {varsomRegionId} on {from}");
 
         var b = bulletins[0];

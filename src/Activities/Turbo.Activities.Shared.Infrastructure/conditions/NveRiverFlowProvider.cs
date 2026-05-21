@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Turboapi.Activities.value;
@@ -50,12 +51,25 @@ public sealed class NveRiverFlowProvider : IRiverFlowProvider
                   + $"&ReferenceTime={from:yyyy-MM-ddTHH:mm:ssZ}/{to:yyyy-MM-ddTHH:mm:ssZ}"
                   + $"&ResolutionTime=60";
 
-        var response = await client.GetFromJsonAsync<NveObservationsResponse>(url, cancellationToken)
-                       ?? throw new InvalidOperationException("NVE returned empty body");
+        NveObservationsResponse? response;
+        try
+        {
+            response = await client.GetFromJsonAsync<NveObservationsResponse>(url, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ConditionsProviderException("NVE upstream request failed", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConditionsProviderException("NVE returned malformed JSON", ex);
+        }
+        if (response is null)
+            throw new ConditionsProviderException("NVE returned empty body");
 
         var observations = response.Data?.FirstOrDefault()?.Observations;
         if (observations is null || observations.Count == 0)
-            throw new InvalidOperationException($"NVE returned no observations for station {nveStationCode}");
+            throw new ConditionsProviderException($"NVE returned no observations for station {nveStationCode}");
 
         // Most recent first; if upstream returns ascending we'll pick the last.
         var sorted = observations.OrderBy(o => o.Time).ToList();

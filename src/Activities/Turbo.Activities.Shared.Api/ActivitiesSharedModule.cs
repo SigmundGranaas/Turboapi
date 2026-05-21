@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Turbo.Messaging;
 using Turbo.Outbox;
@@ -78,7 +79,8 @@ public static class ActivitiesSharedModule
                 http.BaseAddress = new Uri(opts.BaseUrl);
                 http.DefaultRequestHeaders.UserAgent.ParseAdd(opts.UserAgent!);
                 http.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddStandardResilienceHandler(ConfigureUpstreamResilience);
             services.AddScoped<MetNoWeatherProvider>();
             services.AddScoped<IWeatherProvider>(sp => new CachedWeatherProvider(
                 sp.GetRequiredService<MetNoWeatherProvider>(),
@@ -104,7 +106,8 @@ public static class ActivitiesSharedModule
                 var opts = sp.GetRequiredService<IOptions<VarsomOptions>>().Value;
                 http.BaseAddress = new Uri(opts.BaseUrl);
                 http.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddStandardResilienceHandler(ConfigureUpstreamResilience);
             services.AddScoped<VarsomAvalancheProvider>();
             services.AddScoped<IAvalancheProvider>(sp => new CachedAvalancheProvider(
                 sp.GetRequiredService<VarsomAvalancheProvider>(),
@@ -132,7 +135,8 @@ public static class ActivitiesSharedModule
                 http.BaseAddress = new Uri(opts.BaseUrl);
                 http.DefaultRequestHeaders.Add("X-API-Key", opts.ApiKey!);
                 http.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddStandardResilienceHandler(ConfigureUpstreamResilience);
             services.AddScoped<NveRiverFlowProvider>();
             services.AddScoped<IRiverFlowProvider>(sp => new CachedRiverFlowProvider(
                 sp.GetRequiredService<NveRiverFlowProvider>(),
@@ -158,7 +162,8 @@ public static class ActivitiesSharedModule
                 var opts = sp.GetRequiredService<IOptions<SehavnivaOptions>>().Value;
                 http.BaseAddress = new Uri(opts.BaseUrl);
                 http.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddStandardResilienceHandler(ConfigureUpstreamResilience);
             services.AddScoped<SehavnivaTideProvider>();
             services.AddScoped<ITideProvider>(sp => new CachedTideProvider(
                 sp.GetRequiredService<SehavnivaTideProvider>(),
@@ -184,7 +189,8 @@ public static class ActivitiesSharedModule
                 var opts = sp.GetRequiredService<IOptions<SkisporetOptions>>().Value;
                 http.BaseAddress = new Uri(opts.BaseUrl);
                 http.Timeout = TimeSpan.FromSeconds(10);
-            });
+            })
+            .AddStandardResilienceHandler(ConfigureUpstreamResilience);
             services.AddScoped<SkisporetGroomingProvider>();
             services.AddScoped<IGroomingProvider>(sp => new CachedGroomingProvider(
                 sp.GetRequiredService<SkisporetGroomingProvider>(),
@@ -214,4 +220,27 @@ public static class ActivitiesSharedModule
         configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException(
                 $"ConnectionStrings:{ConnectionStringName} is not configured");
+
+    /// <summary>
+    /// Shared resilience profile applied to every external conditions
+    /// HTTP client. Wraps standard retry + circuit breaker around per-
+    /// attempt timeouts so a flaky upstream (met.no, Varsom, NVE, ...)
+    /// can't take the request thread or blow up downstream advisors.
+    /// </summary>
+    private static void ConfigureUpstreamResilience(HttpStandardResilienceOptions options)
+    {
+        // Generous per-attempt budget; the HttpClient itself caps the
+        // total budget at 10s via Timeout (set per-named-client).
+        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(4);
+        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(12);
+
+        options.Retry.MaxRetryAttempts = 2;
+        options.Retry.BackoffType = Polly.DelayBackoffType.Exponential;
+        options.Retry.UseJitter = true;
+
+        // Default circuit breaker (50% failure ratio over a 30s window,
+        // 30s break duration) is fine for our usage — these calls fan
+        // out from each conditions request and we'd rather fail fast on
+        // a degraded upstream than queue up retries.
+    }
 }

@@ -15,8 +15,14 @@ public sealed record UpdateBackcountrySkiActivityCommand(
     string? Name,
     string? Description,
     string? RouteWkt,
-    BackcountrySkiDetails? Details);
+    BackcountrySkiDetails? Details)
+{
+    public long? IfMatchVersion { get; init; }
+}
 
 public sealed record DeleteBackcountrySkiActivityCommand(
     Guid CallerId,
-    Guid ActivityId);
+    Guid ActivityId)
+{
+    public long? IfMatchVersion { get; init; }
+}

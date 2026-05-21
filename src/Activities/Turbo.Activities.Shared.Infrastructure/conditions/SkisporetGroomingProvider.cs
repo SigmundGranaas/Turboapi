@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Turboapi.Activities.value;
@@ -39,10 +40,23 @@ public sealed class SkisporetGroomingProvider : IGroomingProvider
         string feedKey, DateTimeOffset at, CancellationToken cancellationToken)
     {
         var client = _http.CreateClient(HttpClientName);
-        var response = await client.GetFromJsonAsync<SkisporetTrail>($"api/trails/{feedKey}", cancellationToken)
-                       ?? throw new InvalidOperationException("Skisporet returned empty body");
+        SkisporetTrail? response;
+        try
+        {
+            response = await client.GetFromJsonAsync<SkisporetTrail>($"api/trails/{feedKey}", cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ConditionsProviderException("Skisporet upstream request failed", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConditionsProviderException("Skisporet returned malformed JSON", ex);
+        }
+        if (response is null)
+            throw new ConditionsProviderException("Skisporet returned empty body");
         if (response.LastGrooming is null)
-            throw new InvalidOperationException($"Skisporet has no grooming record for trail {feedKey}");
+            throw new ConditionsProviderException($"Skisporet has no grooming record for trail {feedKey}");
 
         var hoursAgo = (int)Math.Max(0, (at - response.LastGrooming.Value).TotalHours);
         var summary = hoursAgo < 12 ? "groomed today" : hoursAgo < 36 ? "groomed yesterday" : $"groomed {hoursAgo / 24}d ago";

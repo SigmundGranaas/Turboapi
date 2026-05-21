@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Turboapi.Activities.BackcountrySki.controller.request;
 using Turboapi.Activities.BackcountrySki.data;
 using Turboapi.Activities.BackcountrySki.domain.handler;
+using Turboapi.Activities.domain.exception;
 using Turboapi.Activities.domain.services;
 
 namespace Turboapi.Activities.BackcountrySki.controller;
@@ -92,6 +93,7 @@ public class BackcountrySkiActivitiesController : ControllerBase
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateBackcountrySkiActivityRequest request)
     {
         try
@@ -101,7 +103,10 @@ public class BackcountrySkiActivitiesController : ControllerBase
                 userId, id,
                 request.Name, request.Description,
                 request.RouteWkt,
-                request.Details?.ToValueObject());
+                request.Details?.ToValueObject())
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            };
             await _update.Handle(cmd);
             return NoContent();
         }
@@ -110,6 +115,12 @@ public class BackcountrySkiActivitiesController : ControllerBase
         catch (ActivityNotFoundException)
         {
             return NotFound(new ErrorResponse("Not found", $"Backcountry ski activity {id} not found"));
+        }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
         }
         catch (ArgumentException ex)
         {
@@ -120,12 +131,16 @@ public class BackcountrySkiActivitiesController : ControllerBase
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ConcurrencyErrorResponse), StatusCodes.Status412PreconditionFailed)]
     public async Task<IActionResult> Delete(Guid id)
     {
         try
         {
             var userId = GetAuthenticatedUserId();
-            await _delete.Handle(new DeleteBackcountrySkiActivityCommand(userId, id));
+            await _delete.Handle(new DeleteBackcountrySkiActivityCommand(userId, id)
+            {
+                IfMatchVersion = IfMatchHeader.Parse(Request.Headers.IfMatch.ToString()),
+            });
             return NoContent();
         }
         catch (UnauthorizedAccessException) { return Forbid(); }
@@ -133,6 +148,12 @@ public class BackcountrySkiActivitiesController : ControllerBase
         catch (ActivityNotFoundException)
         {
             return NotFound(new ErrorResponse("Not found", $"Backcountry ski activity {id} not found"));
+        }
+        catch (OptimisticConcurrencyException ex)
+        {
+            Response.Headers.ETag = $"\"{ex.ActualVersion}\"";
+            return StatusCode(StatusCodes.Status412PreconditionFailed,
+                new ConcurrencyErrorResponse(ex.ExpectedVersion, ex.ActualVersion));
         }
     }
 }

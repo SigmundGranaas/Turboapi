@@ -45,11 +45,24 @@ public sealed class MetNoWeatherProvider : IWeatherProvider
         // met.no requires lat/lon clamped to 4 decimals max.
         var url = $"weatherapi/locationforecast/2.0/compact?lat={Math.Round(latitude, 4)}&lon={Math.Round(longitude, 4)}";
 
-        var response = await client.GetFromJsonAsync<MetNoForecast>(url, cancellationToken)
-                       ?? throw new InvalidOperationException("met.no returned empty body");
+        MetNoForecast? response;
+        try
+        {
+            response = await client.GetFromJsonAsync<MetNoForecast>(url, cancellationToken);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new ConditionsProviderException("met.no upstream request failed", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new ConditionsProviderException("met.no returned malformed JSON", ex);
+        }
+        if (response is null)
+            throw new ConditionsProviderException("met.no returned empty body");
 
         var nearest = NearestTimeseries(response, at)
-                      ?? throw new InvalidOperationException(
+                      ?? throw new ConditionsProviderException(
                           $"met.no returned no timeseries entries usable for instant {at:O}");
 
         var instant = nearest.Data.Instant.Details;
